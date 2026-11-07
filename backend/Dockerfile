@@ -22,6 +22,12 @@ ENV NODE_ENV=production \
     DB_PATH=/data/corse.db
 WORKDIR /app
 
+# npm, npx, corepack e yarn servono solo nella build: a runtime basta node.
+# Toglierli riduce la superficie d'attacco (le loro dipendenze hanno CVE segnalate da Trivy).
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+           /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack \
+           /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
+
 COPY --from=build /app/node_modules ./node_modules
 COPY package.json server.js account.js demo.js ./
 COPY public ./public
