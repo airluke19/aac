@@ -7,7 +7,11 @@ body { margin: 0; background: var(--bg); color: var(--text); font-family: -apple
 body::before { content: ''; position: fixed; inset: -20% -20% auto; height: 70%; pointer-events: none;
   background: radial-gradient(60% 60% at 50% 0%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%); }
 main { position: relative; width: 100%; max-width: 380px; text-align: center; }
-.logo { width: 76px; height: 76px; margin: 0 auto 22px; border-radius: 20px; display: block; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.logo { width: 76px; height: 76px; margin: 0 auto 22px; border-radius: 20px; display: grid; place-items: center; background: var(--surface); box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+.logo svg { width: 52px; height: 52px; }
+/* logo nel colore d'accento scelto (come nell'intestazione dell'app) */
+:root, [data-theme="dark"] { --accent-2: #2a9db0; }
+[data-theme="light"] { --accent-2: #0891b2; }
 h1 { margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; }
 .sub { margin: 8px auto 30px; color: var(--muted); font-size: 1rem; line-height: 1.45; max-width: 320px; }
 .card { background: var(--surface); border-radius: 22px; padding: 22px 20px; }
