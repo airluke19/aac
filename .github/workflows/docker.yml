@@ -28,7 +28,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  TRIVY_VERSION: v0.67.2
+  TRIVY_VERSION: v0.76.1
   IMAGE: ghcr.io/${{ github.repository }}
 
 jobs:
