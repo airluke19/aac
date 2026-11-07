@@ -2032,7 +2032,7 @@
       ? '<section class="card adm-g' + (cls ? ' ' + cls : '') + '"><h3>' + titolo + ' <span class="adm-cnt">' + lista.length + '</span></h3><ul class="adm-list">' + lista.map(riga).join('') + '</ul></section>'
       : '';
     return '<section class="card adm-sum">' +
-        num(attivi.length, T('attivi', 'active')) + num(attesa.length, T('in attesa', 'pending'), attesa.length ? 'warn' : '') + num(bloccati.length, T('bloccati', 'blocked')) +
+        num(attivi.length + me.length, T('attivi', 'active')) + num(attesa.length, T('in attesa', 'pending'), attesa.length ? 'warn' : '') + num(bloccati.length, T('bloccati', 'blocked')) +
       '</section>' +
       gruppo(T('In attesa di approvazione', 'Awaiting approval'), attesa, 'warn') +
       '<section class="card"><h3>' + T('Invita', 'Invite') + '</h3><p class="sub">' +
