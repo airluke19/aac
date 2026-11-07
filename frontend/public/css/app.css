@@ -1563,3 +1563,8 @@ body.demo .admin-wrap { display: none; }
 /* etichette dei numeri della seduta sempre su una riga */
 .hero-stats span { white-space: nowrap; }
 .hero-stats { column-gap: 22px; }
+
+/* ---- Calendario: corsa fuori piano (giorno senza seduta) = pallino pieno sotto il numero ---- */
+.cd.fuori { cursor: pointer; font: inherit; color: var(--text); background: transparent; }
+.cd .fp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 3px; }
+.legend-inline i.fp-leg { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }

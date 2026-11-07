@@ -1578,7 +1578,7 @@ function sedutaDa(stepIdx, sIdx, data, override, intensita) {
 // ---------------------------------------------------------------------------
 function datiAdattamento(inizio, oggiStr) {
   const corse = db
-    .prepare("SELECT data, tempo, distanza, fc_media, rpe FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ?")
+    .prepare("SELECT id, data, tempo, distanza, fc_media, rpe FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ?")
     .all(inizio, oggiStr);
   const camminate = db
     .prepare("SELECT data FROM altre_attivita WHERE tipo IN ('Walk', 'Hike') AND durata >= 900 AND data >= ? AND data <= ?")
@@ -1590,7 +1590,10 @@ function datiAdattamento(inizio, oggiStr) {
   const serie = corse.length ? costruisciSerieGiornaliera(oggiStr, false) : [];
   return {
     corse,
-    giorniAttivi: new Set([...corse, ...camminate, ...manuali].map((r) => r.data)),
+    // AAC e' un'app di corsa: per l'algoritmo (avanzare, ripetere, tornare indietro) contano solo le corse
+    // e le sedute segnate a mano come fatte. Le camminate valgono solo per le sedute "Camminata di recupero".
+    giorniCorsa: new Set([...corse, ...manuali].map((r) => r.data)),
+    giorniCamminata: new Set(camminate.map((r) => r.data)),
     manuali: new Set(manuali.map((r) => r.data)),
     benessere,
     tsb: new Map(serie.map((p) => [p.data, p.tsb])),
@@ -1746,7 +1749,7 @@ function costruisciProgramma(oggiStr) {
     const da = addDays(inizio, w * 7);
     const a = addDays(da, 6);
     let fatte = 0;
-    for (let d = da; d <= a; d = addDays(d, 1)) if (dati.giorniAttivi.has(d)) fatte++;
+    for (let d = da; d <= a; d = addDays(d, 1)) if (dati.giorniCorsa.has(d)) fatte++;
     fatte = Math.min(3, fatte);
 
     const corseSett = dati.corse.filter((r) => r.data >= da && r.data <= a && r.fc_media);
@@ -1816,17 +1819,21 @@ function costruisciProgramma(oggiStr) {
 
   // ---- Calendario: passato reale + futuro proiettato (assumendo progressione regolare) ----
   const calendario = [];
+  // seduta fatta: una corsa quel giorno (o segnata a mano); la "Camminata di recupero" si fa camminando
+  const fattaIl = (sed, data) => dati.giorniCorsa.has(data) || (sed.tipo === 'recupero' && dati.giorniCamminata.has(data));
   storia.forEach((s, w) =>
     OFFSET_SEDUTE.forEach((off, i) => {
       const data = addDays(inizio, w * 7 + off);
-      calendario.push({ ...sedutaDa(s.settimana_piano - 1, i, data, null, s.intensita), fatta: dati.giorniAttivi.has(data), manuale: dati.manuali.has(data), passata: true });
+      const sed = sedutaDa(s.settimana_piano - 1, i, data, null, s.intensita);
+      calendario.push({ ...sed, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: true });
     })
   );
   for (let k = 0; step + k <= ultimo; k++) {
     const w = settCorrente + k;
     OFFSET_SEDUTE.forEach((off, i) => {
       const data = addDays(inizio, w * 7 + off);
-      calendario.push({ ...sedutaDa(step + k, i, data, null, intensitaAttuale), fatta: dati.giorniAttivi.has(data), manuale: dati.manuali.has(data), passata: data < oggiStr });
+      const sed = sedutaDa(step + k, i, data, null, intensitaAttuale);
+      calendario.push({ ...sed, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: data < oggiStr });
     });
   }
   const gara = calendario.find((s) => s.tipo === 'gara');
@@ -1878,7 +1885,7 @@ function costruisciProgramma(oggiStr) {
   const settDa = addDays(inizio, settCorrente * 7);
   const settA = addDays(settDa, 6);
   const giorniFatti = [];
-  for (let d = settDa; d <= settA && d <= oggiStr; d = addDays(d, 1)) if (dati.giorniAttivi.has(d)) giorniFatti.push(d);
+  for (let d = settDa; d <= settA && d <= oggiStr; d = addDays(d, 1)) if (dati.giorniCorsa.has(d)) giorniFatti.push(d);
   const settimana = {
     da: settDa,
     a: settA,
@@ -1975,6 +1982,11 @@ function costruisciProgramma(oggiStr) {
     storia: storia.slice().reverse(),
     consigli,
     calendario,
+    // corse fatte in giorni senza seduta: compaiono nel calendario con il loro segno
+    corse_fuori_piano: (() => {
+      const giorniPiano = new Set(calendario.map((c) => c.data));
+      return dati.corse.filter((c) => !giorniPiano.has(c.data)).map((c) => ({ data: c.data, id: c.id }));
+    })(),
   };
 }
 

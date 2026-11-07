@@ -185,6 +185,7 @@
   function renderCalendario(d) {
     const p = d.programma;
     const perData = new Map(p.calendario.map((x) => [x.data, x]));
+    const fuoriPiano = new Set((p.corse_fuori_piano || []).map((c) => c.data)); // corse in giorni senza seduta
     if (!meseCal) meseCal = (d.oggi < p.inizio ? p.inizio : d.oggi).slice(0, 7);
     if (!giornoSel || !perData.has(giornoSel)) giornoSel = (p.prossime[0] || p.calendario[0]).data;
 
@@ -210,7 +211,9 @@
       celle += x
         ? '<button type="button" class="' + cls.join(' ') + '" data-giorno="' + iso + '" aria-label="' + esc(fmtDataLunga(iso) + ': ' + x.blocchi + stato) + '">' +
             '<span class="g">' + g + '</span><span class="m"><i>' + siglaTipo(x.tipo) + '</i>' + (x.tipo === 'gara' ? '' : x.durata_min + '′') + '</span></button>'
-        : '<div class="' + cls.join(' ') + '"><span class="g">' + g + '</span></div>';
+        : fuoriPiano.has(iso)
+          ? '<button type="button" class="' + cls.concat('fuori').join(' ') + '" data-apri-corsa="' + iso + '" aria-label="' + esc(fmtDataLunga(iso)) + T(': corsa fuori piano', ': unscheduled run') + '"><span class="g">' + g + '</span><span class="fp-dot" aria-hidden="true"></span></button>'
+          : '<div class="' + cls.join(' ') + '"><span class="g">' + g + '</span></div>';
     }
 
     const x = perData.get(giornoSel);
@@ -250,7 +253,8 @@
         '<div class="legend-inline" style="margin-top:12px"><span><i style="background:var(--accent)"></i>' + T('Fatta', 'Done') + '</span>' +
           '<span><i style="background:color-mix(in srgb, var(--accent-2) 22%, transparent);outline:1.5px solid var(--accent-2)"></i>' + T('In programma', 'Planned') + '</span>' +
           '<span><i style="outline:1.5px dashed var(--muted)"></i>' + T('Saltata', 'Missed') + '</span>' +
-          '<span><i style="outline:1.5px solid var(--warn)"></i>' + T('Adattata ai tuoi dati', 'Adapted to your data') + '</span></div>' +
+          '<span><i style="outline:1.5px solid var(--warn)"></i>' + T('Adattata ai tuoi dati', 'Adapted to your data') + '</span>' +
+          '<span><i class="fp-leg"></i>' + T('Corsa fuori piano', 'Unscheduled run') + '</span></div>' +
       '</div><div class="cal-right">' + det + '</div></div>' +
     '</section>';
   }
@@ -401,8 +405,8 @@
         '<p class="nf-foot">' + T('Confronto con la tua media di 28 giorni. La qualità diventa 25′ facili.', 'Compared with your 28-day average. Quality becomes 25′ easy.') + '</p></section>' +
       '<section class="card nf-card"><div class="nf-when">' + T('Ogni settimana', 'Every week') + '</div><h3>' + T('Il piano decide il passo successivo', 'The plan picks the next step') + '</h3>' +
         '<ul class="nf-esiti">' +
-          esito('ok', '↗', T('Avanza', 'Forward'), T('2 sedute su 3, nessun allarme', '2 of 3 sessions, no warnings')) +
-          esito('warn', '↻', T('Ripete', 'Repeat'), T('0–1 sedute o FC media in Z4 (≥ ' + soglia + ' bpm)', '0–1 sessions or avg HR in Z4 (≥ ' + soglia + ' bpm)')) +
+          esito('ok', '↗', T('Avanza', 'Forward'), T('2 corse su 3, nessun allarme', '2 runs of 3, no warnings')) +
+          esito('warn', '↻', T('Ripete', 'Repeat'), T('0–1 corse o FC media in Z4 (≥ ' + soglia + ' bpm)', '0–1 runs or avg HR in Z4 (≥ ' + soglia + ' bpm)')) +
           esito('bad', '↙', T('Indietro', 'Back'), T('2 settimane vuote o forma &lt; −25', '2 empty weeks or form &lt; −25')) +
         '</ul></section>' +
       '<section class="card nf-card"><div class="nf-when">' + T('Ogni 3 settimane', 'Every 3 weeks') + '</div><h3>' + T('L’intensità si regola da sola', 'Intensity tunes itself') + '</h3>' +
@@ -647,7 +651,7 @@
       '<div class="wk-top">' + anello(w.fatte, 3) +
         '<div class="wk-txt"><h3>' + T('Questa settimana', 'This week') + '</h3><p>' + msg + '</p>' +
           '<ul class="wk-days">' + giorni + '</ul>' +
-          (extra ? '<small class="wk-extra">' + T('+ ' + extra + ' allenamento fuori programma, conta lo stesso', '+ ' + extra + ' unscheduled workout, it still counts') + '</small>' : '') +
+          (extra ? '<small class="wk-extra">' + T('+ ' + extra + ' corsa fuori piano, conta lo stesso', '+ ' + extra + ' unscheduled run, it still counts') + '</small>' : '') +
         '</div></div>' +
       (p.consigli.length ? '<details class="more coach-more"><summary>' + T('Note del coach', 'Coach notes') + '</summary><ul>' + p.consigli.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul></details>' : '') +
     '</section>';
@@ -1309,7 +1313,8 @@
   }
 
   function apriCorsaDelGiorno(data) {
-    const c = ultimoStorico && ultimoStorico.corse.find((x) => x.data === data);
+    const c = (ultimoStorico && ultimoStorico.corse.find((x) => x.data === data))
+      || (ultimiDati && ultimiDati.programma && (ultimiDati.programma.corse_fuori_piano || []).find((x) => x.data === data));
     if (c) apriSheet('#seduta/' + encodeURIComponent(c.id));
   }
 

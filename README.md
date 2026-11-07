@@ -16,7 +16,7 @@ It works with any watch that uploads to Intervals.icu: Apple Watch (via a compan
 
 1. **Starting point** — on first login AAC reads your Intervals.icu history (your longest continuous run) and suggests the week to start from.
 2. **Every day, the session** — resting HR, HRV and sleep are compared with your personal 28‑day baseline. One warning sign (resting HR ≥ +5 bpm, HRV ≤ −15%, sleep < 5h30′) and today's session drops to ~60%; quality sessions become 25′ easy. The reason is always shown.
-3. **Every week, the plan** — it moves forward (at least 2 of 3 sessions done, no alarms), repeats (0–1 sessions, or average HR in Z4–Z5, i.e. ≥ 80% of max) or steps back (overload or poor recovery).
+3. **Every week, the plan** — it moves forward (at least 2 of 3 runs done, no alarms; walks never count — AAC is about running — except for the plan's recovery walks), repeats (0–1 sessions, or average HR in Z4–Z5, i.e. ≥ 80% of max) or steps back (overload or poor recovery).
 4. **Every 3 weeks, the intensity** — calm / balanced / ambitious, automatically fine‑tuned by ±10% when weeks are consistently too easy or too hard.
 5. **Personal zones, pace and predictions** — the standard 5‑zone model as % of max HR (Z1 50–60%, Z2 60–70%, Z3 70–80%, Z4 80–90%, Z5 90–100%, below 50% shown as “below zones”, like Garmin, Polar and Suunto); max HR measured by you or estimated as 208 − 0.7 × age (Tanaka), also used as the safety HR not to exceed; time in zones from second‑by‑second heart rate, recalculated for past runs whenever max HR changes; running efficiency, race time prediction (Riegel) and the date your goal becomes reachable.
 
