@@ -68,7 +68,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     if (!col.has('intensita_auto')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita_auto INTEGER'); // 0 = bloccata; vuoto/1 = regolata dal coach
   }
   // Utilizzo dell'app per le statistiche dell'amministratore: un record per utente e giorno (ora locale).
-  // Niente IP, dispositivo o pagine viste. Si conserva USO_GIORNI giorni.
+  // Niente IP, dispositivo o pagine viste. Si conserva finche' esiste l'account (si cancella con l'account).
   sis.exec(`
     CREATE TABLE IF NOT EXISTS uso (
       utente_id INTEGER NOT NULL,
@@ -600,8 +600,6 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
         .formatToParts(new Date()).map((x) => [x.type, x.value]));
       return { giorno: `${p.year}-${p.month}-${p.day}`, hhmm: `${p.hour}:${p.minute}`, ora: Number(p.hour) };
     };
-    const USO_GIORNI = 183;
-    let ultimaPulizia = '';
     app.post('/api/uso/battito', csrf, (req, res) => {
       res.set('Cache-Control', 'no-store');
       if (req.demo || req.vero !== req.utente || !req.vero || !req.vero.id) return res.status(204).end();
@@ -616,10 +614,6 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       sis.prepare(`INSERT INTO uso (utente_id, giorno, aperture, minuti, prima, ultima, ore) VALUES (?, ?, ?, 1, ?, ?, ?)
         ON CONFLICT(utente_id, giorno) DO UPDATE SET aperture = aperture + excluded.aperture, minuti = minuti + 1, ultima = excluded.ultima, ore = excluded.ore`)
         .run(id, t.giorno, Math.max(nuovaApertura, riga ? 0 : 1), t.hhmm, t.hhmm, ore.join(','));
-      if (ultimaPulizia !== t.giorno) { // una volta al giorno: via i dati oltre la conservazione
-        ultimaPulizia = t.giorno;
-        sis.prepare("DELETE FROM uso WHERE giorno < date(?, ?)").run(t.giorno, `-${USO_GIORNI} days`);
-      }
       res.status(204).end();
     });
 
