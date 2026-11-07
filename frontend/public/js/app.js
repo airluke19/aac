@@ -1562,6 +1562,7 @@
   function rotta() {
     const sh = $('#sheet');
     if (location.hash === '#account') { apriAccount(); return; }
+    if (location.hash === '#admin') { apriAdmin(); return; }
     const m = location.hash.match(/^#(seduta|salute)\/(.+)$/);
     if (!m) {
       if (!sh.hidden) { sheetCharts.splice(0).forEach((c) => c.destroy()); sh.hidden = true; document.body.classList.remove('sheet-open'); }
@@ -1725,11 +1726,18 @@
     const n = ME.in_attesa || 0;
     b.innerHTML = avatar(ME, 'av-sm');
     b.hidden = false;
-    $('#account-wrap').querySelector('.av-badge')?.remove();
-    if (n) $('#account-wrap').insertAdjacentHTML('beforeend', '<span class="av-badge">' + (n > 9 ? '9+' : n) + '</span>');
-    b.setAttribute('aria-label', 'Account' + (n ? T(' · ' + n + ' richieste di accesso in attesa', ' · ' + n + ' pending access requests') : ''));
+    b.setAttribute('aria-label', 'Account');
+    // Ingranaggio dell'amministrazione: solo per l'amministratore, con il pallino delle richieste di accesso in attesa
+    const aw = $('#admin-wrap'), ab = $('#btn-admin');
+    aw.hidden = !(ME.ruolo === 'admin' && !ME.impersonato_da);
+    aw.querySelector('.av-badge')?.remove();
+    if (n && !aw.hidden) aw.insertAdjacentHTML('beforeend', '<span class="av-badge">' + (n > 9 ? '9+' : n) + '</span>');
+    const nome = T('Amministrazione', 'Admin');
+    ab.setAttribute('aria-label', nome + (n ? T(' · ' + n + ' richieste di accesso in attesa', ' · ' + n + ' pending access requests') : ''));
+    ab.title = nome;
   }
   $('#btn-account').addEventListener('click', () => apriSheet('#account'));
+  $('#btn-admin').addEventListener('click', () => apriSheet('#admin'));
   // il conteggio si aggiorna quando torni sull'app
   document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) caricaJson('/api/me').then((m) => { ME = m; aggiornaAvatar(); }).catch(() => {}); });
 
@@ -1950,7 +1958,7 @@
     await riempiScarpeAccount(); caricaStorico();
   });
 
-  function renderAccount(utenti) {
+  function renderAccount() {
     const u = ME, p = u.profilo;
     const campo = (id, label, input, nota) => '<label class="acc-f" for="' + id + '"><span>' + label + '</span>' + input + (nota ? '<small>' + nota + '</small>' : '') + '</label>';
     let html = '<section class="acc-head">' + avatar(u, 'av-lg') + '<div><h1>' + esc(u.nome || u.email) + '</h1><p>' + esc(u.email) + (u.ruolo === 'admin' ? ' · <b>' + T('amministratore', 'administrator') + '</b>' : '') + '</p></div></section>';
@@ -1990,7 +1998,18 @@
       '<button type="submit" class="btn-primary">' + T('Salva', 'Save') + '</button>' +
     '</form>' + renderColori() + '<section class="card" id="acc-scarpe"><h3>👟 ' + T('Le tue scarpe', 'Your shoes') + '</h3><div class="skeleton" style="height:80px"></div></section>' +
     (p.ha_chiave ? '<section class="card" id="acc-livello"><h3>' + T('Livello di partenza', 'Starting level') + '</h3><div class="skeleton" style="height:120px"></div></section>' : '');
-    if (u.ruolo === 'admin') {
+    if (u.login) html += '<button type="button" id="acc-esci" class="btn-secondary acc-logout">' + T('Esci', 'Sign out') + '</button>';
+    return html;
+  }
+
+  // Pannello di amministrazione (ingranaggio nell'intestazione): riepilogo, inviti e gestione degli utenti
+  function renderAdmin(utenti) {
+    const u = ME;
+    const conta = (st) => (utenti || []).filter((x) => x.ruolo !== 'admin' && x.stato === st).length;
+    const num = (v, l, cls) => '<div class="adm-n' + (cls ? ' ' + cls : '') + '"><b>' + v + '</b><span>' + l + '</span></div>';
+    let html = '<section class="card adm-sum">' +
+      num(conta('attivo'), T('attivi', 'active')) + num(conta('in_attesa'), T('in attesa', 'pending'), conta('in_attesa') ? 'warn' : '') + num(conta('bloccato'), T('bloccati', 'blocked')) +
+      '</section>';
       const chip = { attivo: ['ok', T('attivo', 'active')], in_attesa: ['warn', T('in attesa', 'pending')], bloccato: ['bad', T('bloccato', 'blocked')] };
       const azioni = (x) => x.ruolo === 'admin' ? '' :
         (x.stato === 'in_attesa' ? '<button type="button" class="pill-btn ok" data-acc="attivo" data-id="' + x.id + '">' + T('Approva', 'Approve') + '</button>' : '') +
@@ -2006,16 +2025,22 @@
           (x.ha_chiave ? ' · Intervals ✓' : '') + (x.ultimo_accesso ? T(' · ultimo accesso ', ' · last seen ') + esc(fmtData(x.ultimo_accesso.slice(0, 10))) : '') + '</small></div>' +
           '<span class="pill ' + (chip[x.stato] || ['', x.stato])[0] + '">' + (x.ruolo === 'admin' ? 'admin' : (chip[x.stato] || ['', x.stato])[1]) + '</span>' +
           '<div class="acc-act">' + azioni(x) + '</div></li>').join('') + '</ul></section>';
-    }
-    if (u.login) html += '<button type="button" id="acc-esci" class="btn-secondary acc-logout">' + T('Esci', 'Sign out') + '</button>';
     return html;
   }
 
+  async function apriAdmin() {
+    try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet(T('Amministrazione', 'Admin'), '<div class="card empty">' + esc(e.message) + '</div>'); return; }
+    if (ME.ruolo !== 'admin' || ME.impersonato_da) { chiudiSheet(); return; }
+    let utenti = null;
+    try { utenti = (await caricaJson('/api/admin/utenti')).utenti; } catch (_) {}
+    mostraSheet(T('Amministrazione', 'Admin'), renderAdmin(utenti));
+  }
+  // dopo un'azione si ricarica il pannello aperto (amministrazione o profilo)
+  const riapri = () => (location.hash === '#admin' ? apriAdmin() : apriAccount());
+
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
-    let utenti = null;
-    if (ME.ruolo === 'admin') { try { utenti = (await caricaJson('/api/admin/utenti')).utenti; } catch (_) {} }
-    mostraSheet(T('Account', 'Account'), renderAccount(utenti));
+    mostraSheet(T('Account', 'Account'), renderAccount());
     riempiLivelloAccount();
     riempiScarpeAccount();
   }
@@ -2060,7 +2085,7 @@
       const email = new FormData(e.target).get('email');
       const { ok } = await inviaJson('POST', '/api/admin/utenti', { email });
       toast(ok ? T('Invito aggiunto: ', 'Invitation added: ') + email : T('Email non valida', 'Invalid email'), ok ? 'ok' : 'err');
-      if (ok) apriAccount();
+      if (ok) riapri();
     }
   });
   $('#sheet-body').addEventListener('click', async (e) => {
@@ -2070,7 +2095,7 @@
       if (az === 'impersona') { await inviaJson('POST', '/api/admin/impersona/' + id); location.href = '/'; return; }
       if (az === 'rimuovi' && !confirm(T('Rimuovere questo utente? Non potrà più accedere (i suoi dati restano sul server).', 'Remove this user? They will no longer be able to sign in (their data stays on the server).'))) return;
       await (az === 'rimuovi' ? inviaJson('DELETE', '/api/admin/utenti/' + id) : inviaJson('POST', '/api/admin/utenti/' + id + '/stato', { stato: az }));
-      apriAccount();
+      riapri();
       return;
     }
     if (e.target.closest('#acc-esci')) {

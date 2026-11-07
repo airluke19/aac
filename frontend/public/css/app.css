@@ -1522,3 +1522,13 @@ details.more[open] > :not(summary), .pv-how[open] > div { animation: aprendo .22
 /* ---- Ambiente di staging: badge BETA (arancione, ben distinto dal colore d'accento) ---- */
 .env-badge { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 6px; background: var(--warn); color: #1c1c1e; font-size: .62rem; font-weight: 800; letter-spacing: .08em; vertical-align: 3px; -webkit-text-fill-color: #1c1c1e; }
 [data-theme="light"] .env-badge { color: #fff; -webkit-text-fill-color: #fff; }
+
+/* ---- Amministrazione: ingranaggio nell'intestazione e riepilogo ---- */
+.admin-wrap[hidden] { display: none; }
+body.demo .admin-wrap { display: none; }
+#btn-admin svg { width: 20px; height: 20px; }
+.adm-sum { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; text-align: center; }
+.adm-n { display: flex; flex-direction: column; gap: 2px; }
+.adm-n b { font-family: var(--f-num); font-size: 1.9rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.adm-n span { font-size: .78rem; color: var(--muted); }
+.adm-n.warn b { color: var(--warn); }
