@@ -15,7 +15,7 @@ RUN --mount=type=secret,id=extra_ca,required=false \
 # ---------- Stage 2: immagine di runtime minimale ----------
 FROM node:22-bookworm-slim
 LABEL org.opencontainers.image.source=https://github.com/airluke19/aac \
-      org.opencontainers.image.description="AI Adaptive Coach backend"
+      org.opencontainers.image.description="AAC backend (API, sync, plan engine)"
 ENV NODE_ENV=production \
     TZ=Europe/Rome \
     PORT=3000 \
@@ -30,7 +30,6 @@ RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack 
 
 COPY --from=build /app/node_modules ./node_modules
 COPY package.json server.js account.js demo.js ./
-COPY public ./public
 
 # /data e' il punto di mount del volume persistente con corse.db
 RUN mkdir -p /data && chown -R node:node /data /app

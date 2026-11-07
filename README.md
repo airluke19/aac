@@ -25,10 +25,10 @@ It works with any watch that uploads to Intervals.icu: Apple Watch (via a compan
 ### Features
 
 - **Today** — next session, readiness, last run, weekly summary
-- **Runs** — history, filters, shoe tracking; run detail with GPS map, HR, pace, cadence, power, elevation, running dynamics, run/walk laps, RPE, weather and shoes
-- **Plan** — calendar with every adaptation explained; copy a completed session as Markdown for any AI assistant
-- **Progress** — goal, predictions, training load
 - **Health** — resting HR, HRV, sleep, steps and more
+- **Plan** — calendar with every adaptation explained; copy a completed session as Markdown for any AI assistant
+- **Runs** — history, filters, shoe tracking; run detail with GPS map, HR, pace, cadence, power, elevation, running dynamics, run/walk laps, RPE, weather and shoes
+- **Progress** — goal, predictions, training load
 - Multi‑user with Google login, invite‑based sign‑up with admin approval
 - Light/dark theme, Italian/English, 9 accent colours, mobile‑first
 
@@ -42,9 +42,18 @@ It works with any watch that uploads to Intervals.icu: Apple Watch (via a compan
 - A free [Intervals.icu](https://intervals.icu) account per user, with your watch syncing to it
 - For multi‑user mode: a Google OAuth client and a public HTTPS URL (reverse proxy, Cloudflare Tunnel, etc.)
 
-### Stack
+### Architecture
 
-Node.js 22, Express, SQLite (better‑sqlite3), node‑cron. Single‑file frontend with Chart.js and MapLibre (OpenFreeMap tiles). Weather from Open‑Meteo.
+Two services, each with its own image:
+
+| Service | Image | What it does |
+|---|---|---|
+| `frontend` | `ghcr.io/airluke19/aac-frontend` | nginx (unprivileged, port 8080): serves the app (`frontend/public`) and proxies `/api`, `/auth` and `/demo` to the backend. The app page is served only after the backend confirms the sign‑in (`auth_request` → `/auth/verifica`). It is the only service published on the host. |
+| `backend` | `ghcr.io/airluke19/aac-backend` | Node.js 22, Express, SQLite (better‑sqlite3), node‑cron: API, Google sign‑in, Intervals.icu sync, plan engine. Reachable only from the frontend on the internal Compose network. |
+
+Frontend: plain HTML/CSS/JS (`index.html`, `css/`, `js/`) with Chart.js and MapLibre (OpenFreeMap tiles); CSS/JS links carry a content hash so browsers cache them until they change. Weather from Open‑Meteo.
+
+Both containers run as non‑root users with a read‑only root filesystem.
 
 ### 1. Clone and configure
 
@@ -65,7 +74,8 @@ Edit `.env`:
 | `APP_SECRET` | Random secret used to encrypt Intervals.icu API keys — generate with `openssl rand -base64 32` and never change it |
 | `ATHLETE_AGE` | Optional, initial age of the admin user, used to estimate max HR (default `33`); every user can change it later in **Account** |
 | `SYNC_CRON` | Optional, sync schedule (default `*/30 * * * *`) |
-| `BIND_ADDR` / `HOST_PORT` | Optional, host listen address and port (default `127.0.0.1:3000`) |
+| `BIND_ADDR` / `HOST_PORT` | Optional, host listen address and port of the frontend (default `127.0.0.1:3000`) |
+| `AAC_TAG` | Optional, image tag for both services (default `latest`; `staging`, or `sha-<commit>` to roll back) |
 
 Google login is enabled only when `PUBLIC_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `ADMIN_EMAIL` are all set. Without them AAC runs in **single‑user mode with no login**: in that case keep it bound to `127.0.0.1` and never expose it to the internet.
 
@@ -77,7 +87,7 @@ docker compose ps        # wait until the container is (healthy)
 docker logs coach-backend
 ```
 
-The app listens on port 3000. Put it behind an HTTPS reverse proxy (Caddy, Nginx, Traefik) or a Cloudflare Tunnel pointing to `http://<host>:3000`; if the proxy runs on another machine, set `BIND_ADDR=0.0.0.0`.
+The app (frontend) listens on host port 3000 by default (`HOST_PORT`). Put it behind an HTTPS reverse proxy (Caddy, Nginx, Traefik) or a Cloudflare Tunnel pointing to `http://<host>:3000`; if the proxy runs on another machine, set `BIND_ADDR=0.0.0.0`.
 
 ### 3. First login
 
@@ -109,14 +119,14 @@ docker compose up -d --build
 
 ### Prebuilt images (GHCR)
 
-GitHub Actions builds the backend image on every push that touches `backend/` and publishes it to GitHub Container Registry:
+GitHub Actions builds both images on every push that touches `backend/` or `frontend/` and publishes it to GitHub Container Registry:
 
 | Branch | Image |
 |---|---|
-| `staging` | `ghcr.io/airluke19/aac:staging` |
-| `main` | `ghcr.io/airluke19/aac:latest` |
+| `staging` | `ghcr.io/airluke19/aac-backend:staging`, `ghcr.io/airluke19/aac-frontend:staging` |
+| `main` | `ghcr.io/airluke19/aac-backend:latest`, `ghcr.io/airluke19/aac-frontend:latest` |
 
-Every build is also tagged `sha-<commit>`. Images are public, so no login is needed. `docker-compose.yml` uses `ghcr.io/airluke19/aac:${AAC_TAG:-latest}`; set `AAC_TAG` in `.env` (e.g. `staging` or `sha-abc1234` to roll back) to pick another tag:
+Every build is also tagged `sha-<commit>`. Images are public, so no login is needed. `docker-compose.yml` uses `${AAC_TAG:-latest}` for both images (they are always built together); set `AAC_TAG` in `.env` (e.g. `staging` or `sha-abc1234` to roll back) to pick another tag:
 
 ```bash
 docker compose pull
@@ -124,7 +134,9 @@ docker compose up -d
 docker compose ps        # wait until the container is (healthy)
 ```
 
-`docker compose up -d --build` still builds the image locally instead.
+`docker compose up -d --build` still builds the images locally instead.
+
+For frontend development without nginx, the backend can serve the static files itself: `PUBLIC_DIR=../frontend/public node server.js` (from `backend/`).
 
 ### Branches
 
@@ -132,8 +144,9 @@ Work happens on `staging`; `main` only receives merges of tested changes.
 
 ### Security notes
 
-- Every image is scanned with [Trivy](https://trivy.dev) in CI before it is published: fixable HIGH/CRITICAL vulnerabilities or secrets in the image, and HIGH/CRITICAL misconfigurations or secrets in the repository, block the release. The image is rebuilt and rescanned every Monday. Third‑party actions are pinned to commit SHAs.
-- The runtime image ships only `node`: npm, npx, corepack and yarn are removed.
+- Both images are scanned with [Trivy](https://trivy.dev) in CI before it is published: fixable HIGH/CRITICAL vulnerabilities or secrets in the image, and HIGH/CRITICAL misconfigurations or secrets in the repository, block the release. The image is rebuilt and rescanned every Monday. Third‑party actions are pinned to commit SHAs.
+- The frontend sends security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) and serves only known files; the backend is not published on the host.
+- The backend runtime image ships only `node`: npm, npx, corepack and yarn are removed.
 - The container runs as a non‑root user with a read‑only root filesystem, no capabilities and `no-new-privileges`.
 - Never commit `.env`, databases or certificates — `.gitignore` already excludes them.
 - Do not expose the app publicly without Google login configured.

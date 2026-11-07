@@ -1,27 +1,50 @@
 name: ai-adaptive-coach
 
 # ---------------------------------------------------------------------------
-# Versione semplice SENZA autenticazione: solo il backend, raggiungibile
-# esclusivamente da questo computer su http://localhost:3000
-# La versione completa (Nginx + HTTPS + Google SSO) e' in docker-compose.auth.yml
+# Due servizi:
+#   frontend  nginx: serve l'app e inoltra /api, /auth e /demo al backend.
+#             E' l'unico esposto sull'host (porta HOST_PORT, default 3000).
+#   backend   Node: API, login, sync con Intervals.icu, motore del piano.
+#             Raggiungibile solo dal frontend, sulla rete interna di Compose.
+# Immagini pubblicate da GitHub Actions su ghcr.io: :staging dal branch staging,
+# :latest dal branch main, sha-<commit> per ogni build (stesso tag per entrambe).
+# AAC_TAG nel .env sceglie il tag (default latest).
+# Deploy: docker compose pull && docker compose up -d
+# Build locale di riserva: docker compose up -d --build
 # ---------------------------------------------------------------------------
 services:
+  frontend:
+    image: ghcr.io/airluke19/aac-frontend:${AAC_TAG:-latest}
+    build:
+      context: ./frontend
+    container_name: coach-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      # Di default solo 127.0.0.1. BIND_ADDR=0.0.0.0 nel .env lo rende raggiungibile
+      # dalla rete locale (es. per un tunnel o un reverse proxy su un'altra macchina).
+      - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:8080"
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
   backend:
-    # Immagine pubblicata da GitHub Actions su ghcr.io:
-    #   :staging dal branch staging, :latest dal branch main, sha-<commit> per ogni build.
-    # AAC_TAG nel .env sceglie il tag (default latest). Deploy: docker compose pull && docker compose up -d
-    image: ghcr.io/airluke19/aac:${AAC_TAG:-latest}
-    # Build locale di riserva: docker compose up -d --build
+    image: ghcr.io/airluke19/aac-backend:${AAC_TAG:-latest}
     build:
       context: ./backend
       secrets:
         - extra_ca
     container_name: coach-backend
     restart: unless-stopped
-    ports:
-      # Di default solo 127.0.0.1: senza autenticazione non va esposto su internet.
-      # BIND_ADDR=0.0.0.0 nel .env lo rende raggiungibile dalla rete locale.
-      - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"
+    # Nessuna porta sull'host: ci arriva solo il frontend.
+    expose:
+      - "3000"
     environment:
       TZ: Europe/Rome
       PORT: "3000"

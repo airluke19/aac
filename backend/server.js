@@ -3238,15 +3238,19 @@ function creaApp() {
 
   app.use('/api', (req, res) => res.status(404).json({ errore: L('Endpoint non trovato', 'Endpoint not found') }));
 
-  app.use(
-    express.static(CONFIG.publicDir, {
-      index: 'index.html',
-      etag: true,
-      setHeaders: (res, filePath) => {
-        if (filePath.endsWith('.html')) res.set('Cache-Control', 'no-cache');
-      },
-    })
-  );
+  // Il frontend e' un servizio separato (container nginx in frontend/). Solo per lo sviluppo locale
+  // il backend puo' servire i file statici: PUBLIC_DIR=../frontend/public node server.js
+  if (CONFIG.publicDir && fs.existsSync(CONFIG.publicDir)) {
+    app.use(
+      express.static(CONFIG.publicDir, {
+        index: 'index.html',
+        etag: true,
+        setHeaders: (res, filePath) => {
+          if (filePath.endsWith('.html')) res.set('Cache-Control', 'no-cache');
+        },
+      })
+    );
+  }
 
   return app;
 }

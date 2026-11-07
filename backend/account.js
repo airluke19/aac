@@ -426,6 +426,27 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       res.json({ login: attivo, utente: u ? { email: u.email, nome: u.nome, stato: u.stato } : null });
     });
 
+    // Controllo d'accesso per il frontend (nginx auth_request) prima di servire l'app:
+    //   204 = puo' entrare (utente attivo, demo o modalita' utente singolo)
+    //   401 = deve fare il login; X-Aac-Vai indica dove mandarlo (login o dominio pubblico)
+    //   403 = account non attivo; X-Aac-Stato = attesa | bloccato
+    app.get('/auth/verifica', (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      if (attivo) {
+        const host = String(req.get('host') || '');
+        const pub = new URL(BASE.publicUrl);
+        if (host && host !== pub.host) {
+          res.set('X-Aac-Vai', BASE.publicUrl + String(req.get('x-original-uri') || '/'));
+          return res.status(401).end();
+        }
+      }
+      if (demo && leggiCookie(req, 'aac_demo') === '1') return res.status(204).end();
+      const u = utenteDaRichiesta(req);
+      if (!u) { res.set('X-Aac-Vai', '/login.html'); return res.status(401).end(); }
+      if (u.stato !== 'attivo') { res.set('X-Aac-Stato', u.stato === 'bloccato' ? 'bloccato' : 'attesa'); return res.status(403).end(); }
+      res.status(204).end();
+    });
+
     // Con il login attivo, chi arriva dall'indirizzo di rete locale viene portato sul dominio pubblico
     // (il cookie di sessione e il ritorno da Google valgono solo li').
     app.use((req, res, next) => {
