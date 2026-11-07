@@ -1027,7 +1027,7 @@ footer { padding-bottom: 8px; }
 
 /* Come stai oggi */
 .come-stai .cs-head { display: flex; gap: 12px; align-items: flex-start; }
-.cs-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--muted); margin-top: 6px; flex: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--muted) 20%, transparent); }
+.cs-dot { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex: none; box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 22%, transparent); } /* stato neutro (sto imparando, dati in arrivo): colore del tema */
 .come-stai.ok .cs-dot { background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent); }
 .come-stai.warn .cs-dot { background: var(--warn); box-shadow: 0 0 0 4px color-mix(in srgb, var(--warn) 22%, transparent); }
 /* pallino vivo: un'onda che si espande e svanisce (più rapida se c'è da fare attenzione) */
