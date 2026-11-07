@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.10@sha256:865e5dd094beca432e8c0a1d5e1c465db5f998dca4e439981029b3b81fb39ed5
 # AAC frontend: nginx non privilegiato (utente 101, porta 8080) che serve i file statici
 # e inoltra /api, /auth e /demo al backend.
-FROM nginxinc/nginx-unprivileged:1.30.6-alpine
+FROM nginxinc/nginx-unprivileged:1.31.7-alpine
 LABEL org.opencontainers.image.source=https://github.com/airluke19/aac \
       org.opencontainers.image.description="AAC frontend (nginx: static app + proxy to the backend)"
 
