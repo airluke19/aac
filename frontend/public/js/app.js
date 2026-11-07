@@ -2002,30 +2002,46 @@
     return html;
   }
 
-  // Pannello di amministrazione (ingranaggio nell'intestazione): riepilogo, inviti e gestione degli utenti
+  // Pannello di amministrazione (ingranaggio nell'intestazione): riepilogo, invito e utenti divisi per stato.
+  // Ogni riga mostra solo nome, email e due etichette; le azioni si aprono toccando la riga
+  // (le richieste in attesa hanno "Approva" sempre visibile).
   function renderAdmin(utenti) {
-    const u = ME;
-    const conta = (st) => (utenti || []).filter((x) => x.ruolo !== 'admin' && x.stato === st).length;
+    const u = ME, tutti = utenti || [];
+    const di = (st) => tutti.filter((x) => x.ruolo !== 'admin' && x.stato === st)
+      .sort((a, b) => String(a.nome || a.email).localeCompare(String(b.nome || b.email)));
+    const attesa = di('in_attesa'), attivi = di('attivo'), bloccati = di('bloccato');
+    const me = tutti.filter((x) => x.ruolo === 'admin');
     const num = (v, l, cls) => '<div class="adm-n' + (cls ? ' ' + cls : '') + '"><b>' + v + '</b><span>' + l + '</span></div>';
-    let html = '<section class="card adm-sum">' +
-      num(conta('attivo'), T('attivi', 'active')) + num(conta('in_attesa'), T('in attesa', 'pending'), conta('in_attesa') ? 'warn' : '') + num(conta('bloccato'), T('bloccati', 'blocked')) +
-      '</section>';
-      const chip = { attivo: ['ok', T('attivo', 'active')], in_attesa: ['warn', T('in attesa', 'pending')], bloccato: ['bad', T('bloccato', 'blocked')] };
-      const azioni = (x) => x.ruolo === 'admin' ? '' :
-        (x.stato === 'in_attesa' ? '<button type="button" class="pill-btn ok" data-acc="attivo" data-id="' + x.id + '">' + T('Approva', 'Approve') + '</button>' : '') +
-        (x.stato === 'attivo' && u.login ? '<button type="button" class="pill-btn imp" data-acc="impersona" data-id="' + x.id + '">' + T('Vedi come', 'View as') + '</button>' : '') +
-        (x.stato === 'attivo' ? '<button type="button" class="pill-btn" data-acc="bloccato" data-id="' + x.id + '">' + T('Blocca', 'Block') + '</button>' : '') +
-        (x.stato === 'bloccato' ? '<button type="button" class="pill-btn" data-acc="attivo" data-id="' + x.id + '">' + T('Riattiva', 'Re-enable') + '</button>' : '') +
-        '<button type="button" class="pill-btn bad" data-acc="rimuovi" data-id="' + x.id + '">' + T('Rimuovi', 'Remove') + '</button>';
-      html += '<section class="card"><h3>' + T('Utenti', 'Users') + (u.in_attesa ? ' <span class="pill warn">' + u.in_attesa + T(' in attesa', ' pending') + '</span>' : '') + '</h3><p class="sub">' +
-        (u.login ? T('Accesso su invito: aggiungi un’email per abilitarla, oppure approva chi ha chiesto l’accesso.', 'Invite-only: add an email to enable it, or approve people who requested access.')
-          : T('Il login con Google non è ancora attivo: finché non lo configuri l’app è solo tua e gli inviti restano in sospeso.', 'Google sign-in is not active yet: until you configure it the app is yours only and invitations wait.')) + '</p>' +
-        '<form id="acc-invita" class="acc-invite"><input name="email" type="email" required placeholder="' + T('email Google da invitare', 'Google email to invite') + '"><button type="submit" class="btn-primary">' + T('Invita', 'Invite') + '</button></form>' +
-        '<ul class="acc-users">' + (utenti || []).map((x) => '<li>' + avatar(x, 'av-sm') + '<div class="acc-u"><b>' + esc(x.nome || x.email) + '</b><small>' + esc(x.email) +
-          (x.ha_chiave ? ' · Intervals ✓' : '') + (x.ultimo_accesso ? T(' · ultimo accesso ', ' · last seen ') + esc(fmtData(x.ultimo_accesso.slice(0, 10))) : '') + '</small></div>' +
-          '<span class="pill ' + (chip[x.stato] || ['', x.stato])[0] + '">' + (x.ruolo === 'admin' ? 'admin' : (chip[x.stato] || ['', x.stato])[1]) + '</span>' +
-          '<div class="acc-act">' + azioni(x) + '</div></li>').join('') + '</ul></section>';
-    return html;
+    const btn = (az, id, testo, cls) => '<button type="button" class="pill-btn ' + (cls || '') + '" data-acc="' + az + '" data-id="' + id + '">' + testo + '</button>';
+    const meta = (x) => '<span class="adm-tag' + (x.ha_chiave ? ' ok' : '') + '">' + (x.ha_chiave ? 'Intervals ✓' : T('Intervals da collegare', 'Intervals not linked')) + '</span>' +
+      '<span class="adm-tag">' + (x.ultimo_accesso ? T('visto il ', 'seen ') + esc(fmtData(x.ultimo_accesso.slice(0, 10))) : T('mai entrato', 'never signed in')) + '</span>';
+    const testa = (x) => avatar(x, 'av-sm') + '<div class="adm-u-t"><b>' + esc(x.nome || x.email) + '</b>' +
+      (x.nome ? '<small>' + esc(x.email) + '</small>' : '') + '<span class="adm-meta">' + meta(x) + '</span></div>';
+    const riga = (x) => {
+      if (x.ruolo === 'admin') return '<li class="adm-u adm-me">' + testa(x) + '<span class="pill">admin</span></li>';
+      const azioni = x.stato === 'in_attesa'
+        ? btn('rimuovi', x.id, T('Rifiuta', 'Decline'), 'bad')
+        : x.stato === 'attivo'
+          ? (u.login ? btn('impersona', x.id, T('Vedi come', 'View as'), 'imp') : '') + btn('bloccato', x.id, T('Blocca', 'Block')) + btn('rimuovi', x.id, T('Rimuovi', 'Remove'), 'bad')
+          : btn('attivo', x.id, T('Riattiva', 'Re-enable'), 'ok') + btn('rimuovi', x.id, T('Rimuovi', 'Remove'), 'bad');
+      const subito = x.stato === 'in_attesa' ? '<div class="adm-subito">' + btn('attivo', x.id, T('Approva', 'Approve'), 'ok') + '</div>' : '';
+      return '<li class="adm-u"><details><summary>' + testa(x) + '<span class="adm-chev" aria-hidden="true">›</span></summary>' +
+        '<div class="adm-az">' + azioni + '</div></details>' + subito + '</li>';
+    };
+    const gruppo = (titolo, lista, cls) => lista.length
+      ? '<section class="card adm-g' + (cls ? ' ' + cls : '') + '"><h3>' + titolo + ' <span class="adm-cnt">' + lista.length + '</span></h3><ul class="adm-list">' + lista.map(riga).join('') + '</ul></section>'
+      : '';
+    return '<section class="card adm-sum">' +
+        num(attivi.length, T('attivi', 'active')) + num(attesa.length, T('in attesa', 'pending'), attesa.length ? 'warn' : '') + num(bloccati.length, T('bloccati', 'blocked')) +
+      '</section>' +
+      gruppo(T('In attesa di approvazione', 'Awaiting approval'), attesa, 'warn') +
+      '<section class="card"><h3>' + T('Invita', 'Invite') + '</h3><p class="sub">' +
+        (u.login ? T('L’accesso è su invito: l’email indicata potrà entrare subito con Google.', 'Access is invite-only: the email you add can sign in with Google straight away.')
+          : T('Il login con Google non è attivo: gli inviti restano in sospeso.', 'Google sign-in is not active: invitations wait.')) + '</p>' +
+        '<form id="acc-invita" class="acc-invite"><input name="email" type="email" required autocomplete="off" placeholder="' + T('email Google', 'Google email') + '"><button type="submit" class="btn-primary">' + T('Invita', 'Invite') + '</button></form>' +
+      '</section>' +
+      gruppo(T('Utenti', 'Users'), me.concat(attivi)) +
+      gruppo(T('Bloccati', 'Blocked'), bloccati);
   }
 
   async function apriAdmin() {

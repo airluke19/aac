@@ -1532,3 +1532,26 @@ body.demo .admin-wrap { display: none; }
 .adm-n b { font-family: var(--f-num); font-size: 1.9rem; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .adm-n span { font-size: .78rem; color: var(--muted); }
 .adm-n.warn b { color: var(--warn); }
+
+/* ---- Amministrazione: gruppi e righe utente leggibili ---- */
+.adm-g h3 { display: flex; align-items: center; gap: 8px; }
+.adm-cnt { font-size: .74rem; font-weight: 700; color: var(--muted); background: var(--fill); border-radius: 999px; padding: 1px 8px; }
+.adm-g.warn .adm-cnt { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.adm-list { list-style: none; margin: 4px 0 0; padding: 0; }
+.adm-u { border-top: 1px solid var(--line); }
+.adm-u:first-child { border-top: 0; }
+.adm-u summary, .adm-me { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; list-style: none; cursor: pointer; }
+.adm-me { cursor: default; }
+.adm-u summary::-webkit-details-marker { display: none; }
+.adm-u .av-sm { width: 40px; height: 40px; }
+.adm-u-t { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.adm-u-t b { font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-u-t small { font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.adm-tag { font-size: .7rem; font-weight: 600; color: var(--muted); background: var(--fill); border-radius: 6px; padding: 2px 7px; white-space: nowrap; }
+.adm-tag.ok { color: var(--ok); background: color-mix(in srgb, var(--ok) 14%, transparent); }
+.adm-chev { color: var(--muted); font-size: 1.3rem; line-height: 1; transition: transform .2s; }
+.adm-u details[open] .adm-chev { transform: rotate(90deg); }
+.adm-az, .adm-subito { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 12px 52px; }
+.adm-subito .pill-btn { min-width: 120px; justify-content: center; }
+@media (prefers-reduced-motion: reduce) { .adm-chev { transition: none; } }
