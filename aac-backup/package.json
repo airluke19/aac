@@ -13,6 +13,6 @@
   },
   "dependencies": {
     "better-sqlite3": "^11.7.0",
-    "node-cron": "^3.0.3"
+    "node-cron": "^4.6.0"
   }
 }
