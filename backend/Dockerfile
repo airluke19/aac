@@ -1,5 +1,5 @@
 # ---------- Stage 1: build delle dipendenze native (better-sqlite3) ----------
-FROM node:22-bookworm-slim AS build
+FROM node:25-bookworm-slim AS build
 WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
@@ -13,7 +13,7 @@ RUN --mount=type=secret,id=extra_ca,required=false \
     && npm ci --omit=dev --no-audit --no-fund
 
 # ---------- Stage 2: immagine di runtime minimale ----------
-FROM node:22-bookworm-slim
+FROM node:25-bookworm-slim
 LABEL org.opencontainers.image.source=https://github.com/airluke19/aac \
       org.opencontainers.image.description="AAC backend (API, sync, plan engine)"
 ENV NODE_ENV=production \
