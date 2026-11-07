@@ -1488,3 +1488,35 @@ details.more[open] > :not(summary), .pv-how[open] > div { animation: aprendo .22
 .cal-det .hero-main { margin: 12px 0 14px; }
 .cal-det .hero-big { font-size: clamp(3.25rem, 15vw, 4.25rem); }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+
+/* ---- Fuori zona (< Z1): grigio neutro, i colori Z1-Z5 restano quelli di sempre ---- */
+:root { --zone-0: rgba(142, 142, 147, .45); }
+.zchip.z0 { background: var(--fill); color: var(--muted); }
+.dd-sicura { margin: -4px 0 12px; font-size: .8rem; font-weight: 600; color: var(--muted); }
+.dd-sicura.over { color: var(--warn); }
+.dd-nota { margin: 10px 0 0; font-size: .72rem; color: var(--muted); }
+.nf-body .in-p { margin: 10px 0 0; font-size: .84rem; line-height: 1.45; color: var(--muted); }
+
+/* ---- Profilo: righe a 2 e 3 campi ---- */
+.acc-row.acc-row2 { grid-template-columns: 1.4fr 1fr; }
+.acc-row.acc-row3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+@media (max-width: 420px) {
+  .acc-row.acc-row2 .acc-f:first-child, .acc-row.acc-row3 .acc-f:first-child { grid-column: auto; }
+}
+
+/* ---- BMI (Salute) ---- */
+.bmi-top { display: flex; align-items: baseline; gap: 12px; margin: 4px 0 12px; }
+.bmi-v { font-family: var(--f-num); font-size: 2.6rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.bmi-cat { font-size: .78rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--fill); }
+.bmi-cat.normo { background: color-mix(in srgb, var(--accent) 18%, transparent); color: var(--accent); }
+.bmi-cat.sotto, .bmi-cat.sovra { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+.bmi-cat.obeso { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); }
+.bmi-scala { position: relative; display: flex; height: 8px; border-radius: 999px; overflow: visible; margin: 0 0 12px; }
+.bmi-scala i { display: block; height: 100%; }
+.bmi-scala i:first-child { border-radius: 999px 0 0 999px; } .bmi-scala i:nth-child(4) { border-radius: 0 999px 999px 0; }
+.bmi-scala .sotto, .bmi-scala .sovra { background: color-mix(in srgb, var(--warn) 55%, transparent); }
+.bmi-scala .normo { background: var(--accent); }
+.bmi-scala .obeso { background: color-mix(in srgb, var(--danger) 60%, transparent); }
+.bmi-scala b { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 3px solid var(--text); transform: translate(-50%, -50%); }
+.dd-zone .zchip.z0 { white-space: nowrap; padding: 2px 2px; letter-spacing: -.02em; }
+.sheet-body .sub a, .bmi-card .sub a { color: var(--accent); font-weight: 600; text-decoration: none; }

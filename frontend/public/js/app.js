@@ -328,7 +328,9 @@
     const fasi = s.struttura.map((f) => '<li><span class="m">' + f.min + '′</span><span><b>' + esc(f.fase) + '</b> · ' + esc(f.testo) + '</span></li>').join('');
     const st = (v, l) => '<div><b class="num">' + v + '</b><span>' + l + '</span></div>';
     const notaPasso = pi ? '<p class="pi-nota">' + T('Passo ', 'Pace ') + '<b>' + pi.valore + '/km</b> · ' + esc(pi.nota) + '</p>' : '';
-    const tip = '<div class="tip">' + esc(s.nota) + (s.tipo === 'gara' ? '' : T(' Se senti dolore (non semplice fatica), fermati e cammina.', ' If you feel pain (not just fatigue), stop and walk.')) + '</div>';
+    const fcSic = ultimiDati && ultimiDati.atleta ? ultimiDati.atleta.fc_max_stimata : null;
+    const tip = '<div class="tip">' + esc(s.nota) + (s.tipo === 'gara' ? '' : T(' Se senti dolore (non semplice fatica), fermati e cammina.', ' If you feel pain (not just fatigue), stop and walk.')) +
+      (fcSic ? ' <b>' + T('FC di sicurezza: non superare ' + fcSic + ' bpm.', 'Safety HR: do not exceed ' + fcSic + ' bpm.') + '</b>' : '') + '</div>';
     return '<div class="hero-main"><b class="hero-big num">' + s.durata_min + '<small>min</small></b>' +
       '<div class="hero-stats">' +
         st(s.corsa_min + '′', T('di corsa', 'running')) +
@@ -431,8 +433,21 @@
       return '<li class="' + (qui ? 'qui' : settAtt && settAtt > a ? 'fatta' : '') + '"><span class="in-ph-n">' + (i + 1) + '</span><div><b>' + f[0] + (qui ? '<em>' + T('sei qui', 'you are here') + '</em>' : '') + '</b><small>' + T('settimane ', 'weeks ') + da + '–' + a + '</small><p>' + f[1] + '</p></div></li>';
     }).join('') + '</ol>';
 
-    const zone = '<div class="in-zones">' + [['Z1', '< 65%'], ['Z2', '65–75%'], ['Z3', '75–82%'], ['Z4', '82–89%'], ['Z5', '≥ 89%']].map((z, i) => '<div><span class="zchip z' + (i + 1) + '">' + z[0] + '</span><small>' + z[1] + '</small></div>').join('') + '</div>' +
-      kv(T('FC massima', 'Max HR'), fcMax + ' bpm') + kv(T('Corse facili', 'Easy runs'), T('sotto ', 'below ') + facile + ' bpm') + kv(T('Passo indicativo', 'Guide pace'), T('dopo 3 corse, dalla tua efficienza', 'after 3 runs, from your efficiency'));
+    const fmi = d.atleta && d.atleta.fc_max_info;
+    const zone = '<div class="in-zones">' + [['&lt; Z1', '&lt; 50%', 'z0'], ['Z1', '50–60%'], ['Z2', '60–70%'], ['Z3', '70–80%'], ['Z4', '80–90%'], ['Z5', '90–100%']].map((z, i) => '<div><span class="zchip ' + (z[2] || 'z' + i) + '">' + z[0] + '</span><small>' + z[1] + '</small></div>').join('') + '</div>' +
+      kv(T('Modello', 'Model'), T('5 zone in % della FC max, come Garmin, Polar e Suunto', '5 zones as % of max HR, like Garmin, Polar and Suunto')) +
+      kv(T('FC massima', 'Max HR'), fcMax + ' bpm · ' + (fmi && fmi.fonte === 'misurata' ? T('misurata', 'measured') : T('stimata dall’età', 'age-based estimate'))) +
+      kv(T('FC di sicurezza', 'Safety HR'), T('non superare ', 'do not exceed ') + fcMax + ' bpm') +
+      kv(T('Corse facili', 'Easy runs'), T('sotto ', 'below ') + facile + ' bpm') + kv(T('Passo indicativo', 'Guide pace'), T('dopo 3 corse, dalla tua efficienza', 'after 3 runs, from your efficiency')) +
+      '<p class="in-p">' + T(
+        'Senza un test sul campo la FC max si stima con <b>208 − 0,7 × età</b> (Tanaka): è più precisa di <b>220 − età</b>, che la sottostima dopo i 40 anni. La stima può sbagliare di ±10 bpm: se fai un test, inserisci il valore nel profilo e zone e limiti si ricalcolano da soli, anche per le corse passate. Il tempo nelle zone viene dai battiti secondo per secondo dell’orologio; sotto il 50% è “fuori zona”.',
+        'Without a field test, max HR is estimated as <b>208 − 0.7 × age</b> (Tanaka): more accurate than <b>220 − age</b>, which underestimates it after 40. The estimate can be off by ±10 bpm: if you do a test, enter it in your profile and zones and limits update automatically, past runs included. Time in zones comes from your watch’s second-by-second heart rate; below 50% is “below zones”.') + '</p>';
+
+    const bmi = '<div class="in-zones">' + [['&lt; 18,5', T('sottopeso', 'underweight')], ['18,5–24,9', T('normopeso', 'healthy')], ['25–29,9', T('sovrappeso', 'overweight')], ['≥ 30', T('obesità', 'obesity')]].map((z) => '<div><b>' + z[0] + '</b><small>' + z[1] + '</small></div>').join('') + '</div>' +
+      kv(T('Formula', 'Formula'), T('peso (kg) ÷ altezza (m)²', 'weight (kg) ÷ height (m)²')) +
+      kv(T('Peso', 'Weight'), T('il dato più recente tra bilancia (via Intervals.icu) e profilo', 'the most recent of scale (via Intervals.icu) and profile')) +
+      '<p class="in-p">' + T('Categorie OMS per adulti. Il BMI non distingue muscoli e grasso: chi corre molto può avere un BMI alto senza eccesso di grasso. È un’indicazione, non una diagnosi.',
+        'WHO adult categories. BMI does not tell muscle from fat: active runners can have a high BMI without excess fat. It is a guide, not a diagnosis.') + '</p>';
 
     const previsioni = kv(T('Data della gara', 'Race date'), T('dal tuo ritmo di avanzamento, dopo 3 settimane', 'from your progress rate, after 3 weeks')) +
       kv(T('Tempo di gara', 'Race time'), T('formula di Riegel sulla tua corsa migliore', 'Riegel formula on your best run')) +
@@ -467,6 +482,7 @@
       voce('piano', G.cal, '#5856d6', T('Il piano', 'The plan'), tot + T(' settimane · 3 sedute alle ', ' weeks · 3 sessions at ') + esc(ora), fasi) +
       voce('sedute', G.list, '#007aff', T('Le sedute', 'Sessions'), T('Cosa significano le sigle', 'What the codes mean'), '<div class="in-tipi">' + tipiSeduta().map((t) => '<div class="in-tipo"><span class="sig">' + esc(t.sigla) + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('') + '</div>') +
       voce('zone', G.heart, '#ff3b30', T('Zone e passo', 'Zones and pace'), T('Dalla tua FC massima', 'From your max HR'), zone) +
+      voce('bmi', G.heart, '#34c759', 'BMI', T('Peso e altezza, in Salute', 'Weight and height, in Health'), bmi) +
       voce('previsioni', G.trend, '#30b0c7', T('Previsioni', 'Forecasts'), T('Data, tempo e forma per la gara', 'Race date, time and form'), previsioni) +
       voce('dati', G.sync, '#8e8e93', T('I tuoi dati', 'Your data'), T('Orologio, Intervals.icu, AAC', 'Watch, Intervals.icu, AAC'), dati) +
       voce('strumenti', G.grid, '#af52de', T('Strumenti', 'Tools'), T('Calendario, export, Copia per AI', 'Calendar, export, Copy for AI'), strumenti) +
@@ -1118,14 +1134,22 @@
     '</section>';
   }
 
-  function zoneBar(c, zone) {
-    if (!c.zone_fc || !c.zone_fc.length) return '';
-    const tot = c.zone_fc.reduce((t, x) => t + x, 0);
-    if (!tot) return '';
-    const col = ['var(--zone-1)', 'var(--zone-2)', 'var(--zone-3)', 'var(--zone-4)', 'var(--zone-5)', 'var(--zone-5)', 'var(--zone-5)'];
-    return '<div class="det-sub">' + T('Tempo nelle zone di frequenza (da Intervals.icu)', 'Time in heart-rate zones (from Intervals.icu)') + '</div><div class="timeline zone">' +
-      c.zone_fc.map((x, i) => x ? '<div class="seg" style="width:' + (x / tot * 100).toFixed(2) + '%;background:' + col[i] + '" title="Z' + (i + 1) + ' · ' + Math.round(x / 60) + '′"></div>' : '').join('') +
-      '</div><div class="legend-inline">' + c.zone_fc.map((x, i) => x ? '<span><i style="background:' + col[i] + '"></i>Z' + (i + 1) + ' ' + Math.round(x / tot * 100) + '%</span>' : '').join('') + '</div>';
+  // FC max in uso: "185 bpm · stimata dall'età" oppure "· misurata"
+  function testoFcMax(fm) {
+    if (!fm) return '';
+    return 'FC max ' + fm.valore + ' bpm · ' + (fm.fonte === 'misurata' ? T('misurata', 'measured')
+      : T('stimata dall’età', 'age-based estimate') + (fm.eta ? '' : T(' (età non impostata)', ' (age not set)')));
+  }
+
+  // Barra del tempo nelle zone (elenco corse): stessi limiti del dettaglio, calcolati dal server
+  function zoneBar(c) {
+    const tz = c.tempo_zone;
+    if (!tz || !tz.totale) return '';
+    const parti = [{ n: '< Z1', sec: tz.sotto.sec, pct: tz.sotto.pct, col: 'var(--zone-0)' }]
+      .concat(tz.zone.map((x, i) => ({ n: 'Z' + (i + 1), sec: x.sec, pct: x.pct, col: 'var(--zone-' + (i + 1) + ')' })));
+    return '<div class="det-sub">' + T('Tempo nelle zone cardiache', 'Time in heart-rate zones') + '</div><div class="timeline zone">' +
+      parti.map((x) => x.sec ? '<div class="seg" style="width:' + x.pct.toFixed(2) + '%;background:' + x.col + '" title="' + x.n + ' · ' + Math.round(x.sec / 60) + '′"></div>' : '').join('') +
+      '</div><div class="legend-inline">' + parti.map((x) => x.sec ? '<span><i style="background:' + x.col + '"></i>' + x.n + ' ' + Math.round(x.pct) + '%</span>' : '').join('') + '</div>';
   }
 
   function parziali(c) {
@@ -1146,7 +1170,7 @@
         (c.passo_corsa ? m(T('Passo di corsa', 'Running pace'), fmtPasso(c.passo_corsa) + ' /km', fmtDurata(c.tempo_corsa) + T(' di corsa', ' running')) : '') +
         (c.fc_corsa ? m(T('FC in corsa', 'HR while running'), fmt0(c.fc_corsa) + ' bpm') : '') +
         m(T('FC media', 'Avg HR'), c.fc_media ? fmt0(c.fc_media) + ' bpm' : '–', z ? z.z + ' · ' + z.nome : '') +
-        m(T('FC max', 'Max HR'), c.fc_max ? fmt0(c.fc_max) + ' bpm' : '–', c.fc_max ? Math.round(c.fc_max / st.fc_max_stimata * 100) + T('% della max stimata', '% of estimated max') : '') +
+        m(T('FC max', 'Max HR'), c.fc_max ? fmt0(c.fc_max) + ' bpm' : '–', c.fc_max ? Math.round(c.fc_max / st.fc_max_stimata * 100) + T('% della FC max', '% of max HR') : '') +
         m(T('Cadenza', 'Cadence'), c.cadenza ? fmt0(c.cadenza) + T(' ppm', ' spm') : '–') +
         m(T('Dislivello', 'Elevation'), c.dislivello != null ? fmt0(c.dislivello) + ' m' : '–') +
         m(T('Efficienza', 'Efficiency'), c.efficiency_factor ? fmt0(c.efficiency_factor * 1000) : '–', T('più alta = meglio', 'higher = better')) +
@@ -1154,7 +1178,7 @@
         m(T('Carico', 'Load'), c.carico != null ? fmt0(c.carico) : '–', 'training load') +
         m(T('Calorie', 'Calories'), c.calorie ? fmt0(c.calorie) + ' kcal' : '–') +
         m(T('Forma (TSB)', 'Form (TSB)'), fmtSigned(c.tsb)) +
-      '</div>' + zoneBar(c, st.zone) + parziali(c) +
+      '</div>' + zoneBar(c) + parziali(c) +
       '<div class="azioni"><button type="button" class="btn-mini primary" data-copia="' + c.data + '">' + ICO.copy + 'Copia per AI</button></div>' +
     '</div>';
   }
@@ -1357,6 +1381,25 @@
     });
     const tilesTutti = tiles + altri.join('') + '</section>';
 
+    // BMI: peso (bilancia/Intervals o profilo) e altezza dal profilo
+    const cb = s.corpo || {};
+    const bmiCard = (() => {
+      if (cb.bmi == null) {
+        return '<section class="card bmi-card"><h3>BMI</h3><p class="sub">' +
+          (cb.altezza_cm ? T('Manca il peso: aggiungilo nel profilo o collega una bilancia a Intervals.icu.', 'Weight missing: add it in your profile or connect a scale to Intervals.icu.')
+            : T('Aggiungi altezza e peso nel profilo per vedere il tuo BMI.', 'Add your height and weight in your profile to see your BMI.')) +
+          ' <a href="#account">' + T('Apri il profilo', 'Open profile') + '</a></p></section>';
+      }
+      const min = 15, max = 40, pos = Math.min(100, Math.max(0, (cb.bmi - min) / (max - min) * 100));
+      const w = (a, b) => ((Math.min(b, max) - Math.max(a, min)) / (max - min) * 100).toFixed(2);
+      const fontePeso = (cb.fonte_peso === 'misurato' ? T('bilancia', 'scale') : T('profilo', 'profile')) + (cb.data_peso ? ' · ' + fmtData(cb.data_peso) : '');
+      return '<section class="card bmi-card"><h3>BMI</h3>' +
+        '<div class="bmi-top"><div class="bmi-v">' + fmt1(cb.bmi) + '</div><span class="bmi-cat ' + cb.categoria.id + '">' + esc(cb.categoria.nome) + '</span></div>' +
+        '<div class="bmi-scala" aria-hidden="true"><i class="sotto" style="width:' + w(min, 18.5) + '%"></i><i class="normo" style="width:' + w(18.5, 25) + '%"></i><i class="sovra" style="width:' + w(25, 30) + '%"></i><i class="obeso" style="width:' + w(30, max) + '%"></i><b style="left:' + pos.toFixed(1) + '%"></b></div>' +
+        '<p class="sub">' + fmt1(cb.peso_kg) + ' kg (' + fontePeso + ') · ' + cb.altezza_cm + ' cm' +
+          (cb.peso_normo ? ' · ' + T('normopeso per la tua altezza: ', 'healthy range for your height: ') + fmt1(cb.peso_normo[0]) + '–' + fmt1(cb.peso_normo[1]) + ' kg' : '') + '</p></section>';
+    })();
+
     const box = (id, titolo, sub) => '<section class="card"><h3>' + titolo + '</h3><p class="sub">' + sub + '</p><div class="chart-box sm" id="box-' + id + '"><canvas id="' + id + '" role="img" aria-label="' + titolo + '"></canvas></div></section>';
 
     const sr = s.serie_30g || [];
@@ -1367,7 +1410,7 @@
     const nota = s.disponibile ? '' :
       '<section class="card empty">' + T('Ancora nessun dato di salute: controlla che <b>FC a riposo, HRV e sonno</b> arrivino su Intervals.icu (Apple Watch: consenti l’accesso all’app Companion in Salute; Garmin e altri: attiva il wellness nel collegamento con Intervals.icu).', 'No health data yet: check that <b>resting HR, HRV and sleep</b> reach Intervals.icu (Apple Watch: allow the Companion app in Apple Health; Garmin and others: enable wellness in the Intervals.icu connection).') + '</section>';
 
-    return '<div class="sec-title"><h2>' + T('Ultimi valori', 'Latest values') + '</h2><button type="button" class="link-btn" data-salute="fc_riposo">' + T('Tutti i dati', 'All data') + ' ›</button></div>' + tilesTutti + nota +
+    return '<div class="sec-title"><h2>' + T('Ultimi valori', 'Latest values') + '</h2><button type="button" class="link-btn" data-salute="fc_riposo">' + T('Tutti i dati', 'All data') + ' ›</button></div>' + tilesTutti + bmiCard + nota +
       (grafici.length ? '<div class="grid-' + (grafici.length === 1 ? '1' : grafici.length === 2 ? '2e' : '3') + '">' + grafici.join('') + '</div>' : '');
   }
 
@@ -1765,8 +1808,6 @@
       '<form id="acc-livello-form" class="acc-form">' +
         '<label class="acc-f"><span>' + T('Il piano parte dalla settimana', 'The plan starts from week') + '</span><select name="settimana_iniziale">' + opz + '</select>' +
           '<small>' + T('Cambiarla ricalcola il piano dalla data della prima seduta.', 'Changing it recalculates the plan from the first-session date.') + '</small></label>' +
-        '<label class="acc-f"><span>' + T('FC massima', 'Max HR') + '</span><input name="fc_max" type="number" min="140" max="220" placeholder="' + v.fc_max_stimata + '" value="' + (ME.profilo.fc_max || '') + '">' +
-          '<small>' + T('Vuoto = stimata dall’età (' + v.fc_max_stimata + ' bpm)', 'Empty = age-based estimate (' + v.fc_max_stimata + ' bpm)') + (v.fc_max_osservata ? T(' · massima vista nelle tue corse: ' + v.fc_max_osservata + ' bpm', ' · highest seen in your runs: ' + v.fc_max_osservata + ' bpm') : '') + '</small></label>' +
         '<button type="submit" class="btn-primary">' + T('Applica', 'Apply') + '</button>' +
       '</form>';
   }
@@ -1865,11 +1906,21 @@
         campo('acc-int', T('Intensità', 'Intensity'), '<select id="acc-int" name="intensita">' + INTENSITA_UI().map((o) => '<option value="' + o[0] + '"' + ((p.intensita || 'equilibrata') === o[0] ? ' selected' : '') + '>' + (LANG === 'en' ? o[2] : o[1]) + ' · ' + o[3] + '</option>').join('') + '</select>') +
       '</div>' +
       (ultimiDati && ultimiDati.programma && ultimiDati.programma.intensita ? (() => { const it = ultimiDati.programma.intensita; return '<p class="acc-int-stato">' + T('Adesso: ', 'Now: ') + '<b>' + esc(it.nome) + (it.percentuale ? ' · ' + (it.percentuale > 0 ? '+' : '') + it.percentuale + '%' : '') + '</b>' + (it.ultima_modifica ? ' · ' + esc(it.ultima_modifica.motivo) : T(' · il coach la ritocca da solo se serve', ' · the coach fine-tunes it when needed')) + '</p>'; })() : '') +
-      '<div class="acc-row">' +
+      '<div class="acc-row acc-row2">' +
         campo('acc-ini', T('Prima seduta', 'First session'), '<input id="acc-ini" name="programma_inizio" type="date" value="' + esc(p.programma_inizio || '') + '">') +
         campo('acc-ora', T('Orario', 'Time'), '<input id="acc-ora" name="programma_ora" type="time" value="' + esc(p.programma_ora || '06:30') + '">') +
-        campo('acc-eta', T('Età', 'Age'), '<input id="acc-eta" name="eta" type="number" min="14" max="90" value="' + esc(p.eta || '') + '">') +
       '</div>' +
+      '<h3>' + T('Il tuo corpo', 'Your body') + '</h3>' +
+      '<div class="acc-row acc-row3">' +
+        campo('acc-eta', T('Età', 'Age'), '<input id="acc-eta" name="eta" type="number" inputmode="numeric" min="14" max="90" placeholder="33" value="' + esc(p.eta || '') + '">') +
+        campo('acc-alt', T('Altezza (cm)', 'Height (cm)'), '<input id="acc-alt" name="altezza" type="number" inputmode="numeric" min="100" max="230" value="' + esc(p.altezza || '') + '">') +
+        campo('acc-peso', T('Peso (kg)', 'Weight (kg)'), '<input id="acc-peso" name="peso" type="number" inputmode="decimal" min="30" max="250" step="0.1" value="' + esc(p.peso || '') + '">') +
+      '</div>' +
+      (() => {
+        const stima = Math.round(208 - 0.7 * (p.eta || 33));
+        return campo('acc-fcmax', T('FC max misurata (bpm)', 'Measured max HR (bpm)'), '<input id="acc-fcmax" name="fc_max" type="number" inputmode="numeric" min="140" max="220" placeholder="' + stima + '" value="' + esc(p.fc_max || '') + '">' +
+          '<small>' + T('Vuoto = stimata dall’età: 208 − 0,7 × età = ' + stima + ' bpm. Le zone cardiache e la FC di sicurezza si ricalcolano da sole.', 'Empty = age-based estimate: 208 − 0.7 × age = ' + stima + ' bpm. Heart-rate zones and safety HR update automatically.') + '</small>');
+      })() +
       '<p id="acc-err" class="acc-err" hidden></p>' +
       '<button type="submit" class="btn-primary">' + T('Salva', 'Save') + '</button>' +
     '</form>' + renderColori() + '<section class="card" id="acc-scarpe"><h3>👟 ' + T('Le tue scarpe', 'Your shoes') + '</h3><div class="skeleton" style="height:80px"></div></section>' +
@@ -1915,13 +1966,13 @@
     if (e.target.id === 'acc-form') {
       e.preventDefault();
       const f = new FormData(e.target), corpo = {};
-      for (const [k, v] of f.entries()) if (String(v).trim() !== '' || k === 'athlete_id') corpo[k] = String(v).trim();
+      for (const [k, v] of f.entries()) if (String(v).trim() !== '' || ['athlete_id', 'eta', 'fc_max', 'altezza', 'peso'].includes(k)) corpo[k] = String(v).trim();
       const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
       const err = $('#acc-err'); err.hidden = true;
       try {
         const { ok, out } = await inviaJson('PUT', '/api/profilo', corpo);
         if (!ok) {
-          const msg = { intervals: T('Intervals.icu non accetta questa API key con questo Athlete ID: ricontrollali.', 'Intervals.icu rejects this API key with this Athlete ID: please check them.'), athlete_id: T('Athlete ID non valido (es. i123456).', 'Invalid Athlete ID (e.g. i123456).'), intervals_key: T('API key non valida.', 'Invalid API key.'), eta: T('Età non valida.', 'Invalid age.'), programma_inizio: T('Data non valida.', 'Invalid date.'), programma_ora: T('Orario non valido.', 'Invalid time.') };
+          const msg = { fc_max: T('FC max tra 140 e 220 bpm.', 'Max HR between 140 and 220 bpm.'), altezza: T('Altezza tra 100 e 230 cm.', 'Height between 100 and 230 cm.'), peso: T('Peso tra 30 e 250 kg.', 'Weight between 30 and 250 kg.'), intervals: T('Intervals.icu non accetta questa API key con questo Athlete ID: ricontrollali.', 'Intervals.icu rejects this API key with this Athlete ID: please check them.'), athlete_id: T('Athlete ID non valido (es. i123456).', 'Invalid Athlete ID (e.g. i123456).'), intervals_key: T('API key non valida.', 'Invalid API key.'), eta: T('Età non valida.', 'Invalid age.'), programma_inizio: T('Data non valida.', 'Invalid date.'), programma_ora: T('Orario non valido.', 'Invalid time.') };
           err.textContent = (out.errori || []).map((x) => msg[x] || x).join(' ') || T('Salvataggio non riuscito.', 'Could not save.');
           err.hidden = false;
           return;
@@ -1937,7 +1988,7 @@
       e.preventDefault();
       const f = new FormData(e.target);
       const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
-      if (await applicaLivello(parseInt(f.get('settimana_iniziale'), 10), String(f.get('fc_max') || '').trim())) apriAccount();
+      if (await applicaLivello(parseInt(f.get('settimana_iniziale'), 10))) apriAccount();
       btn.disabled = false;
     } else if (e.target.id === 'acc-invita') {
       e.preventDefault();
@@ -2029,19 +2080,6 @@
     return out;
   }
 
-  function tempoZone(s, zone) {
-    if (!s.hr) return null;
-    const sec = zone.map(() => 0);
-    for (let i = 0; i < s.hr.length; i++) {
-      const h = s.hr[i]; if (!h) continue;
-      const dt = (s.t[i + 1] ?? s.t[i] + s.passo) - s.t[i];
-      const z = zone.findIndex((z) => (z.a == null || h <= z.a) && (z.da == null || h >= z.da));
-      if (z >= 0) sec[z] += dt;
-    }
-    const tot = sec.reduce((a, b) => a + b, 0);
-    return tot ? sec.map((x) => ({ sec: x, pct: x / tot * 100 })) : null;
-  }
-
   async function apriSeduta(id) {
     mostraSheet(T('Allenamento', 'Workout'), '<div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:260px"></div>');
     let a;
@@ -2052,7 +2090,6 @@
     if (pr) pr.lim = pr.fc_target ? Number(String(pr.fc_target).replace(/[^\d]/g, '')) || null : null;
     const z = a.zone.find((x) => x.z === c.zona);
     const at = s ? analisiTratti(s, a.giri) : null;
-    const zt = s ? tempoZone(s, a.zone) : null;
 
     // ---- intestazione e numeri principali ----
     // ---- copertina: mappa, titolo e tre numeri chiave ----
@@ -2089,7 +2126,7 @@
       '<div class="dd-groups">' +
         gruppo('cuore', ICO.heart, T('Cuore', 'Heart'), [
           tile(T('FC media', 'Avg HR'), c.fc_media ? fmt0(c.fc_media) + u('bpm') : null, z ? z.z + ' · ' + z.nome : ''),
-          tile(T('FC max', 'Max HR'), c.fc_max ? fmt0(c.fc_max) + u('bpm') : null, c.fc_max ? Math.round(c.fc_max / a.fc_max_teorica * 100) + T('% della max stimata', '% of est. max') : ''),
+          tile(T('FC max', 'Max HR'), c.fc_max ? fmt0(c.fc_max) + u('bpm') : null, c.fc_max ? (c.fc_max > a.fc_max_teorica ? '⚠️ ' + T('sopra la FC di sicurezza', 'above your safety HR') : Math.round(c.fc_max / a.fc_max_teorica * 100) + T('% della FC max', '% of max HR')) : ''),
           tile(T('FC in corsa', 'Running HR'), c.fc_corsa ? fmt0(c.fc_corsa) + u('bpm') : null, T('media dei tratti corsi', 'running parts only')),
           tile(T('Efficienza', 'Efficiency'), c.efficiency_factor ? fmt0(c.efficiency_factor * 1000) : null, T('velocità per battito', 'speed per heartbeat')),
           tile(T('Recupero FC', 'HR recovery'), c.fc_recupero ? '−' + fmt0(c.fc_recupero) + u('bpm') : null, T('nel minuto dopo il picco', 'in the minute after the peak')),
@@ -2149,13 +2186,26 @@
       void durata;
     }
 
-    // ---- zone cardiache ----
-    const zoneDati = zt || (c.zone_fc ? (() => { const tot = c.zone_fc.reduce((x, y) => x + y, 0); return tot ? c.zone_fc.slice(0, 5).map((x) => ({ sec: x, pct: x / tot * 100 })) : null; })() : null);
-    if (zoneDati) {
-      html += '<section class="card"><h3>' + T('Tempo nelle zone cardiache', 'Time in heart-rate zones') + '</h3><p class="sub">' + T('FC max stimata ', 'Estimated max HR ') + a.fc_max_teorica + ' bpm' + T(' · per costruire la base conta stare in Z1–Z2', ' · building the base means staying in Z1–Z2') + '</p><div class="dd-zones">' +
-        a.zone.map((zz, i) => '<div class="dd-zone"><span class="zchip z' + (i + 1) + '">' + zz.z + '</span><span class="dd-zn">' + esc(zz.nome) + '<small>' + (zz.da == null ? '< ' + (zz.a + 1) : zz.a == null ? '≥ ' + zz.da : zz.da + '–' + zz.a) + ' bpm</small></span>' +
-          '<i><b style="width:' + Math.max(zoneDati[i].pct, zoneDati[i].sec ? 1 : 0) + '%;background:var(--zone-' + (i + 1) + ')"></b></i><span class="dd-zv">' + mmss(zoneDati[i].sec) + '<small>' + Math.round(zoneDati[i].pct) + '%</small></span></div>').join('') +
-        '</div></section>';
+    // ---- zone cardiache (limiti e tempi calcolati dal server sulla FC max dell'utente) ----
+    const tz = c.tempo_zone;
+    if (tz) {
+      const fm = a.fc_max_info || { valore: a.fc_max_teorica, fonte: 'stimata' };
+      const sz = a.sotto_zone || { a: a.zone[0].da - 1, nome: T('Fuori zona', 'Below zones') };
+      const base = a.zone[0].da + '–' + a.zone[1].a;
+      const riga = (chip, cls, nome, range, sec, pct, col) => '<div class="dd-zone"><span class="zchip ' + cls + '">' + chip + '</span><span class="dd-zn">' + esc(nome).replace('/', '/<wbr>') + '<small>' + range + ' bpm</small></span>' +
+        '<i><b style="width:' + Math.max(pct, sec ? 1 : 0) + '%;background:' + col + '"></b></i><span class="dd-zv">' + mmss(sec) + '<small>' + Math.round(pct) + '%</small></span></div>';
+      html += '<section class="card"><h3>' + T('Tempo nelle zone cardiache', 'Time in heart-rate zones') + '</h3>' +
+        '<p class="sub">' + testoFcMax(fm) + ' · <a href="#account">' + T('modifica', 'edit') + '</a><br>' +
+          T('Per costruire la base conta stare in Z1–Z2 (' + base + ' bpm)', 'Building the base means staying in Z1–Z2 (' + base + ' bpm)') + '</p>' +
+        '<p class="dd-sicura' + (c.fc_max > fm.valore ? ' over' : '') + '">' + (c.fc_max > fm.valore
+          ? '⚠️ ' + T('Picco di ' + fmt0(c.fc_max) + ' bpm, sopra la FC di sicurezza (' + fm.valore + ' bpm). Se il dato è reale, aggiorna la FC max nel profilo.', 'Peak of ' + fmt0(c.fc_max) + ' bpm, above your safety HR (' + fm.valore + ' bpm). If it is real, update your max HR in your profile.')
+          : T('FC di sicurezza: non superare ' + fm.valore + ' bpm', 'Safety HR: do not exceed ' + fm.valore + ' bpm')) + '</p>' +
+        '<div class="dd-zones">' +
+          riga('&lt; Z1', 'z0', sz.nome, '&lt; ' + (sz.a + 1), tz.sotto.sec, tz.sotto.pct, 'var(--zone-0)') +
+          a.zone.map((zz, i) => riga(zz.z, 'z' + (i + 1), zz.nome, zz.da + '–' + zz.a, tz.zone[i].sec, tz.zone[i].pct, 'var(--zone-' + (i + 1) + ')')).join('') +
+        '</div>' +
+        (tz.fonte === 'serie' ? '<p class="dd-nota">' + T('Stima sui dati a 5 s: quelli al secondo arrivano con la prossima sincronizzazione.', 'Estimate from 5 s data: per-second data arrive with the next sync.') + '</p>' : '') +
+        '</section>';
     }
 
     // ---- tratti di corsa ----
@@ -2234,7 +2284,7 @@
 
     if (s.hr) {
       const zc = [1, 2, 3, 4, 5].map((i) => alpha(cssVar('--zone-' + i), 0.16));
-      const fasce = a.zone.map((z, i) => ({ da: z.da ?? 0, a: z.a ?? 250, colore: zc[i] }));
+      const fasce = a.zone.map((z, i) => ({ da: z.da, a: i === a.zone.length - 1 ? 250 : z.a + 1, colore: zc[i] }));
       const linee = pr && pr.lim ? [{ v: pr.lim, colore: cssVar('--warn'), testo: T('limite ', 'cap ') + pr.lim }] : [];
       const hrv = s.hr.filter((x) => x);
       nuovo('dd-hr', { type: 'line', data: { datasets: [ds(punti(s.hr), cssVar('--c-cuore'))] },

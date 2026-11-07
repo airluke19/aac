@@ -51,17 +51,19 @@ const BASE = {
   appSecret: (process.env.APP_SECRET || '').trim(),
 };
 BASE.dataDir = path.dirname(BASE.dbPath);
-// Formula di Tanaka per la FC massima stimata
-BASE.fcMax = Math.round(208 - 0.7 * BASE.eta);
+// Formula di Tanaka (2001) per la FC massima stimata: 208 - 0,7 x eta'. Piu' accurata di 220 - eta',
+// che la sottostima dopo i 40 anni. Con l'eta' predefinita (33) da' 185 bpm.
+const fcMaxTanaka = (eta) => Math.round(208 - 0.7 * (eta || 33));
+BASE.fcMax = fcMaxTanaka(BASE.eta);
 
 // Ogni richiesta (e ogni sincronizzazione) gira nel contesto di un utente: database e impostazioni sono i suoi.
 const contesto = new AsyncLocalStorage();
-const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'fcMax', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto']);
+const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto']);
 const CONFIG = new Proxy(BASE, {
   get(t, k) {
     const c = contesto.getStore();
     // FC massima: quella indicata dall'utente (o vista nelle sue corse), altrimenti la formula di Tanaka dall'eta'
-    if (c && CAMPI_UTENTE.has(k)) return k === 'fcMax' ? c.cfg.fcMaxReale || Math.round(208 - 0.7 * c.cfg.eta) : c.cfg[k];
+    if (c && CAMPI_UTENTE.has(k)) return k === 'fcMax' ? c.cfg.fcMaxReale || fcMaxTanaka(c.cfg.eta) : c.cfg[k];
     return t[k];
   },
 });
@@ -236,6 +238,7 @@ function apriDbUtente(file) {
       ['serie', 'TEXT'], // JSON: dati campionati ogni ~5 s per i grafici della seduta
       ['v_analisi', 'INTEGER'], // versione dell'analisi stream: sotto ANALISI_V la corsa viene rianalizzata
       ['giri', 'TEXT'], // JSON: giri dell'orologio (es. 1' corsa / 2' cammino), '[]' se assenti
+      ['fc_istogramma', 'TEXT'], // JSON: [[bpm, secondi], ...] dallo stream FC al secondo di Intervals (dato derivato, ricalcolabile)
       ['rpe', 'REAL'], // sforzo percepito 1-10
       ['contatto', 'REAL'], // tempo di contatto col suolo, ms
       ['oscillazione', 'REAL'], // oscillazione verticale, cm
@@ -745,6 +748,51 @@ function salvaScarpa(id, b) {
 
 const ANALISI_V = 3; // 2 = percorso GPS e potenza nella serie; 3 = deriva cardiaca calcolata da AAC
 
+/**
+ * Istogramma della FC dai dati grezzi (uno per secondo): secondi passati a ogni bpm.
+ * Non dipende dalla FC max, quindi le zone si ricalcolano al volo quando cambia.
+ * Pause e buchi nei dati contano al massimo 10 s (come nell'analisi della corsa).
+ */
+function istogrammaDaStreams(streams) {
+  const prendi = (t) => {
+    const s = Array.isArray(streams) ? streams.find((x) => x && x.type === t) : streams && streams[t];
+    const d = s && (Array.isArray(s) ? s : s.data);
+    return Array.isArray(d) && d.length ? d : null;
+  };
+  const time = prendi('time'), hr = prendi('heartrate');
+  if (!time || !hr) return [];
+  const sec = new Map();
+  for (let i = 1; i < time.length && i < hr.length; i++) {
+    const dt = Math.min(10, Number(time[i]) - Number(time[i - 1]));
+    const h = Number(hr[i]);
+    if (!(dt > 0) || !(h >= 30 && h <= 250)) continue;
+    const b = Math.round(h);
+    sec.set(b, (sec.get(b) || 0) + dt);
+  }
+  return [...sec.entries()].sort((x, y) => x[0] - y[0]).map(([b, t]) => [b, Math.round(t * 10) / 10]);
+}
+
+// Corse gia' registrate senza istogramma: scarica solo tempo e FC da Intervals e lo calcola.
+// Scrive soltanto fc_istogramma (vuota): i dati originali della corsa non vengono toccati.
+async function completaIstogrammiFc(limite = 60) {
+  const righe = db
+    .prepare("SELECT id FROM attivita WHERE origine = 'intervals' AND fc_istogramma IS NULL AND stream_ok = 1 ORDER BY data DESC LIMIT ?")
+    .all(limite);
+  const agg = db.prepare('UPDATE attivita SET fc_istogramma = ? WHERE id = ? AND fc_istogramma IS NULL');
+  let fatte = 0;
+  for (const { id } of righe) {
+    try {
+      const st = await intervalsGetAttivita(id, '/streams', { types: 'time,heartrate' });
+      agg.run(JSON.stringify(st ? istogrammaDaStreams(st) : []), id);
+      fatte++;
+    } catch (e) {
+      console.warn(`[zone] ${id}: ${e.message}`);
+      break; // Intervals non risponde: si riprova alla prossima sincronizzazione
+    }
+  }
+  return fatte;
+}
+
 async function analizzaCorseNuove(limite = 40) {
   const daFare = db
     .prepare(`SELECT id FROM attivita WHERE origine = 'intervals' AND (stream_ok IS NULL OR stream_ok = -1 OR (stream_ok = 1 AND (serie IS NULL OR giri IS NULL OR COALESCE(v_analisi, 0) < ${ANALISI_V}))) ORDER BY data DESC LIMIT ?`)
@@ -755,6 +803,7 @@ async function analizzaCorseNuove(limite = 40) {
     try {
       const st = await intervalsGetAttivita(id, '/streams', { types: 'time,velocity_smooth,heartrate,cadence,distance,fixed_altitude,altitude,watts,latlng' });
       const a = st ? analizzaStream(st) : null;
+      if (st) db.prepare('UPDATE attivita SET fc_istogramma = ? WHERE id = ?').run(JSON.stringify(istogrammaDaStreams(st)), id);
       let giri = [];
       try {
         const iv = await intervalsGetAttivita(id, '/intervals');
@@ -1026,6 +1075,12 @@ async function eseguiSync(origine) {
       analisi = await analizzaCorseNuove();
     } catch (e) {
       console.warn(`[stream] analisi non riuscita: ${e.message}`);
+    }
+    try {
+      const n = await completaIstogrammiFc();
+      if (n) console.log(`[zone] u${contesto.getStore().utente.id}: tempo nelle zone calcolato dai dati grezzi per ${n} corse`);
+    } catch (e) {
+      console.warn(`[zone] ${e.message}`);
     }
     try {
       await aggiornaMeteo();
@@ -1630,7 +1685,7 @@ function valutaLivello(oggiStr) {
     return { n: k + 1, fase: faseDi(k + 1).nome, desc: lu ? L(`lungo ${lu.lavoro}′`, `long run ${lu.lavoro}′`) + ' · ' + desc0 : desc0 };
   });
   void oggiL;
-  const formula = Math.round(208 - 0.7 * CONFIG.eta);
+  const formula = fcMaxTanaka(CONFIG.eta);
   return {
     settimana_consigliata: sett,
     fase: fase.nome,
@@ -2176,25 +2231,101 @@ function aggregaSettimane(righe, oggiStr, massimo = 12) {
 // Storico e statistiche di miglioramento
 // ===========================================================================
 
-// Zone FC su % della FC massima stimata (Z2 = "corsa facile" del piano: < 75%)
+// ---------------------------------------------------------------------------
+// Zone cardiache: modello standard a 5 zone in % della FC max (come Garmin, Polar, Suunto).
+// UNICO punto in cui si calcolano i limiti: grafico, barre, tempi, percentuali e testi li prendono da qui.
+//   < Z1 fuori zona < 50% · Z1 50-60% · Z2 60-70% · Z3 70-80% · Z4 80-90% · Z5 90-100%
+// Limiti interi senza sovrapposizioni: soglia = parte intera di FCmax x %, il bpm della soglia sta
+// nella zona sotto. Con FC max 185: < 93 · 93-111 · 112-129 · 130-148 · 149-166 · 167-185.
+// ---------------------------------------------------------------------------
+const ZONE_PCT = [50, 60, 70, 80, 90];
 const ZONE_FC = [
-  { z: 'Z1', nome: ['Recupero', 'Recovery'], max: 0.65 },
-  { z: 'Z2', nome: ['Aerobica facile', 'Easy aerobic'], max: 0.75 },
-  { z: 'Z3', nome: ['Aerobica media', 'Steady aerobic'], max: 0.82 },
-  { z: 'Z4', nome: ['Soglia', 'Threshold'], max: 0.89 },
-  { z: 'Z5', nome: ['Massimale', 'Maximal'], max: Infinity },
+  { z: 'Z1', nome: ['Recupero/Riscaldamento', 'Recovery/Warm-up'] },
+  { z: 'Z2', nome: ['Aerobica facile', 'Easy aerobic'] },
+  { z: 'Z3', nome: ['Aerobica media', 'Steady aerobic'] },
+  { z: 'Z4', nome: ['Soglia', 'Threshold'] },
+  { z: 'Z5', nome: ['Massimale', 'Maximal'] },
 ];
+// soglie[k] = ultimo bpm sotto il k-esimo limite (interi, aritmetica intera: niente errori di arrotondamento)
+const soglieZone = (fcMax = CONFIG.fcMax) => ZONE_PCT.map((p) => Math.floor((fcMax * p) / 100));
+// -1 = fuori zona (< Z1), 0..4 = Z1..Z5 (oltre la FC max resta Z5)
+function indiceZona(bpm, soglie) {
+  const h = Math.round(bpm);
+  if (h <= soglie[0]) return -1;
+  for (let i = 1; i < soglie.length; i++) if (h <= soglie[i]) return i - 1;
+  return soglie.length - 1;
+}
 function zonaFc(fc) {
   if (fc == null) return null;
-  return ZONE_FC.find((z) => fc / CONFIG.fcMax < z.max).z;
+  const i = indiceZona(fc, soglieZone());
+  return i < 0 ? null : ZONE_FC[i].z;
 }
-const limitiZone = () =>
-  ZONE_FC.map((z, i) => ({
+const limitiZone = (fcMax = CONFIG.fcMax) => {
+  const s = soglieZone(fcMax);
+  return ZONE_FC.map((z, i) => ({
     z: z.z,
     nome: P(z.nome),
-    da: i ? Math.round(CONFIG.fcMax * ZONE_FC[i - 1].max) : null,
-    a: z.max === Infinity ? null : Math.round(CONFIG.fcMax * z.max) - 1,
+    pct_da: ZONE_PCT[i],
+    pct_a: ZONE_PCT[i + 1] || 100,
+    da: s[i] + 1,
+    a: i < s.length - 1 ? s[i + 1] : fcMax,
   }));
+};
+const sottoZone = (fcMax = CONFIG.fcMax) => ({ z: '< Z1', nome: L('Fuori zona', 'Below zones'), a: soglieZone(fcMax)[0] });
+
+// FC max in uso e sua origine: misurata/inserita dall'utente oppure stimata dall'eta' (Tanaka)
+function infoFcMax() {
+  const misurata = Boolean(CONFIG.fcMaxReale);
+  return {
+    valore: CONFIG.fcMax,
+    fonte: misurata ? 'misurata' : 'stimata',
+    stimata: fcMaxTanaka(CONFIG.eta),
+    eta: CONFIG.etaImpostata || null,
+    formula: '208 − 0,7 × ' + L('età', 'age'),
+  };
+}
+
+// Istogramma ricavato dalla serie a ~5 s (solo se manca quello dai dati grezzi, es. demo o corsa non ancora scaricata)
+function istogrammaDaSerie(s) {
+  if (!s || !Array.isArray(s.hr) || !Array.isArray(s.t)) return null;
+  const sec = new Map();
+  for (let i = 0; i < s.hr.length; i++) {
+    const h = s.hr[i];
+    if (!(h >= 30 && h <= 250)) continue;
+    const dt = Math.min(10 + (s.passo || 5), (s.t[i + 1] ?? s.t[i] + (s.passo || 5)) - s.t[i]);
+    if (!(dt > 0)) continue;
+    sec.set(Math.round(h), (sec.get(Math.round(h)) || 0) + dt);
+  }
+  return [...sec.entries()];
+}
+
+// Tempo in ogni zona per una corsa (riga di attivita): dai dati grezzi se disponibili, altrimenti dalla serie.
+// Percentuali sul tempo totale con FC, fuori zona compreso (le righe sommano 100%).
+function tempoInZone(r, fcMax = CONFIG.fcMax) {
+  let bins = null, fonte = null;
+  try {
+    const g = r.fc_istogramma ? JSON.parse(r.fc_istogramma) : null;
+    if (g && g.length) { bins = g; fonte = 'grezzi'; }
+    if (!bins && r.serie) {
+      const d = istogrammaDaSerie(typeof r.serie === 'string' ? JSON.parse(r.serie) : r.serie);
+      if (d && d.length) { bins = d; fonte = 'serie'; }
+    }
+  } catch (_) {
+    return null;
+  }
+  if (!bins) return null;
+  const soglie = soglieZone(fcMax);
+  const sec = ZONE_FC.map(() => 0);
+  let sotto = 0;
+  for (const [b, t] of bins) {
+    const i = indiceZona(b, soglie);
+    if (i < 0) sotto += t; else sec[i] += t;
+  }
+  const tot = sotto + sec.reduce((x, y) => x + y, 0);
+  if (!tot) return null;
+  const pct = (x) => round((x / tot) * 100, 1);
+  return { fonte, totale: Math.round(tot), sotto: { sec: Math.round(sotto), pct: pct(sotto) }, zone: sec.map((x) => ({ sec: Math.round(x), pct: pct(x) })) };
+}
 
 const media = (arr) => (arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : null);
 const variazionePct = (nuovo, vecchio) => (nuovo != null && vecchio ? round(((nuovo - vecchio) / vecchio) * 100, 1) : null);
@@ -2230,7 +2361,7 @@ function costruisciAttivita(id, oggiStr) {
         tempo: Math.round(med(prec.map((x) => x.tempo))),
       }
     : null;
-  return { corsa: c, serie, giri, zone: st.zone, fc_max_teorica: CONFIG.fcMax, prevista, confronto };
+  return { corsa: c, serie, giri, zone: st.zone, sotto_zone: st.sotto_zone, fc_max_info: st.fc_max_info, fc_max_teorica: CONFIG.fcMax, prevista, confronto };
 }
 
 function costruisciStoriaSalute(oggiStr) {
@@ -2270,6 +2401,7 @@ function costruisciStorico(oggiStr) {
       fc_media: r.fc_media,
       fc_max: r.fc_max,
       zona: zonaFc(r.fc_corsa || r.fc_media),
+      tempo_zone: tempoInZone(r),
       passo_corsa: r.passo_corsa,
       fc_corsa: r.fc_corsa,
       tempo_corsa: r.tempo_corsa,
@@ -2347,9 +2479,10 @@ function costruisciStorico(oggiStr) {
     const km = arr.reduce((t, r) => t + r.distanza, 0);
     return km > 0 ? arr.reduce((t, r) => t + r.tempo, 0) / km : null;
   };
-  const conFc = recenti.filter((r) => r.zona);
-  const secFacili = conFc.filter((r) => r.zona === 'Z1' || r.zona === 'Z2').reduce((t, r) => t + r.tempo, 0);
-  const secTot = conFc.reduce((t, r) => t + r.tempo, 0);
+  // Tempo in Z1-Z2: secondi reali nelle zone (dati FC); per le corse senza dati, la zona della FC media
+  const conFc = recenti.filter((r) => r.tempo_zone || r.zona);
+  const secFacili = conFc.reduce((t, r) => t + (r.tempo_zone ? r.tempo_zone.zone[0].sec + r.tempo_zone.zone[1].sec : r.zona === 'Z1' || r.zona === 'Z2' ? r.tempo : 0), 0);
+  const secTot = conFc.reduce((t, r) => t + (r.tempo_zone ? r.tempo_zone.totale : r.tempo), 0);
   const lunghi = corse.filter((r) => r.data > fin(56) && r.tempo >= 45 * 60 && r.decoupling != null);
   const bw = (campo, da, a) => media(benessere.filter((r) => r.data > fin(da) && r.data <= fin(a) && r[campo] != null).map((r) => r[campo]));
   const lungoMax = corse.reduce((m, r) => (!m || r.distanza > m.distanza ? r : m), null);
@@ -2383,7 +2516,7 @@ function costruisciStorico(oggiStr) {
     vo2max: vo2 ? { valore: vo2.vo2max, data: vo2.data, precedente: vo2Prima ? vo2Prima.vo2max : null } : null,
   };
 
-  return { zone: limitiZone(), fc_max_stimata: CONFIG.fcMax, corse, altre, settimane, statistiche };
+  return { zone: limitiZone(), sotto_zone: sottoZone(), fc_max_info: infoFcMax(), fc_max_stimata: CONFIG.fcMax, corse, altre, settimane, statistiche };
 }
 
 // Metriche di salute: ultimo valore, media dei 28 giorni precedenti e serie di 30 giorni
@@ -2452,7 +2585,27 @@ function costruisciSalute(oggiStr) {
     }
   }
 
-  return { disponibile, metriche, serie_30g: serie, recupero };
+  return { disponibile, metriche, serie_30g: serie, recupero, corpo: corpoEBmi(oggiStr) };
+}
+
+// BMI = peso (kg) / altezza (m)². Peso: sempre il dato piu' recente tra bilancia/Intervals e profilo
+// (a parita' di giorno vince la misura). Categorie OMS per adulti.
+function corpoEBmi(oggiStr) {
+  const altezza = CONFIG.altezza || null;
+  const w = db.prepare('SELECT data, peso FROM benessere WHERE peso IS NOT NULL AND data <= ? ORDER BY data DESC LIMIT 1').get(oggiStr);
+  let peso = null, fonte = null, data = null;
+  const prof = CONFIG.peso ? { peso: CONFIG.peso, data: CONFIG.pesoData || '0000-00-00' } : null;
+  if (w && (!prof || w.data >= prof.data)) { peso = w.peso; fonte = 'misurato'; data = w.data; }
+  else if (prof) { peso = prof.peso; fonte = 'profilo'; data = CONFIG.pesoData || null; }
+  const bmi = altezza && peso ? round(peso / (altezza / 100) ** 2, 1) : null;
+  const categoria = bmi == null ? null
+    : bmi < 18.5 ? { id: 'sotto', nome: L('Sottopeso', 'Underweight') }
+    : bmi < 25 ? { id: 'normo', nome: L('Normopeso', 'Healthy weight') }
+    : bmi < 30 ? { id: 'sovra', nome: L('Sovrappeso', 'Overweight') }
+    : { id: 'obeso', nome: L('Obesità', 'Obesity') };
+  // peso che porterebbe il BMI nell'intervallo 18,5-24,9 per questa altezza
+  const intervallo = altezza ? [round(18.5 * (altezza / 100) ** 2, 1), round(24.9 * (altezza / 100) ** 2, 1)] : null;
+  return { altezza_cm: altezza, peso_kg: peso, fonte_peso: fonte, data_peso: data, bmi, categoria, peso_normo: intervallo };
 }
 
 // ===========================================================================
@@ -2809,8 +2962,8 @@ function markdownSessione(data, perParere = false) {
       ? seduta.manuale ? L('fatta (segnata a mano)', 'done (marked manually)') : L('fatta', 'done')
       : seduta.passata ? L('non fatta', 'missed') : L('in programma', 'planned')
     : L('fuori piano', 'outside the plan');
-  const zoneTxt = limitiZone()
-    .map((z) => `${z.z} ${z.nome} ${z.da == null ? `< ${z.a + 1}` : z.a == null ? `≥ ${z.da}` : `${z.da}–${z.a}`}`)
+  const zoneTxt = [`< Z1 ${sottoZone().nome} < ${sottoZone().a + 1}`]
+    .concat(limitiZone().map((z) => `${z.z} ${z.nome} ${z.da}–${z.a}`))
     .join('; ');
 
   const R = [];
@@ -2829,7 +2982,9 @@ function markdownSessione(data, perParere = false) {
     `- Età ${CONFIG.eta} anni;${mese != null ? ` ha ripreso a correre a ${MESI_IT[mese]} ${anno} dopo anni di inattività.` : ''}`,
     `- Age ${CONFIG.eta};${mese != null ? ` started running again in ${MESI_EN[mese]} ${anno} after years of inactivity.` : ''}`
   ));
-  R.push(L(`- FC massima **stimata** ${CONFIG.fcMax} bpm (formula di Tanaka, non misurata).`, `- **Estimated** max HR ${CONFIG.fcMax} bpm (Tanaka formula, not measured).`));
+  R.push(CONFIG.fcMaxReale
+    ? L(`- FC massima **misurata** ${CONFIG.fcMax} bpm (inserita dall'atleta).`, `- **Measured** max HR ${CONFIG.fcMax} bpm (entered by the athlete).`)
+    : L(`- FC massima **stimata** ${CONFIG.fcMax} bpm (formula di Tanaka 208 − 0,7 × età, non misurata).`, `- **Estimated** max HR ${CONFIG.fcMax} bpm (Tanaka formula 208 − 0.7 × age, not measured).`));
   R.push(L(`- Zone FC usate dall'app: ${zoneTxt} bpm.`, `- HR zones used by the app: ${zoneTxt} bpm.`));
   if (p) {
     const o = p.obiettivo;
@@ -2890,10 +3045,11 @@ function markdownSessione(data, perParere = false) {
     R.push(`| ${L('Carico (training load)', 'Training load')} | ${v(c.carico)} |`);
     R.push(`| ${L('Calorie', 'Calories')} | ${v(c.calorie, ' kcal')} |`);
     R.push(`| ${L('CTL / ATL / TSB dopo la corsa', 'CTL / ATL / TSB after the run')} | ${v(g.ctl)} / ${v(g.atl)} / ${v(c.tsb)} |`);
-    if (c.zone_fc && c.zone_fc.some(Boolean)) {
-      const tot = c.zone_fc.reduce((t, x) => t + x, 0);
+    if (c.tempo_zone) {
+      const tz = c.tempo_zone, fm = infoFcMax();
       R.push('');
-      R.push(`${L('Tempo nelle zone FC (zone di Intervals.icu)', 'Time in HR zones (Intervals.icu zones)')}: ${c.zone_fc.map((x, k) => `Z${k + 1} ${Math.round(x / 60)}′ (${Math.round((x / tot) * 100)}%)`).join(', ')}.`);
+      R.push(`${L('Tempo nelle zone FC', 'Time in HR zones')} (FC max ${fm.valore} bpm, ${fm.fonte === 'misurata' ? L('misurata', 'measured') : L('stimata', 'estimated')}): ` +
+        [`< Z1 ${Math.round(tz.sotto.sec / 60)}′ (${Math.round(tz.sotto.pct)}%)`].concat(tz.zone.map((x, k) => `Z${k + 1} ${Math.round(x.sec / 60)}′ (${Math.round(x.pct)}%)`)).join(', ') + '.');
     }
     R.push('');
     if (c.parziali && c.parziali.length) {
@@ -3002,7 +3158,7 @@ function costruisciCoachData() {
   const base = {
     generato_il: new Date().toISOString(),
     oggi: oggiStr,
-    atleta: { eta: CONFIG.eta, fc_max_stimata: CONFIG.fcMax, obiettivo: P(obiettivoCorrente().nome), codice_obiettivo: CONFIG.obiettivo || 'mezza' },
+    atleta: { eta: CONFIG.eta, eta_impostata: CONFIG.etaImpostata || null, fc_max_stimata: CONFIG.fcMax, fc_max_info: infoFcMax(), obiettivo: P(obiettivoCorrente().nome), codice_obiettivo: CONFIG.obiettivo || 'mezza' },
     soglie: SOGLIE,
     sincronizzazione: statoSync(),
     salute: costruisciSalute(oggiStr),
@@ -3300,6 +3456,13 @@ if (require.main === module) {
 
 module.exports = {
   analizzaStream,
+  // zone cardiache (usate anche nei test)
+  fcMaxTanaka,
+  soglieZone,
+  indiceZona,
+  limitiZone,
+  tempoInZone,
+  istogrammaDaStreams,
   creaApp,
   costruisciCoachData,
   generaDatiSimulati,

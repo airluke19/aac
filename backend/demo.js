@@ -21,7 +21,7 @@ function creaDemo({ BASE, dbPer, chiudiDb, contesto, fn }) {
   const dir = path.join(BASE.dataDir, 'demo');
   let corrente = null; // { giorno, ctx }
 
-  const utente = { id: 'demo', email: 'demo@aac', nome: 'Atleta demo', foto: null, ruolo: 'demo', stato: 'attivo', intervals_key: null, athlete_id: null, eta: 35, programma_ora: '07:00' };
+  const utente = { id: 'demo', email: 'demo@aac', nome: 'Atleta demo', foto: null, ruolo: 'demo', stato: 'attivo', intervals_key: null, athlete_id: null, eta: 35, altezza: 178, peso: 76, programma_ora: '07:00' };
 
   function contestoDemo() {
     const giorno = fn.oggi();
@@ -33,7 +33,7 @@ function creaDemo({ BASE, dbPer, chiudiDb, contesto, fn }) {
     const ctx = {
       utente: { id: 'demo', email: utente.email, ruolo: 'demo' },
       db: dbPer(file),
-      cfg: { apiKey: '', athleteId: '', eta: 35, programmaInizio: inizio, programmaOra: '07:00', seedMock: false, obiettivo: 'mezza', intensita: 'equilibrata', intensitaAuto: true },
+      cfg: { apiKey: '', athleteId: '', eta: 35, etaImpostata: 35, altezza: 178, peso: 76, programmaInizio: inizio, programmaOra: '07:00', seedMock: false, obiettivo: 'mezza', intensita: 'equilibrata', intensitaAuto: true },
     };
     if (nuovo) {
       const t0 = Date.now();

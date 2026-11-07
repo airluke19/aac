@@ -19,6 +19,8 @@ const Database = require('better-sqlite3');
 const COOKIE_SESSIONE_VECCHIO = 'aac_sess'; // fino al 7 nov 2026; ora __Host-aac_sess in HTTPS
 const COOKIE_OAUTH = 'aac_oauth';
 const DURATA_SESSIONE_GIORNI = 30;
+// Data di oggi nel fuso dell'app (AAAA-MM-GG)
+const oggiLocale = () => new Date().toLocaleDateString('sv-SE', { timeZone: process.env.TZ || 'Europe/Rome' });
 const MAX_IN_ATTESA = 50; // richieste di accesso non ancora approvate
 
 function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
@@ -55,6 +57,9 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     const col = new Set(sis.prepare('PRAGMA table_info(utenti)').all().map((c) => c.name));
     if (!col.has('settimana_iniziale')) sis.exec('ALTER TABLE utenti ADD COLUMN settimana_iniziale INTEGER');
     if (!col.has('fc_max')) sis.exec('ALTER TABLE utenti ADD COLUMN fc_max INTEGER');
+    if (!col.has('altezza')) sis.exec('ALTER TABLE utenti ADD COLUMN altezza INTEGER'); // cm, per il BMI
+    if (!col.has('peso')) sis.exec('ALTER TABLE utenti ADD COLUMN peso REAL'); // kg inserito nel profilo
+    if (!col.has('peso_data')) sis.exec('ALTER TABLE utenti ADD COLUMN peso_data TEXT'); // giorno in cui e' stato inserito (per scegliere il dato piu' recente)
     if (!col.has('colore')) sis.exec('ALTER TABLE utenti ADD COLUMN colore TEXT'); // colore principale scelto dall'utente
     if (!col.has('obiettivo')) sis.exec('ALTER TABLE utenti ADD COLUMN obiettivo TEXT'); // 5k | 10k | mezza | maratona (vuoto = mezza)
     if (!col.has('intensita')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita TEXT'); // tranquilla | equilibrata | ambiziosa (vuoto = equilibrata)
@@ -168,6 +173,10 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
           apiKey: decifra(u.intervals_key),
           athleteId: u.athlete_id || '',
           eta: u.eta || 33,
+          etaImpostata: u.eta || null,
+          altezza: u.altezza || null,
+          peso: u.peso || null,
+          pesoData: u.peso_data || null,
           programmaInizio: u.programma_inizio || null,
           programmaOra: u.programma_ora || '06:30',
           seedMock: u.ruolo === 'admin' ? BASE.seedMock : false,
@@ -318,6 +327,9 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
         programma_ora: u.programma_ora || '06:30',
         settimana_iniziale: u.settimana_iniziale ?? null, // null = non ancora scelta (valutazione da proporre)
         fc_max: u.fc_max ?? null,
+        altezza: u.altezza ?? null,
+        peso: u.peso ?? null,
+        peso_data: u.peso_data ?? null,
         colore: u.colore || null, // null = mai scelto: resta quello del dispositivo
         obiettivo: u.obiettivo || 'mezza',
         intensita: u.intensita || 'equilibrata',
@@ -344,7 +356,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     const errori = [];
     const athlete = b.athlete_id != null ? String(b.athlete_id).trim() : u.athlete_id;
     const nuovaChiave = b.intervals_key ? String(b.intervals_key).trim() : null;
-    const eta = b.eta != null && b.eta !== '' ? parseInt(b.eta, 10) : u.eta;
+    const eta = b.eta === '' || b.eta === null ? null : b.eta != null ? parseInt(b.eta, 10) : u.eta;
     const inizio = b.programma_inizio != null ? String(b.programma_inizio).trim() : u.programma_inizio;
     const oraP = b.programma_ora != null ? String(b.programma_ora).trim() : u.programma_ora;
     if (athlete && !/^i?\d{1,12}$/.test(athlete)) errori.push('athlete_id');
@@ -357,6 +369,10 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     const fcMaxIn = b.fc_max !== undefined ? intONull(b.fc_max) : u.fc_max;
     if (settIn != null && !(settIn >= 1 && settIn <= 22)) errori.push('settimana_iniziale');
     if (fcMaxIn != null && !(fcMaxIn >= 140 && fcMaxIn <= 220)) errori.push('fc_max');
+    const altezzaIn = b.altezza !== undefined ? intONull(b.altezza) : u.altezza;
+    const pesoIn = b.peso !== undefined ? (b.peso === null || b.peso === '' ? null : Math.round(parseFloat(String(b.peso).replace(',', '.')) * 10) / 10) : u.peso;
+    if (altezzaIn != null && !(altezzaIn >= 100 && altezzaIn <= 230)) errori.push('altezza');
+    if (pesoIn != null && !(pesoIn >= 30 && pesoIn <= 250)) errori.push('peso');
     const coloreIn = b.colore !== undefined ? String(b.colore) : u.colore;
     const obiettivoIn = b.obiettivo !== undefined ? String(b.obiettivo) : u.obiettivo;
     if (obiettivoIn && !['5k', '10k', 'mezza', 'maratona'].includes(obiettivoIn)) errori.push('obiettivo');
@@ -377,8 +393,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       const m = cambioObiettivo(contestoDi(u), obiettivoIn); // stessa fase nel nuovo piano, da oggi
       if (m) { settFinale = m.settimana_iniziale; inizioFinale = m.programma_inizio; }
     }
-    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ? WHERE id = ?')
-      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, u.id);
+    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ? WHERE id = ?')
+      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), u.id);
     dimentica(u.id);
     return { ok: true, utente: perId(u.id) };
   }
