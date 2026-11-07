@@ -4,13 +4,13 @@ WORKDIR /app
 RUN apt-get update \
     && apt-get install -y --no-install-recommends python3 make g++ \
     && rm -rf /var/lib/apt/lists/*
-COPY package.json ./
+COPY package.json package-lock.json ./
 # CA aggiuntiva opzionale (es. proxy aziendale con ispezione TLS):
 #   docker build --secret id=extra_ca,src=/percorso/ca.pem ...
 # Non finisce nell'immagine; senza il secret il build funziona normalmente.
 RUN --mount=type=secret,id=extra_ca,required=false \
     if [ -s /run/secrets/extra_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/extra_ca; fi \
-    && npm install --omit=dev --no-audit --no-fund
+    && npm ci --omit=dev --no-audit --no-fund
 
 # ---------- Stage 2: immagine di runtime minimale ----------
 FROM node:22-bookworm-slim
