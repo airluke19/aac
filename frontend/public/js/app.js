@@ -331,11 +331,12 @@
     const tip = '<div class="tip">' + esc(s.nota) + (s.tipo === 'gara' ? '' : T(' Se senti dolore (non semplice fatica), fermati e cammina.', ' If you feel pain (not just fatigue), stop and walk.')) + '</div>';
     // FC: il limite consigliato della seduta e il tetto di sicurezza (FC max personale) da non superare mai
     const fcSic = ultimiDati && ultimiDati.atleta ? ultimiDati.atleta.fc_max_stimata : null;
+    // "< 130" = fino a 129 bpm: si mostra l'ultimo battito consentito
     const fcT = String(s.fc_target || '').trim(), fcRange = !fcT.startsWith('<') && /[–-]/.test(fcT);
     return '<div class="hero-main"><b class="hero-big num">' + s.durata_min + '<small>min</small></b>' +
       '<div class="hero-stats">' +
         st(s.corsa_min + '′', T('di corsa', 'running')) +
-        st(esc(fcT.replace(/^<\s*/, '')), fcRange ? T('FC seduta', 'Session HR') : T('FC max seduta', 'Session max HR')) +
+        st(esc(fcT.startsWith('<') ? String(parseInt(fcT.replace(/[^\d]/g, ''), 10) - 1) : fcT), fcRange ? T('FC seduta', 'Session HR') : T('FC max seduta', 'Session max HR')) +
         (fcSic ? '<div class="fc-sic"><b class="num">' + fcSic + '</b><span>' + T('FC max sicurezza', 'Safety max HR') + '</span></div>' : '') +
         (pi ? st(pi.valore, T('passo /km', 'pace /km')) : '') +
       '</div></div>' +
