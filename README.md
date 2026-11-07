@@ -48,6 +48,7 @@ Two services, each with its own image:
 
 | Service | Image | What it does |
 |---|---|---|
+| `backup` | `ghcr.io/airluke19/aac-backup` | Nightly verified backups of the databases with rotation, and restore. No network. |
 | `frontend` | `ghcr.io/airluke19/aac-frontend` | nginx (unprivileged, port 8080): serves the app (`frontend/public`) and proxies `/api`, `/auth` and `/demo` to the backend. The app page is served only after the backend confirms the sign‑in (`auth_request` → `/auth/verifica`). It is the only service published on the host. |
 | `backend` | `ghcr.io/airluke19/aac-backend` | Node.js 22, Express, SQLite (better‑sqlite3), node‑cron: API, Google sign‑in, Intervals.icu sync, plan engine. Reachable only from the frontend on the internal Compose network. |
 
@@ -103,12 +104,25 @@ All data lives in the Docker volume `coach-db` (mounted at `/data`):
 
 - `sistema.db` — users and sessions
 - `corse.db` — admin's data; `utenti/u<id>-<hex>.db` — one database per user
+- `.chiave-app` — key that encrypts the Intervals.icu API keys when `APP_SECRET` is not set
 
-Back up the volume regularly, for example:
+The **`backup`** service (`coach-backup`, no network, non‑root) backs up every night at 03:30 (`BACKUP_CRON`) into the `coach-backup` volume, and once at start‑up if the last backup is older than 24 hours:
+
+- hot, consistent copy of each SQLite database (SQLite backup API), `integrity_check` on the copy, gzip and SHA‑256 in a `manifest.json` with row counts; the encryption key file is included;
+- one folder per backup (`AAAA-MM-GG_HHMM`), written to a temporary folder and published only when complete;
+- retention: last 7 days, then one per week (4) and one per month (6) — `BACKUP_KEEP_DAILY/WEEKLY/MONTHLY`;
+- the container is healthy only if the last successful backup is less than 26 hours old.
+
+Restore (verifies every checksum and the integrity of every database before touching anything; current databases are moved to `/data/pre-restore-<date>/`, never deleted; refuses to run while the backend is using the databases):
 
 ```bash
-docker run --rm -v coach-db:/data -v "$PWD":/backup alpine tar czf /backup/aac-data.tgz -C /data .
+docker compose stop backend
+docker compose run --rm backup node restore.js                  # list backups
+docker compose run --rm backup node restore.js 2026-11-08_0330  # restore one
+docker compose start backend
 ```
+
+Backups stay on the same machine: copy the `coach-backup` volume elsewhere if you need protection from disk failure. Keep `.env` safe too, it is not part of the backup.
 
 ### Updating
 

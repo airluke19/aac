@@ -6,6 +6,10 @@ name: ai-adaptive-coach
 #             E' l'unico esposto sull'host (porta HOST_PORT, default 3000).
 #   backend   Node: API, login, sync con Intervals.icu, motore del piano.
 #             Raggiungibile solo dal frontend, sulla rete interna di Compose.
+#   backup    Backup notturno verificato dei database nel volume coach-backup (senza rete).
+#             Ripristino: docker compose stop backend
+#                         docker compose run --rm backup node restore.js [AAAA-MM-GG_HHMM]
+#                         docker compose start backend
 # Immagini pubblicate da GitHub Actions su ghcr.io: :staging dal branch staging,
 # :latest dal branch main, sha-<commit> per ogni build (stesso tag per entrambe).
 # AAC_TAG nel .env sceglie il tag (default latest).
@@ -90,6 +94,37 @@ services:
     security_opt:
       - no-new-privileges:true
 
+  backup:
+    image: ghcr.io/airluke19/aac-backup:${AAC_TAG:-latest}
+    build:
+      context: ./coach-backup
+    container_name: coach-backup
+    restart: unless-stopped
+    # Non ha bisogno di rete: legge i database e scrive nel volume dei backup
+    network_mode: none
+    environment:
+      TZ: Europe/Rome
+      # Ogni notte alle 03:30 (all'avvio ne fa uno subito se l'ultimo ha piu' di 24 ore)
+      BACKUP_CRON: ${BACKUP_CRON:-30 3 * * *}
+      BACKUP_KEEP_DAILY: ${BACKUP_KEEP_DAILY:-7}
+      BACKUP_KEEP_WEEKLY: ${BACKUP_KEEP_WEEKLY:-4}
+      BACKUP_KEEP_MONTHLY: ${BACKUP_KEEP_MONTHLY:-6}
+    volumes:
+      # in scrittura solo perche' SQLite in modalita' WAL lo richiede anche ai lettori;
+      # il backup apre i database in sola lettura
+      - coach-db:/data
+      - coach-backup:/backups
+    logging: *logging
+    mem_limit: 256m
+    pids_limit: 64
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
 secrets:
   # Certificato CA opzionale per reti con ispezione TLS (es. Netskope).
   # Impostalo in .env con EXTRA_CA_FILE=/percorso/ca.pem; altrimenti resta vuoto.
@@ -99,3 +134,5 @@ secrets:
 volumes:
   coach-db:
     name: coach-db
+  coach-backup:
+    name: coach-backup

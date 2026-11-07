@@ -1,11 +1,11 @@
 name: Docker images
 
-# Costruisce le immagini dei due servizi (backend e frontend), le controlla con Trivy
+# Costruisce le immagini dei servizi (backend, frontend, backup), le controlla con Trivy
 # e solo se sono pulite le pubblica su GitHub Container Registry:
-#   push su staging -> ghcr.io/<owner>/aac-backend:staging, aac-frontend:staging
-#   push su main    -> ghcr.io/<owner>/aac-backend:latest,  aac-frontend:latest
+#   push su staging -> ghcr.io/<owner>/aac-backend, aac-frontend, aac-backup :staging
+#   push su main    -> stesse immagini con :latest
 # Ogni build ha anche il tag sha-<commit> per poter tornare indietro.
-# Si costruiscono sempre entrambe, cosi' uno stesso AAC_TAG vale per tutti e due i servizi.
+# Si costruiscono sempre tutte (backend, frontend, backup), cosi' uno stesso AAC_TAG vale per tutti i servizi.
 # Ogni lunedì ricostruisce :latest per prendere le patch dell'immagine base
 # e ricontrolla le CVE uscite nel frattempo.
 on:
@@ -14,6 +14,7 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
+      - "coach-backup/**"
       - "docker-compose.yml"
       - ".github/workflows/docker.yml"
   pull_request:
@@ -79,7 +80,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [backend, frontend]
+        include:
+          - { service: backend, dir: backend }
+          - { service: frontend, dir: frontend }
+          - { service: backup, dir: coach-backup }
     env:
       IMAGE: ghcr.io/${{ github.repository }}-${{ matrix.service }}
     permissions:
@@ -104,7 +108,7 @@ jobs:
       - name: Build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: ./${{ matrix.service }}
+          context: ./${{ matrix.dir }}
           platforms: linux/amd64
           load: true
           tags: aac-${{ matrix.service }}:scan
@@ -153,7 +157,7 @@ jobs:
         name: Push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
-          context: ./${{ matrix.service }}
+          context: ./${{ matrix.dir }}
           platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}

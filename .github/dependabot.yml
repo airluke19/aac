@@ -2,14 +2,14 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directory: /backend
+    directories: [/backend, /coach-backup]
     target-branch: staging
     schedule: { interval: weekly, day: monday }
     groups:
       npm-minor-patch: { update-types: [minor, patch] }
 
   - package-ecosystem: docker
-    directories: [/backend, /frontend]
+    directories: [/backend, /frontend, /coach-backup]
     target-branch: staging
     schedule: { interval: weekly, day: monday }
 

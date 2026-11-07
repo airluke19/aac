@@ -1,0 +1,18 @@
+{
+  "name": "aac-backup",
+  "version": "1.0.0",
+  "description": "AAC - nightly backup of the SQLite databases (verified, compressed, rotated)",
+  "license": "AGPL-3.0-only",
+  "private": true,
+  "main": "backup.js",
+  "scripts": {
+    "start": "node backup.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.7.0",
+    "node-cron": "^3.0.3"
+  }
+}
