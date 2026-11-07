@@ -25,6 +25,11 @@
   if (q.get('errore')) mostra('err', T('Accesso non riuscito', 'Sign-in failed'), errori[q.get('errore')] || errori.google);
 
   fetch('/auth/stato', { credentials: 'same-origin', cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (s) {
+    if (s.ambiente === 'staging') {
+      document.title = 'BETA · ' + document.title;
+      var h = document.querySelector('h1');
+      if (h) h.insertAdjacentHTML('beforeend', ' <b class="env-badge" title="staging">BETA</b>');
+    }
     if (!s.login) { location.replace('/'); return; }
     var u = s.utente;
     if (u && u.stato === 'attivo') { location.replace('/'); return; }

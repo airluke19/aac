@@ -1632,8 +1632,18 @@
   let ME = null;
   const iniziali = (u) => ((u.nome || u.email || '?').trim().split(/[\s@.]+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join('') || '?').toUpperCase();
   const avatar = (u, cls) => (u.foto ? '<img class="' + cls + '" src="' + esc(u.foto) + '" alt="" referrerpolicy="no-referrer">' : '<span class="' + cls + ' av-ini">' + esc(iniziali(u)) + '</span>');
+  // Ambiente di staging: badge BETA accanto al logo e "BETA ·" nel titolo della scheda
+  function segnaAmbiente(amb) {
+    if (amb !== 'staging') return;
+    document.documentElement.classList.add('env-staging');
+    if (!document.title.startsWith('BETA')) document.title = 'BETA · ' + document.title;
+    const h = document.querySelector('.brand h1');
+    if (h && !h.querySelector('.env-badge')) h.insertAdjacentHTML('beforeend', '<b class="env-badge" title="' + T('Ambiente di prova (staging)', 'Test environment (staging)') + '">BETA</b>');
+  }
+
   async function caricaMe() {
     try { ME = await caricaJson('/api/me'); } catch (_) { return; }
+    segnaAmbiente(ME.ambiente);
     if (ME.profilo && ME.profilo.colore && ME.profilo.colore !== document.documentElement.getAttribute('data-accent')) {
       applicaColore(ME.profilo.colore);
       if (ultimiDati) render(ultimiDati);

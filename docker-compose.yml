@@ -5,6 +5,7 @@ name: ai-adaptive-coach
 #   AAC_TAG               immagine (production: latest = branch main, staging: staging)
 #   HOST_PORT             porta su 127.0.0.1 (production: 8088, staging: 8089)
 #   LOGIN_GOOGLE          on/off (off = utente singolo, solo accesso locale)
+#   AAC_AMBIENTE          production/staging (staging = badge BETA)
 
 # ---------------------------------------------------------------------------
 # Due servizi:
@@ -86,6 +87,8 @@ services:
       APP_SECRET: ${APP_SECRET:-}
       # off = login Google spento (utente singolo): il backend rifiuta le richieste da internet
       LOGIN_GOOGLE: ${LOGIN_GOOGLE:-on}
+      # staging = badge BETA nell'app e nel titolo della pagina
+      AAC_AMBIENTE: ${AAC_AMBIENTE:-production}
       # CA aggiuntiva (proxy aziendale) per le chiamate a Intervals.icu
       NODE_EXTRA_CA_CERTS: /etc/extra-ca.pem
     logging: *logging

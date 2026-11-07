@@ -16,6 +16,8 @@ const path = require('path');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
+// Ambiente dell'istanza: 'staging' mostra il badge BETA nell'app e nella pagina di login
+const AMBIENTE = String(process.env.AAC_AMBIENTE || 'production').trim().toLowerCase() === 'staging' ? 'staging' : 'production';
 const COOKIE_SESSIONE_VECCHIO = 'aac_sess'; // fino al 7 nov 2026; ora __Host-aac_sess in HTTPS
 const COOKIE_OAUTH = 'aac_oauth';
 const DURATA_SESSIONE_GIORNI = 30;
@@ -477,7 +479,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     app.get('/auth/stato', (req, res) => {
       res.set('Cache-Control', 'no-store');
       const u = utenteDaRichiesta(req);
-      res.json({ login: attivo, utente: u ? { email: u.email, nome: u.nome, stato: u.stato } : null });
+      res.json({ login: attivo, ambiente: AMBIENTE, utente: u ? { email: u.email, nome: u.nome, stato: u.stato } : null });
     });
 
     // Controllo d'accesso per il frontend (nginx auth_request) prima di servire l'app:
@@ -546,6 +548,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     app.get('/api/me', (req, res) => {
       res.set('Cache-Control', 'no-store');
       const p = profiloPubblico(req.utente);
+      p.ambiente = AMBIENTE;
       if (req.utente !== req.vero) { p.impersonato_da = req.vero.email; p.in_attesa = 0; }
       if (req.demo) { p.demo = true; p.completo = true; p.in_attesa = 0; }
       res.json(p);
