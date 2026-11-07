@@ -20,9 +20,9 @@ data/
 backup/
 
 # --- Legacy single-user setup (oauth2-proxy + nginx), not used anymore ---
-docker-compose.auth.yml
-nginx.conf
-oauth2-proxy.cfg
+/docker-compose.auth.yml
+/nginx.conf
+/oauth2-proxy.cfg
 
 # --- Local tooling / instance notes ---
 CLAUDE.md
