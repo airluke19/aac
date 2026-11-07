@@ -2267,10 +2267,10 @@
     if (mappaPronta) return mappaPronta;
     mappaPronta = new Promise((ok, ko) => {
       const css = document.createElement('link');
-      css.rel = 'stylesheet'; css.href = 'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css';
+      css.rel = 'stylesheet'; css.href = '/vendor/maplibre-gl-4.7.1.css';
       document.head.appendChild(css);
       const js = document.createElement('script');
-      js.src = 'https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js';
+      js.src = '/vendor/maplibre-gl-4.7.1.js';
       js.onload = () => ok(); js.onerror = () => { mappaPronta = null; ko(new Error('maplibre')); };
       document.head.appendChild(js);
     });

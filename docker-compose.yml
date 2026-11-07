@@ -12,6 +12,13 @@ name: ai-adaptive-coach
 # Deploy: docker compose pull && docker compose up -d
 # Build locale di riserva: docker compose up -d --build
 # ---------------------------------------------------------------------------
+# Limiti comuni: log ruotati (max 3 x 10 MB) per non riempire il disco.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   frontend:
     image: ghcr.io/airluke19/aac-frontend:${AAC_TAG:-latest}
@@ -23,9 +30,12 @@ services:
       backend:
         condition: service_healthy
     ports:
-      # Di default solo 127.0.0.1. BIND_ADDR=0.0.0.0 nel .env lo rende raggiungibile
-      # dalla rete locale (es. per un tunnel o un reverse proxy su un'altra macchina).
+      # Di default solo 127.0.0.1 (es. tunnel Cloudflare sullo stesso host). BIND_ADDR=0.0.0.0
+      # nel .env serve solo se il reverse proxy e' su un'altra macchina.
       - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:8080"
+    logging: *logging
+    mem_limit: 128m
+    pids_limit: 64
     read_only: true
     tmpfs:
       - /tmp
@@ -66,6 +76,9 @@ services:
       APP_SECRET: ${APP_SECRET:-}
       # CA aggiuntiva (proxy aziendale) per le chiamate a Intervals.icu
       NODE_EXTRA_CA_CERTS: /etc/extra-ca.pem
+    logging: *logging
+    mem_limit: 768m
+    pids_limit: 128
     volumes:
       - coach-db:/data
       - ${EXTRA_CA_FILE:-./.no-extra-ca}:/etc/extra-ca.pem:ro
