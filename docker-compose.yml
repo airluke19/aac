@@ -1,7 +1,7 @@
 name: ai-adaptive-coach
 # Due ambienti sulla stessa macchina (cartelle /opt/aac/production e /opt/aac/staging), ognuno col suo .env:
 #   COMPOSE_PROJECT_NAME  progetto Compose (production: ai-adaptive-coach, staging: aac-staging)
-#   AAC_PREFIX            prefisso di container e volumi (production: coach, staging: coach-staging)
+#   AAC_PREFIX            prefisso di container e volumi (default aac; staging: aac-staging; production oggi: coach)
 #   AAC_TAG               immagine (production: latest = branch main, staging: staging)
 #   HOST_PORT             porta su 127.0.0.1 (production: 8088, staging: 8089)
 #   LOGIN_GOOGLE          on/off (off = utente singolo, solo accesso locale)
@@ -14,7 +14,7 @@ name: ai-adaptive-coach
 #             E' l'unico esposto sull'host (porta HOST_PORT, default 3000).
 #   backend   Node: API, login, sync con Intervals.icu, motore del piano.
 #             Raggiungibile solo dal frontend, sulla rete interna di Compose.
-#   backup    Backup notturno verificato dei database nel volume coach-backup (senza rete).
+#   backup    Backup notturno verificato dei database nel volume <prefisso>-backup (senza rete).
 #             Ripristino: docker compose stop backend
 #                         docker compose run --rm backup node restore.js [AAAA-MM-GG_HHMM]
 #                         docker compose start backend
@@ -36,7 +36,7 @@ services:
     image: ghcr.io/airluke19/aac-frontend:${AAC_TAG:-latest}
     build:
       context: ./frontend
-    container_name: ${AAC_PREFIX:-coach}-frontend
+    container_name: ${AAC_PREFIX:-aac}-frontend
     restart: unless-stopped
     depends_on:
       backend:
@@ -62,7 +62,7 @@ services:
       context: ./backend
       secrets:
         - extra_ca
-    container_name: ${AAC_PREFIX:-coach}-backend
+    container_name: ${AAC_PREFIX:-aac}-backend
     restart: unless-stopped
     # Nessuna porta sull'host: ci arriva solo il frontend.
     expose:
@@ -109,8 +109,8 @@ services:
   backup:
     image: ghcr.io/airluke19/aac-backup:${AAC_TAG:-latest}
     build:
-      context: ./coach-backup
-    container_name: ${AAC_PREFIX:-coach}-backup
+      context: ./aac-backup
+    container_name: ${AAC_PREFIX:-aac}-backup
     # AAC_BACKUP=0 nel .env spegne il servizio (es. staging); di default e' acceso
     deploy:
       replicas: ${AAC_BACKUP:-1}
@@ -148,6 +148,6 @@ secrets:
 
 volumes:
   coach-db:
-    name: ${AAC_PREFIX:-coach}-db
+    name: ${AAC_PREFIX:-aac}-db
   coach-backup:
-    name: ${AAC_PREFIX:-coach}-backup
+    name: ${AAC_PREFIX:-aac}-backup

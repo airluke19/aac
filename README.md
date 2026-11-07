@@ -80,7 +80,7 @@ Edit `.env`:
 | `LOGIN_GOOGLE` | Optional, `off` turns Google sign‑in off even when configured: single‑user mode, and the backend rejects every request coming from the internet (Cloudflare headers), so the instance is usable only locally |
 | `AAC_AMBIENTE` | Optional, `staging` shows a **BETA** badge next to the logo (app and sign‑in page) and prefixes the tab title, so a test instance is never mistaken for production (default `production`) |
 | `AAC_BACKUP` | Optional, `0` disables the backup service (e.g. on a staging copy); default `1` |
-| `COMPOSE_PROJECT_NAME` / `AAC_PREFIX` | Optional, run several instances on one host (e.g. production `ai-adaptive-coach`/`coach`, staging `aac-staging`/`coach-staging`): containers and volumes are named `<AAC_PREFIX>-backend`, `<AAC_PREFIX>-db`… |
+| `COMPOSE_PROJECT_NAME` / `AAC_PREFIX` | Optional, run several instances on one host (e.g. production `ai-adaptive-coach`/`aac`, staging `aac-staging`/`aac-staging`; default prefix `aac`): containers and volumes are named `<AAC_PREFIX>-backend`, `<AAC_PREFIX>-db`… |
 
 Google login is enabled only when `PUBLIC_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `ADMIN_EMAIL` are all set. Without them AAC runs in **single‑user mode with no login**: in that case keep it bound to `127.0.0.1` and never expose it to the internet.
 
@@ -89,7 +89,7 @@ Google login is enabled only when `PUBLIC_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIE
 ```bash
 docker compose up -d --build
 docker compose ps        # wait until the container is (healthy)
-docker logs coach-backend
+docker logs aac-backend
 ```
 
 The app (frontend) listens on host port 3000 by default (`HOST_PORT`). Put it behind an HTTPS reverse proxy (Caddy, Nginx, Traefik) or a Cloudflare Tunnel pointing to `http://<host>:3000`; if the proxy runs on another machine, set `BIND_ADDR=0.0.0.0`.
@@ -104,13 +104,13 @@ New users sign up with Google and appear as pending requests for the admin to ap
 
 ### Data and backups
 
-All data lives in the Docker volume `coach-db` (mounted at `/data`):
+All data lives in the Docker volume `aac-db` (mounted at `/data`):
 
 - `sistema.db` — users and sessions
 - `corse.db` — admin's data; `utenti/u<id>-<hex>.db` — one database per user
 - `.chiave-app` — key that encrypts the Intervals.icu API keys when `APP_SECRET` is not set
 
-The **`backup`** service (`coach-backup`, no network, non‑root) backs up every night at 03:30 (`BACKUP_CRON`) into the `coach-backup` volume, and once at start‑up if the last backup is older than 24 hours:
+The **`backup`** service (`aac-backup`, no network, non‑root) backs up every night at 03:30 (`BACKUP_CRON`) into the `aac-backup` volume, and once at start‑up if the last backup is older than 24 hours:
 
 - hot, consistent copy of each SQLite database (SQLite backup API), `integrity_check` on the copy, gzip and SHA‑256 in a `manifest.json` with row counts; the encryption key file is included;
 - one folder per backup (`AAAA-MM-GG_HHMM`), written to a temporary folder and published only when complete;
@@ -126,7 +126,7 @@ docker compose run --rm backup node restore.js 2026-11-08_0330  # restore one
 docker compose start backend
 ```
 
-Backups stay on the same machine: copy the `coach-backup` volume elsewhere if you need protection from disk failure. Keep `.env` safe too, it is not part of the backup.
+Backups stay on the same machine: copy the `aac-backup` volume elsewhere if you need protection from disk failure. Keep `.env` safe too, it is not part of the backup.
 
 ### Updating
 

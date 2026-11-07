@@ -14,7 +14,7 @@ on:
     paths:
       - "backend/**"
       - "frontend/**"
-      - "coach-backup/**"
+      - "aac-backup/**"
       - "docker-compose.yml"
       - ".github/workflows/docker.yml"
   pull_request:
@@ -83,7 +83,7 @@ jobs:
         include:
           - { service: backend, dir: backend }
           - { service: frontend, dir: frontend }
-          - { service: backup, dir: coach-backup }
+          - { service: backup, dir: aac-backup }
     env:
       IMAGE: ghcr.io/${{ github.repository }}-${{ matrix.service }}
     permissions:
