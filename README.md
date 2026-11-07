@@ -25,7 +25,7 @@ It works with any watch that uploads to Intervals.icu: Apple Watch (via a compan
 ### Features
 
 - **Today** — next session, readiness, last run, weekly summary
-- **Health** — resting HR, HRV, sleep, steps, BMI (latest weight from your scale or profile) and more
+- **Health** — resting HR, HRV, sleep, steps, BMI (latest weight from your scale or profile; height and weight are asked once in a pop‑up if missing) and more
 - **Plan** — calendar with every adaptation explained; copy a completed session as Markdown for any AI assistant
 - **Runs** — history, filters, shoe tracking; run detail with GPS map, HR, pace, cadence, power, elevation, running dynamics, run/walk laps, RPE, weather and shoes
 - **Progress** — goal, predictions, training load

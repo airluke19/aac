@@ -1640,6 +1640,59 @@
     caricaValutazione();
     // nuovo utente: prima di tutto il collegamento con Intervals.icu e la data di inizio
     if (!ME.completo && !location.hash) apriSheet('#account');
+    else chiediCorpo();
+  }
+
+  // Popup: altezza e peso mancanti, servono per il BMI. Chiede solo cio' che manca
+  // (il peso solo se non arriva gia' da una bilancia); "Piu' tardi" lo rimanda di 7 giorni.
+  const CORPO_DOPO = 'coach-corpo-dopo';
+  function chiediCorpo() {
+    if (!ME || ME.demo || ME.impersonato_da || !ME.completo || location.hash || $('#corpo-dlg')) return;
+    const cb = ultimiDati && ultimiDati.salute && ultimiDati.salute.corpo;
+    if (!cb || cb.bmi != null) return;
+    try { if (Date.now() < Number(localStorage.getItem(CORPO_DOPO) || 0)) return; } catch (_) { /* senza storage si chiede a ogni apertura */ }
+    const serveAltezza = !cb.altezza_cm, servePeso = cb.peso_kg == null;
+    if (!serveAltezza && !servePeso) return;
+    document.body.insertAdjacentHTML('beforeend',
+      '<dialog id="corpo-dlg" class="corpo-dlg" aria-labelledby="corpo-t"><form method="dialog" class="acc-form" id="corpo-form" novalidate>' +
+        '<h3 id="corpo-t">' + (serveAltezza && servePeso ? T('Altezza e peso', 'Height and weight') : serveAltezza ? T('La tua altezza', 'Your height') : T('Il tuo peso', 'Your weight')) + '</h3>' +
+        '<p class="sub">' + (serveAltezza && servePeso
+          ? T('Servono per calcolare il tuo BMI in Salute. Puoi cambiarli quando vuoi nel profilo.', 'Needed to work out your BMI in Health. You can change them any time in your profile.')
+          : T('Serve per calcolare il tuo BMI in Salute. Puoi cambiarla quando vuoi nel profilo.'.replace('cambiarla', serveAltezza ? 'cambiarla' : 'cambiarlo'), 'Needed to work out your BMI in Health. You can change it any time in your profile.')) + '</p>' +
+        '<div class="acc-row' + (serveAltezza && servePeso ? ' acc-row2 corpo-2' : '') + '">' +
+          (serveAltezza ? '<label class="acc-f"><span>' + T('Altezza (cm)', 'Height (cm)') + '</span><input name="altezza" type="number" inputmode="numeric" min="100" max="230" required autocomplete="off"></label>' : '') +
+          (servePeso ? '<label class="acc-f"><span>' + T('Peso (kg)', 'Weight (kg)') + '</span><input name="peso" type="text" inputmode="decimal" pattern="[0-9]{2,3}([.,][0-9])?" maxlength="5" required autocomplete="off" placeholder="70,5"></label>' : '') +
+        '</div>' +
+        '<p id="corpo-err" class="acc-err" hidden></p>' +
+        '<div class="corpo-az"><button type="button" class="link-btn" id="corpo-dopo">' + T('Più tardi', 'Later') + '</button><button type="submit" class="btn-primary">' + T('Salva', 'Save') + '</button></div>' +
+      '</form></dialog>');
+    const dlg = $('#corpo-dlg');
+    const chiudi = (rimanda) => {
+      if (rimanda) { try { localStorage.setItem(CORPO_DOPO, String(Date.now() + 7 * 864e5)); } catch (_) { /* ignora */ } }
+      dlg.close(); dlg.remove();
+    };
+    $('#corpo-dopo').addEventListener('click', () => chiudi(true));
+    dlg.addEventListener('cancel', (e) => { e.preventDefault(); chiudi(true); }); // tasto Esc
+    $('#corpo-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = new FormData(e.target), corpo = {}, err = $('#corpo-err');
+      for (const [k, v] of f.entries()) corpo[k] = String(v).trim().replace(',', '.');
+      const fuori = (k, a, b) => corpo[k] !== undefined && !(Number(corpo[k]) >= a && Number(corpo[k]) <= b);
+      if (fuori('altezza', 100, 230) || fuori('peso', 30, 250)) {
+        err.textContent = T('Altezza tra 100 e 230 cm, peso tra 30 e 250 kg.', 'Height between 100 and 230 cm, weight between 30 and 250 kg.'); err.hidden = false; return;
+      }
+      const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+      try {
+        const { ok, out } = await inviaJson('PUT', '/api/profilo', corpo);
+        if (!ok) { err.textContent = T('Salvataggio non riuscito: controlla i valori.', 'Could not save: check the values.'); err.hidden = false; return; }
+        ME = out;
+        chiudi(false);
+        toast(T('Salvato: il BMI è in Salute', 'Saved: your BMI is in Health'), 'ok');
+        await caricaDati(true);
+      } catch (_) { /* errore gia' segnalato */ } finally { btn.disabled = false; }
+    });
+    dlg.showModal();
+    const primo = dlg.querySelector('input'); if (primo) primo.focus();
   }
   function bannerImpersona() {
     $('#imp-bar')?.remove();
@@ -1914,7 +1967,7 @@
       '<div class="acc-row acc-row3">' +
         campo('acc-eta', T('Età', 'Age'), '<input id="acc-eta" name="eta" type="number" inputmode="numeric" min="14" max="90" placeholder="33" value="' + esc(p.eta || '') + '">') +
         campo('acc-alt', T('Altezza (cm)', 'Height (cm)'), '<input id="acc-alt" name="altezza" type="number" inputmode="numeric" min="100" max="230" value="' + esc(p.altezza || '') + '">') +
-        campo('acc-peso', T('Peso (kg)', 'Weight (kg)'), '<input id="acc-peso" name="peso" type="number" inputmode="decimal" min="30" max="250" step="0.1" value="' + esc(p.peso || '') + '">') +
+        campo('acc-peso', T('Peso (kg)', 'Weight (kg)'), '<input id="acc-peso" name="peso" type="text" inputmode="decimal" pattern="[0-9]{2,3}([.,][0-9])?" maxlength="5" value="' + esc(p.peso != null ? String(p.peso).replace('.', LANG === 'en' ? '.' : ',') : '') + '">') +
       '</div>' +
       (() => {
         const stima = Math.round(208 - 0.7 * (p.eta || 33));

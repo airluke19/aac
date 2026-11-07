@@ -1520,3 +1520,17 @@ details.more[open] > :not(summary), .pv-how[open] > div { animation: aprendo .22
 .bmi-scala b { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 3px solid var(--text); transform: translate(-50%, -50%); }
 .dd-zone .zchip.z0 { white-space: nowrap; padding: 2px 2px; letter-spacing: -.02em; }
 .sheet-body .sub a, .bmi-card .sub a { color: var(--accent); font-weight: 600; text-decoration: none; }
+
+/* ---- Popup altezza/peso (BMI) ---- */
+.corpo-dlg { width: min(360px, calc(100vw - 32px)); padding: 22px 20px 18px; border: 0; border-radius: 22px; background: var(--surface); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .35); }
+.corpo-dlg::backdrop { background: rgba(0, 0, 0, .45); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.corpo-dlg h3 { margin: 0 0 4px; font-size: 1.15rem; }
+.corpo-dlg .sub { margin: 0 0 14px; color: var(--muted); font-size: .86rem; line-height: 1.4; }
+.corpo-dlg .acc-row.corpo-2 { grid-template-columns: 1fr 1fr; }
+.corpo-dlg .acc-row.corpo-2 .acc-f:first-child { grid-column: auto; }
+.corpo-az { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+.corpo-az .btn-primary { flex: 1; max-width: 180px; }
+@media (prefers-reduced-motion: no-preference) {
+  .corpo-dlg[open] { animation: corpo-in .22s ease-out; }
+  @keyframes corpo-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
+}
