@@ -7,11 +7,15 @@ name: ai-adaptive-coach
 # ---------------------------------------------------------------------------
 services:
   backend:
+    # Immagine pubblicata da GitHub Actions su ghcr.io:
+    #   :staging dal branch staging, :latest dal branch main.
+    # ./deploy.sh sceglie il tag dal branch corrente (AAC_TAG) e fa pull + up.
+    image: ghcr.io/airluke19/aac:${AAC_TAG:-latest}
+    # Build locale di riserva: docker compose up -d --build
     build:
       context: ./backend
       secrets:
         - extra_ca
-    image: ai-adaptive-coach-backend:1.0.0
     container_name: coach-backend
     restart: unless-stopped
     ports:
