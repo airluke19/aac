@@ -3063,7 +3063,8 @@ function costruisciCoachData() {
 function creaApp() {
   const app = express();
   app.disable('x-powered-by');
-  app.set('trust proxy', true);
+  // Davanti c'e' solo il frontend nginx sulla rete interna di Docker: si fidano solo gli indirizzi privati
+  app.set('trust proxy', 'uniquelocal');
 
   // Lingua dei testi generati per questa richiesta
   app.use((req, res, next) => {
@@ -3252,6 +3253,16 @@ function creaApp() {
     );
   }
 
+  // Errori non gestiti: risposta generica, mai lo stack o i dettagli interni al client
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, req, res, next) => {
+    const stato = err.status || err.statusCode || 500;
+    if (stato >= 500) console.error(`[api] ${req.method} ${req.path}:`, err);
+    if (res.headersSent) return;
+    res.status(stato >= 400 && stato < 600 ? stato : 500)
+      .json({ errore: stato < 500 ? L('Richiesta non valida', 'Invalid request') : L('Errore interno', 'Internal error') });
+  });
+
   return app;
 }
 
@@ -3278,6 +3289,7 @@ function main() {
     });
     setTimeout(() => process.exit(1), 10000).unref();
   };
+  process.on('unhandledRejection', (e) => console.error('[server] promessa rifiutata non gestita:', e));
   process.on('SIGTERM', () => chiudi('SIGTERM'));
   process.on('SIGINT', () => chiudi('SIGINT'));
 }

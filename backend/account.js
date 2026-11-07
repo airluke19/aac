@@ -16,7 +16,7 @@ const path = require('path');
 const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
-const COOKIE_SESSIONE = 'aac_sess';
+const COOKIE_SESSIONE_VECCHIO = 'aac_sess'; // fino al 7 nov 2026; ora __Host-aac_sess in HTTPS
 const COOKIE_OAUTH = 'aac_oauth';
 const DURATA_SESSIONE_GIORNI = 30;
 const MAX_IN_ATTESA = 50; // richieste di accesso non ancora approvate
@@ -67,6 +67,9 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
 
   const attivo = Boolean(BASE.googleClientId && BASE.googleClientSecret && BASE.publicUrl && BASE.adminEmail);
   const sicuro = BASE.publicUrl.startsWith('https://');
+  // In HTTPS il cookie di sessione usa il prefisso __Host-: il browser lo accetta solo Secure, Path=/
+  // e senza Domain, quindi nessun sottodominio puo' impostarlo o sovrascriverlo.
+  const COOKIE_SESSIONE = sicuro ? '__Host-aac_sess' : COOKIE_SESSIONE_VECCHIO;
 
   // ---- cifratura della chiave Intervals ----
   const chiave = (() => {
@@ -203,7 +206,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     scriviCookie(res, COOKIE_SESSIONE, token, { maxAge: DURATA_SESSIONE_GIORNI * 86400 });
   }
   function sessioneDaRichiesta(req) {
-    const token = leggiCookie(req, COOKIE_SESSIONE);
+    const token = leggiCookie(req, COOKIE_SESSIONE) || (sicuro ? leggiCookie(req, COOKIE_SESSIONE_VECCHIO) : null);
     if (!token) return null;
     const s = sis.prepare('SELECT * FROM sessioni WHERE hash = ?').get(hash(token));
     return s && s.scade >= ora() ? s : null;
@@ -279,8 +282,9 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       }
       sis.prepare('UPDATE utenti SET nome = COALESCE(?, nome), foto = COALESCE(?, foto), ultimo_accesso = ? WHERE id = ?')
         .run(info.name || null, info.picture || null, ora(), u.id);
-      if (u.stato === 'bloccato') return vai('stato=bloccato');
+      if (u.stato === 'bloccato') { console.warn(`[account] accesso negato a utente bloccato: ${email}`); return vai('stato=bloccato'); }
       creaSessione(res, u.id);
+      console.log(`[account] login: ${email} (${u.stato})`);
       return res.redirect(u.stato === 'attivo' ? '/' : '/login.html?stato=attesa');
     } catch (e) {
       console.error(`[account] login Google non riuscito: ${e.message}`);
@@ -289,9 +293,11 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
   }
 
   function esci(req, res) {
-    const token = leggiCookie(req, COOKIE_SESSIONE);
-    if (token) sis.prepare('DELETE FROM sessioni WHERE hash = ?').run(hash(token));
-    scriviCookie(res, COOKIE_SESSIONE, '', { maxAge: 0 });
+    for (const nome of new Set([COOKIE_SESSIONE, COOKIE_SESSIONE_VECCHIO])) {
+      const token = leggiCookie(req, nome);
+      if (token) sis.prepare('DELETE FROM sessioni WHERE hash = ?').run(hash(token));
+      if (token) scriviCookie(res, nome, '', { maxAge: 0 });
+    }
   }
 
   // ---- profilo ----
@@ -417,6 +423,21 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     const json = require('express').json({ limit: '16kb' });
     const csrf = (req, res, next) => (req.get('x-requested-with') === 'coach' ? next() : res.status(400).json({ errore: L('Richiesta non valida', 'Invalid request') }));
 
+    // Migrazione al cookie __Host-: chi ha ancora il vecchio cookie valido riceve quello nuovo
+    // con la stessa scadenza, senza dover rifare il login.
+    if (sicuro) {
+      app.use((req, res, next) => {
+        const vecchio = leggiCookie(req, COOKIE_SESSIONE_VECCHIO);
+        if (vecchio && !leggiCookie(req, COOKIE_SESSIONE)) {
+          const s = sis.prepare('SELECT scade FROM sessioni WHERE hash = ?').get(hash(vecchio));
+          const resto = s ? Math.floor((Date.parse(s.scade) - Date.now()) / 1000) : 0;
+          if (resto > 0) scriviCookie(res, COOKIE_SESSIONE, vecchio, { maxAge: resto });
+          scriviCookie(res, COOKIE_SESSIONE_VECCHIO, '', { maxAge: 0 });
+        }
+        next();
+      });
+    }
+
     app.get('/auth/google', (req, res) => (attivo ? avviaLogin(req, res) : res.redirect('/')));
     app.get('/auth/google/callback', (req, res) => (attivo ? completaLogin(req, res) : res.redirect('/')));
     app.post('/auth/logout', csrf, (req, res) => { esci(req, res); res.json({ ok: true }); });
@@ -523,13 +544,19 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     app.get('/api/admin/utenti', soloAdmin, (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ login: attivo, utenti: elencoUtenti() }); });
     app.post('/api/admin/utenti', csrf, soloAdmin, json, (req, res) => {
       const r = invita(req.body && req.body.email);
+      if (r.ok) console.log(`[admin] ${req.vero.email} invita/attiva ${String(req.body.email).trim().toLowerCase()}`);
       res.status(r.ok ? 200 : 400).json(r);
     });
     app.post('/api/admin/utenti/:id/stato', csrf, soloAdmin, json, (req, res) => {
-      res.json({ ok: cambiaStato(parseInt(req.params.id, 10), req.body && req.body.stato) });
+      const id = parseInt(req.params.id, 10), stato = req.body && req.body.stato;
+      const t = perId(id), ok = cambiaStato(id, stato);
+      if (ok) console.log(`[admin] ${req.vero.email} imposta ${t.email} a ${stato}`);
+      res.json({ ok });
     });
     app.delete('/api/admin/utenti/:id', csrf, soloAdmin, (req, res) => {
-      res.json({ ok: rimuovi(parseInt(req.params.id, 10)) });
+      const id = parseInt(req.params.id, 10), t = perId(id), ok = rimuovi(id);
+      if (ok) console.log(`[admin] ${req.vero.email} rimuove l'account ${t.email}`);
+      res.json({ ok });
     });
   }
 
