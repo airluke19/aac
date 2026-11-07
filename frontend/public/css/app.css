@@ -1560,3 +1560,6 @@ body.demo .admin-wrap { display: none; }
 .hero-stats .fc-sic b { color: var(--warn); }
 .hero-stats:has(> :nth-child(4)) { grid-template-columns: repeat(2, minmax(0, auto)); row-gap: 12px; }
 @media (min-width: 560px) { .hero-stats:has(> :nth-child(4)) { grid-template-columns: repeat(4, minmax(0, auto)); } }
+/* etichette dei numeri della seduta sempre su una riga */
+.hero-stats span { white-space: nowrap; }
+.hero-stats { column-gap: 22px; }
