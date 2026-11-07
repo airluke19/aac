@@ -116,11 +116,12 @@ GitHub Actions builds the backend image on every push that touches `backend/` an
 | `staging` | `ghcr.io/airluke19/aac:staging` |
 | `main` | `ghcr.io/airluke19/aac:latest` |
 
-Every build is also tagged `sha-<commit>`. Images are public, so no login is needed. Deploy with the script, which picks `:staging` on the `staging` branch and `:latest` otherwise, pulls, restarts and waits for `(healthy)`:
+Every build is also tagged `sha-<commit>`. Images are public, so no login is needed. `docker-compose.yml` uses `ghcr.io/airluke19/aac:${AAC_TAG:-latest}`; set `AAC_TAG` in `.env` (e.g. `staging` or `sha-abc1234` to roll back) to pick another tag:
 
 ```bash
-./deploy.sh
-AAC_TAG=sha-abc1234 ./deploy.sh   # roll back to a specific build
+docker compose pull
+docker compose up -d
+docker compose ps        # wait until the container is (healthy)
 ```
 
 `docker compose up -d --build` still builds the image locally instead.

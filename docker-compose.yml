@@ -8,8 +8,8 @@ name: ai-adaptive-coach
 services:
   backend:
     # Immagine pubblicata da GitHub Actions su ghcr.io:
-    #   :staging dal branch staging, :latest dal branch main.
-    # ./deploy.sh sceglie il tag dal branch corrente (AAC_TAG) e fa pull + up.
+    #   :staging dal branch staging, :latest dal branch main, sha-<commit> per ogni build.
+    # AAC_TAG nel .env sceglie il tag (default latest). Deploy: docker compose pull && docker compose up -d
     image: ghcr.io/airluke19/aac:${AAC_TAG:-latest}
     # Build locale di riserva: docker compose up -d --build
     build:
