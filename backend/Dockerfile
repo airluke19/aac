@@ -14,6 +14,8 @@ RUN --mount=type=secret,id=extra_ca,required=false \
 
 # ---------- Stage 2: immagine di runtime minimale ----------
 FROM node:22-bookworm-slim
+LABEL org.opencontainers.image.source=https://github.com/airluke19/aac \
+      org.opencontainers.image.description="AI Adaptive Coach backend"
 ENV NODE_ENV=production \
     TZ=Europe/Rome \
     PORT=3000 \
