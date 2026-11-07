@@ -26,3 +26,4 @@ h1 { margin: 0; font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; }
 .demo-link { display: inline-block; margin-top: 18px; color: var(--accent); font-weight: 600; font-size: .95rem; text-decoration: none; }
 [hidden] { display: none !important; }
 .env-badge { display: inline-block; padding: 3px 8px; border-radius: 7px; background: var(--warn); color: #1c1c1e; font-size: .8rem; font-weight: 800; letter-spacing: .08em; vertical-align: middle; }
+[data-theme="light"] .env-badge { color: #fff; -webkit-text-fill-color: #fff; }

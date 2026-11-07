@@ -1537,3 +1537,4 @@ details.more[open] > :not(summary), .pv-how[open] > div { animation: aprendo .22
 
 /* ---- Ambiente di staging: badge BETA (arancione, ben distinto dal colore d'accento) ---- */
 .env-badge { display: inline-block; margin-left: 8px; padding: 2px 7px; border-radius: 6px; background: var(--warn); color: #1c1c1e; font-size: .62rem; font-weight: 800; letter-spacing: .08em; vertical-align: 3px; -webkit-text-fill-color: #1c1c1e; }
+[data-theme="light"] .env-badge { color: #fff; -webkit-text-fill-color: #fff; }
