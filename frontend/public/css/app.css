@@ -1555,3 +1555,8 @@ body.demo .admin-wrap { display: none; }
 .adm-az, .adm-subito { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 12px 52px; }
 .adm-subito .pill-btn { min-width: 120px; justify-content: center; }
 @media (prefers-reduced-motion: reduce) { .adm-chev { transition: none; } }
+
+/* ---- Seduta: FC max consigliata e FC max di sicurezza; con 4 numeri, griglia 2x2 sul telefono ---- */
+.hero-stats .fc-sic b { color: var(--warn); }
+.hero-stats:has(> :nth-child(4)) { grid-template-columns: repeat(2, minmax(0, auto)); row-gap: 12px; }
+@media (min-width: 560px) { .hero-stats:has(> :nth-child(4)) { grid-template-columns: repeat(4, minmax(0, auto)); } }

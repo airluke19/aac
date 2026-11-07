@@ -328,13 +328,15 @@
     const fasi = s.struttura.map((f) => '<li><span class="m">' + f.min + '′</span><span><b>' + esc(f.fase) + '</b> · ' + esc(f.testo) + '</span></li>').join('');
     const st = (v, l) => '<div><b class="num">' + v + '</b><span>' + l + '</span></div>';
     const notaPasso = pi ? '<p class="pi-nota">' + T('Passo ', 'Pace ') + '<b>' + pi.valore + '/km</b> · ' + esc(pi.nota) + '</p>' : '';
+    const tip = '<div class="tip">' + esc(s.nota) + (s.tipo === 'gara' ? '' : T(' Se senti dolore (non semplice fatica), fermati e cammina.', ' If you feel pain (not just fatigue), stop and walk.')) + '</div>';
+    // FC: il limite consigliato della seduta e il tetto di sicurezza (FC max personale) da non superare mai
     const fcSic = ultimiDati && ultimiDati.atleta ? ultimiDati.atleta.fc_max_stimata : null;
-    const tip = '<div class="tip">' + esc(s.nota) + (s.tipo === 'gara' ? '' : T(' Se senti dolore (non semplice fatica), fermati e cammina.', ' If you feel pain (not just fatigue), stop and walk.')) +
-      (fcSic ? ' <b>' + T('FC di sicurezza: non superare ' + fcSic + ' bpm.', 'Safety HR: do not exceed ' + fcSic + ' bpm.') + '</b>' : '') + '</div>';
+    const fcT = String(s.fc_target || '').trim(), fcRange = !fcT.startsWith('<') && /[–-]/.test(fcT);
     return '<div class="hero-main"><b class="hero-big num">' + s.durata_min + '<small>min</small></b>' +
       '<div class="hero-stats">' +
         st(s.corsa_min + '′', T('di corsa', 'running')) +
-        st(esc(s.fc_target), T('FC bpm', 'HR bpm')) +
+        st(esc(fcT.replace(/^<\s*/, '')), fcRange ? T('FC seduta', 'Session HR') : T('FC max seduta', 'Session max HR')) +
+        (fcSic ? '<div class="fc-sic"><b class="num">' + fcSic + '</b><span>' + T('FC max sicurezza', 'Safety max HR') + '</span></div>' : '') +
         (pi ? st(pi.valore, T('passo /km', 'pace /km')) : '') +
       '</div></div>' +
       timelineSeduta(s) +
