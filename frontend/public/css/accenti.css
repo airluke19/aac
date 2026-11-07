@@ -1,0 +1,19 @@
+/* Colore principale scelto dall'utente (colori di sistema Apple, varianti scuro/chiaro).
+   Condiviso da app (index.html) e pagina di accesso (login.html); il verde e' il valore predefinito
+   definito nei fogli di stile delle due pagine. data-accent lo imposta js/theme.js. */
+[data-theme="dark"][data-accent="menta"]   { --accent: #63e6e2; --accent-ink: #00302e; }
+[data-theme="light"][data-accent="menta"]  { --accent: #0c817b; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="azzurro"] { --accent: #64d2ff; --accent-ink: #002a3d; }
+[data-theme="light"][data-accent="azzurro"]{ --accent: #0071a4; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="blu"]     { --accent: #0a84ff; --accent-ink: #00172e; }
+[data-theme="light"][data-accent="blu"]    { --accent: #0066cc; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="indaco"]  { --accent: #7d7aff; --accent-ink: #0b0a33; }
+[data-theme="light"][data-accent="indaco"] { --accent: #3634a3; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="viola"]   { --accent: #bf5af2; --accent-ink: #1f0029; }
+[data-theme="light"][data-accent="viola"]  { --accent: #8944ab; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="ambra"]     { --accent: #ffb340; --accent-ink: #2b1a00; }
+[data-theme="light"][data-accent="ambra"]    { --accent: #a15c00; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="arancio"]   { --accent: #ff9f0a; --accent-ink: #2b1600; }
+[data-theme="light"][data-accent="arancio"]  { --accent: #c24e00; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="mandarino"] { --accent: #ff7a45; --accent-ink: #2b0d00; }
+[data-theme="light"][data-accent="mandarino"]{ --accent: #c2410c; --accent-ink: #ffffff; }

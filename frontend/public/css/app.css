@@ -958,23 +958,7 @@ body.demo .account-wrap { display: none; }
 .pill-btn.ok { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
 .pill-btn.bad { color: var(--danger); }
 @media (max-width: 420px) { .acc-row { grid-template-columns: 1fr 1fr; } .acc-row .acc-f:first-child { grid-column: 1 / -1; } }
-/* ---- Colore principale scelto dall'utente (colori di sistema Apple, varianti scuro/chiaro) ---- */
-[data-theme="dark"][data-accent="menta"]   { --accent: #63e6e2; --accent-ink: #00302e; }
-[data-theme="light"][data-accent="menta"]  { --accent: #0c817b; --accent-ink: #ffffff; }
-[data-theme="dark"][data-accent="azzurro"] { --accent: #64d2ff; --accent-ink: #002a3d; }
-[data-theme="light"][data-accent="azzurro"]{ --accent: #0071a4; --accent-ink: #ffffff; }
-[data-theme="dark"][data-accent="blu"]     { --accent: #0a84ff; --accent-ink: #00172e; }
-[data-theme="light"][data-accent="blu"]    { --accent: #0066cc; --accent-ink: #ffffff; }
-[data-theme="dark"][data-accent="indaco"]  { --accent: #7d7aff; --accent-ink: #0b0a33; }
-[data-theme="light"][data-accent="indaco"] { --accent: #3634a3; --accent-ink: #ffffff; }
-[data-theme="dark"][data-accent="viola"]   { --accent: #bf5af2; --accent-ink: #1f0029; }
-[data-theme="light"][data-accent="viola"]  { --accent: #8944ab; --accent-ink: #ffffff; }
-[data-theme="dark"][data-accent="ambra"]     { --accent: #ffb340; --accent-ink: #2b1a00; }
-[data-theme="light"][data-accent="ambra"]    { --accent: #a15c00; --accent-ink: #ffffff; }
-[data-theme="dark"][data-accent="arancio"]   { --accent: #ff9f0a; --accent-ink: #2b1600; }
-[data-theme="light"][data-accent="arancio"]  { --accent: #c24e00; --accent-ink: #ffffff; }
-[data-theme="dark"][data-accent="mandarino"] { --accent: #ff7a45; --accent-ink: #2b0d00; }
-[data-theme="light"][data-accent="mandarino"]{ --accent: #c2410c; --accent-ink: #ffffff; }
+/* Colori d'accento: in css/accenti.css (condiviso con la pagina di accesso) */
 /* zone cardiache: stessa scala, nel colore scelto */
 [data-theme="dark"][data-accent]:not([data-accent="verde"]) {
   --ok: var(--accent);

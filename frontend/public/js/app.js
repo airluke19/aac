@@ -408,7 +408,7 @@
     '</div>';
 
     // ---- approfondimenti: elenco stile Impostazioni, si apre con un tocco ----
-    const voce = (id, ico, col, tit, sotto, corpo) => '<details class="nf-row" id="info-' + id + '"><summary><span class="nf-sq" style="--c:' + col + '">' + ico + '</span><span class="nf-t"><b>' + tit + '</b><small>' + sotto + '</small></span></summary><div class="nf-body">' + corpo + '</div></details>';
+    const voce = (id, ico, col, tit, sotto, corpo) => '<details class="nf-row" id="info-' + id + '"><summary><span class="nf-sq' + (col === 'var(--accent)' ? ' acc' : '') + '" style="--c:' + col + '">' + ico + '</span><span class="nf-t"><b>' + tit + '</b><small>' + sotto + '</small></span></summary><div class="nf-body">' + corpo + '</div></details>';
     const kv = (k, v) => '<div class="nf-kv"><b>' + k + '</b><span>' + v + '</span></div>';
 
     const vs = (cosa, fisso, aac) => '<div class="in-vs-r"><b>' + cosa + '</b><span class="in-vs-f">' + fisso + '</span><span class="in-vs-a">' + aac + '</span></div>';
@@ -479,12 +479,12 @@
     ]));
 
     const elenco = '<div class="sec-title"><h2>' + T('Approfondisci', 'Learn more') + '</h2></div><section class="nf-list">' +
-      voce('vantaggio', G.star, '#34c759', T('Perché AAC', 'Why AAC'), T('Rispetto a una tabella fissa', 'Compared with a fixed plan'), perche) +
+      voce('vantaggio', G.star, 'var(--accent)', T('Perché AAC', 'Why AAC'), T('Rispetto a una tabella fissa', 'Compared with a fixed plan'), perche) +
       voce('partenza', G.flag, '#ff9500', T('Punto di partenza', 'Starting point'), T('La settimana da cui parti', 'The week you start from'), partenza) +
       voce('piano', G.cal, '#5856d6', T('Il piano', 'The plan'), tot + T(' settimane · 3 sedute alle ', ' weeks · 3 sessions at ') + esc(ora), fasi) +
       voce('sedute', G.list, '#007aff', T('Le sedute', 'Sessions'), T('Cosa significano le sigle', 'What the codes mean'), '<div class="in-tipi">' + tipiSeduta().map((t) => '<div class="in-tipo"><span class="sig">' + esc(t.sigla) + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('') + '</div>') +
       voce('zone', G.heart, '#ff3b30', T('Zone e passo', 'Zones and pace'), T('Dalla tua FC massima', 'From your max HR'), zone) +
-      voce('bmi', G.heart, '#34c759', 'BMI', T('Peso e altezza, in Salute', 'Weight and height, in Health'), bmi) +
+      voce('bmi', G.heart, '#ff2d55', 'BMI', T('Peso e altezza, in Salute', 'Weight and height, in Health'), bmi) +
       voce('previsioni', G.trend, '#30b0c7', T('Previsioni', 'Forecasts'), T('Data, tempo e forma per la gara', 'Race date, time and form'), previsioni) +
       voce('dati', G.sync, '#8e8e93', T('I tuoi dati', 'Your data'), T('Orologio, Intervals.icu, AAC', 'Watch, Intervals.icu, AAC'), dati) +
       voce('strumenti', G.grid, '#af52de', T('Strumenti', 'Tools'), T('Calendario, export, Copia per AI', 'Calendar, export, Copy for AI'), strumenti) +
