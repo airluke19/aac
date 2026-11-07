@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="4 6 56 52"><title>AI Adaptive Coach</title>
+<style>.a{stop-color:#248a3d}.b{stop-color:#0891b2}@media (prefers-color-scheme: dark){.a{stop-color:#30d158}.b{stop-color:#2a9db0}}</style>
+<defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" class="a"/><stop offset="1" class="b"/></linearGradient></defs>
+<g stroke="url(#lg)" stroke-width="4.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 26.5A19 19 0 1 1 13.6 37.5"/><path d="M8 32h14l3.5-8 5 16 3.5-8h4"/></g></svg>

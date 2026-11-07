@@ -1,0 +1,60 @@
+name: ai-adaptive-coach
+
+# ---------------------------------------------------------------------------
+# Versione semplice SENZA autenticazione: solo il backend, raggiungibile
+# esclusivamente da questo computer su http://localhost:3000
+# La versione completa (Nginx + HTTPS + Google SSO) e' in docker-compose.auth.yml
+# ---------------------------------------------------------------------------
+services:
+  backend:
+    build:
+      context: ./backend
+      secrets:
+        - extra_ca
+    image: ai-adaptive-coach-backend:1.0.0
+    container_name: coach-backend
+    restart: unless-stopped
+    ports:
+      # Di default solo 127.0.0.1: senza autenticazione non va esposto su internet.
+      # BIND_ADDR=0.0.0.0 nel .env lo rende raggiungibile dalla rete locale.
+      - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:3000"
+    environment:
+      TZ: Europe/Rome
+      PORT: "3000"
+      DB_PATH: /data/corse.db
+      INTERVALS_API_KEY: ${INTERVALS_API_KEY:-}
+      INTERVALS_ATHLETE_ID: ${INTERVALS_ATHLETE_ID:-}
+      SYNC_CRON: ${SYNC_CRON:-*/30 * * * *}
+      ATHLETE_AGE: "33"
+      # Programma di ripartenza corsa/cammino (8 settimane): data della prima seduta
+      PROGRAMMA_INIZIO: ${PROGRAMMA_INIZIO:-}
+      PROGRAMMA_ORA: ${PROGRAMMA_ORA:-06:30}
+      # Account e login con Google (vuoti = utente singolo, nessun login).
+      # Dopo il primo avvio chiave Intervals, Athlete ID e programma si gestiscono dal profilo nell'app.
+      PUBLIC_URL: ${PUBLIC_URL:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      APP_SECRET: ${APP_SECRET:-}
+      # CA aggiuntiva (proxy aziendale) per le chiamate a Intervals.icu
+      NODE_EXTRA_CA_CERTS: /etc/extra-ca.pem
+    volumes:
+      - coach-db:/data
+      - ${EXTRA_CA_FILE:-./.no-extra-ca}:/etc/extra-ca.pem:ro
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+secrets:
+  # Certificato CA opzionale per reti con ispezione TLS (es. Netskope).
+  # Impostalo in .env con EXTRA_CA_FILE=/percorso/ca.pem; altrimenti resta vuoto.
+  extra_ca:
+    file: ${EXTRA_CA_FILE:-./.no-extra-ca}
+
+volumes:
+  coach-db:
+    name: coach-db

@@ -1,0 +1,39 @@
+# --- Secrets: never commit ---
+.env
+.env.*
+!.env.example
+*.bak
+*.bak-*
+*.pem
+*.key
+*.crt
+certs/
+emails.txt
+
+# --- Data (user databases, backups) ---
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite*
+data/
+backup/
+
+# --- Legacy single-user setup (oauth2-proxy + nginx), not used anymore ---
+docker-compose.auth.yml
+nginx.conf
+oauth2-proxy.cfg
+
+# --- Local tooling / instance notes ---
+CLAUDE.md
+.claude/
+
+# --- Node / OS / editor ---
+node_modules/
+npm-debug.log*
+._*
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
