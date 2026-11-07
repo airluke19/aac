@@ -49,7 +49,7 @@ Node.js 22, Express, SQLite (better‑sqlite3), node‑cron. Single‑file front
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/<you>/aac.git
+git clone https://github.com/airluke19/aac.git
 cd aac
 cp .env.example .env
 chmod 600 .env
