@@ -477,12 +477,14 @@
       '<b>Nessun modello di AI</b>: regole fisse, uguali per tutti.',
       'Senza la tua FC massima usa la stima dall’età.',
       'Non sostituisce il medico: se senti dolore, fermati.',
-      'Dati su un server privato, un database per utente, chiave Intervals cifrata.'
+      'Dati su un server privato, un database per utente, chiave Intervals cifrata.',
+      'L’amministratore vede quando usi l’app (giorni e minuti, conservati 6 mesi), mai cosa guardi.'
     ], [
       '<b>No AI model</b>: fixed rules, the same for everyone.',
       'Without your max HR it uses the age-based estimate.',
       'It does not replace a doctor: if you feel pain, stop.',
-      'Data on a private server, one database per user, encrypted Intervals key.'
+      'Data on a private server, one database per user, encrypted Intervals key.',
+      'The administrator sees when you use the app (days and minutes, kept 6 months), never what you look at.'
     ]));
 
     const elenco = '<div class="sec-title"><h2>' + T('Approfondisci', 'Learn more') + '</h2></div><section class="nf-list">' +
@@ -1571,6 +1573,8 @@
     const sh = $('#sheet');
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
+    const mu = location.hash.match(/^#uso\/(\d+)$/);
+    if (mu) { apriUso(mu[1]); return; }
     const m = location.hash.match(/^#(seduta|salute)\/(.+)$/);
     if (!m) {
       if (!sh.hidden) { sheetCharts.splice(0).forEach((c) => c.destroy()); sh.hidden = true; document.body.classList.remove('sheet-open'); }
@@ -1650,9 +1654,19 @@
     if (h && !h.querySelector('.env-badge')) h.insertAdjacentHTML('beforeend', '<b class="env-badge" title="' + T('Ambiente di prova (staging)', 'Test environment (staging)') + '">BETA</b>');
   }
 
+  // Utilizzo dell'app (statistiche per l'amministratore): un segnale al minuto con la pagina visibile.
+  // Il server conta i minuti e le aperture (pausa > 30 minuti = nuova apertura).
+  function battito() {
+    if (!ME || ME.demo || ME.impersonato_da || document.visibilityState !== 'visible') return;
+    fetch('/api/uso/battito', { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'X-Requested-With': 'coach' } }).catch(() => {});
+  }
+  setInterval(battito, 60e3);
+  document.addEventListener('visibilitychange', battito);
+
   async function caricaMe() {
     try { ME = await caricaJson('/api/me'); } catch (_) { return; }
     segnaAmbiente(ME.ambiente);
+    battito();
     if (ME.profilo && ME.profilo.colore && ME.profilo.colore !== document.documentElement.getAttribute('data-accent')) {
       applicaColore(ME.profilo.colore);
       if (ultimiDati) render(ultimiDati);
@@ -2013,8 +2027,21 @@
   // Pannello di amministrazione (ingranaggio nell'intestazione): riepilogo, invito e utenti divisi per stato.
   // Ogni riga mostra solo nome, email e due etichette; le azioni si aprono toccando la riga
   // (le richieste in attesa hanno "Approva" sempre visibile).
-  function renderAdmin(utenti) {
+  // "oggi", "ieri", "3 giorni fa", "12 ott" dall'ultimo segnale "AAAA-MM-GG HH:MM"
+  function quandoUso(ultima, oggiIso) {
+    if (!ultima) return T('mai', 'never');
+    const [g, h] = ultima.split(' ');
+    const diff = Math.round((Date.parse(oggiIso + 'T12:00:00Z') - Date.parse(g + 'T12:00:00Z')) / 864e5);
+    if (diff <= 0) return T('oggi ', 'today ') + h;
+    if (diff === 1) return T('ieri ', 'yesterday ') + h;
+    if (diff < 7) return diff + T(' giorni fa', ' days ago');
+    return fmtData(g);
+  }
+  const pallini7 = (m) => '<span class="uso7" aria-hidden="true">' + (m || []).map((x) => '<i class="' + (x ? 'on' : '') + '"></i>').join('') + '</span>';
+
+  function renderAdmin(utenti, uso) {
     const u = ME, tutti = utenti || [];
+    const oggiIso = (ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10);
     const di = (st) => tutti.filter((x) => x.ruolo !== 'admin' && x.stato === st)
       .sort((a, b) => String(a.nome || a.email).localeCompare(String(b.nome || b.email)));
     const attesa = di('in_attesa'), attivi = di('attivo'), bloccati = di('bloccato');
@@ -2022,15 +2049,17 @@
     const num = (v, l, cls) => '<div class="adm-n' + (cls ? ' ' + cls : '') + '"><b>' + v + '</b><span>' + l + '</span></div>';
     const btn = (az, id, testo, cls) => '<button type="button" class="pill-btn ' + (cls || '') + '" data-acc="' + az + '" data-id="' + id + '">' + testo + '</button>';
     const meta = (x) => '<span class="adm-tag' + (x.ha_chiave ? ' ok' : '') + '">' + (x.ha_chiave ? 'Intervals ✓' : T('Intervals da collegare', 'Intervals not linked')) + '</span>' +
-      '<span class="adm-tag">' + (x.ultimo_accesso ? T('visto il ', 'seen ') + esc(fmtData(x.ultimo_accesso.slice(0, 10))) : T('mai entrato', 'never signed in')) + '</span>';
+      (x.uso && x.uso.ultima
+        ? '<span class="adm-uso">' + pallini7(x.uso.giorni7) + '<span>' + esc(quandoUso(x.uso.ultima, oggiIso)) + (x.uso.minuti_medi ? ' · ' + x.uso.minuti_medi + T('′/giorno', '′/day') : '') + '</span></span>'
+        : '<span class="adm-tag">' + (x.ultimo_accesso ? T('nessun uso registrato', 'no usage yet') : T('mai entrato', 'never signed in')) + '</span>');
     const testa = (x) => avatar(x, 'av-sm') + '<div class="adm-u-t"><b>' + esc(x.nome || x.email) + '</b>' +
       (x.nome ? '<small>' + esc(x.email) + '</small>' : '') + '<span class="adm-meta">' + meta(x) + '</span></div>';
     const riga = (x) => {
-      if (x.ruolo === 'admin') return '<li class="adm-u adm-me">' + testa(x) + '<span class="pill">admin</span></li>';
+      if (x.ruolo === 'admin') return '<li class="adm-u adm-me">' + testa(x) + '<a class="pill" href="#uso/' + x.id + '">' + T('Statistiche', 'Stats') + '</a></li>';
       const azioni = x.stato === 'in_attesa'
         ? btn('rimuovi', x.id, T('Rifiuta', 'Decline'), 'bad')
         : x.stato === 'attivo'
-          ? (u.login ? btn('impersona', x.id, T('Vedi come', 'View as'), 'imp') : '') + btn('bloccato', x.id, T('Blocca', 'Block')) + btn('rimuovi', x.id, T('Rimuovi', 'Remove'), 'bad')
+          ? '<a class="pill-btn ok" href="#uso/' + x.id + '">' + T('Statistiche', 'Stats') + '</a>' + (u.login ? btn('impersona', x.id, T('Vedi come', 'View as'), 'imp') : '') + btn('bloccato', x.id, T('Blocca', 'Block')) + btn('rimuovi', x.id, T('Rimuovi', 'Remove'), 'bad')
           : btn('attivo', x.id, T('Riattiva', 'Re-enable'), 'ok') + btn('rimuovi', x.id, T('Rimuovi', 'Remove'), 'bad');
       const subito = x.stato === 'in_attesa' ? '<div class="adm-subito">' + btn('attivo', x.id, T('Approva', 'Approve'), 'ok') + '</div>' : '';
       return '<li class="adm-u"><details><summary>' + testa(x) + '<span class="adm-chev" aria-hidden="true">›</span></summary>' +
@@ -2042,6 +2071,8 @@
     return '<section class="card adm-sum">' +
         num(attivi.length + me.length, T('attivi', 'active')) + num(attesa.length, T('in attesa', 'pending'), attesa.length ? 'warn' : '') + num(bloccati.length, T('bloccati', 'blocked')) +
       '</section>' +
+      (uso ? '<section class="card"><h3>' + T('Chi usa l’app', 'Who uses the app') + '</h3><div class="adm-sum adm-sum-in">' +
+        num(uso.oggi, T('oggi', 'today')) + num(uso.sette, T('7 giorni', '7 days')) + num(uso.trenta, T('30 giorni', '30 days')) + '</div></section>' : '') +
       gruppo(T('In attesa di approvazione', 'Awaiting approval'), attesa, 'warn') +
       '<section class="card"><h3>' + T('Invita', 'Invite') + '</h3><p class="sub">' +
         (u.login ? T('L’accesso è su invito: l’email indicata potrà entrare subito con Google.', 'Access is invite-only: the email you add can sign in with Google straight away.')
@@ -2055,10 +2086,60 @@
   async function apriAdmin() {
     try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet(T('Amministrazione', 'Admin'), '<div class="card empty">' + esc(e.message) + '</div>'); return; }
     if (ME.ruolo !== 'admin' || ME.impersonato_da) { chiudiSheet(); return; }
-    let utenti = null;
-    try { utenti = (await caricaJson('/api/admin/utenti')).utenti; } catch (_) {}
-    mostraSheet(T('Amministrazione', 'Admin'), renderAdmin(utenti));
+    let utenti = null, uso = null;
+    try { const r = await caricaJson('/api/admin/utenti'); utenti = r.utenti; uso = r.uso; } catch (_) {}
+    mostraSheet(T('Amministrazione', 'Admin'), renderAdmin(utenti, uso));
   }
+  // Scheda "Utilizzo" di un utente: numeri chiave, calendario delle ultime 5 settimane, fascia oraria, allenamento
+  async function apriUso(id) {
+    mostraSheet(T('Utilizzo', 'Usage'), '<div class="skeleton" style="height:160px"></div><div class="skeleton" style="height:220px"></div>');
+    let d;
+    try { d = await caricaJson('/api/admin/utenti/' + encodeURIComponent(id) + '/uso'); }
+    catch (e) { mostraSheet(T('Utilizzo', 'Usage'), '<div class="card empty">' + esc(e.message) + '</div>'); return; }
+    const u = d.utente;
+    const big = (v, l) => '<div class="adm-n"><b>' + v + '</b><span>' + l + '</span></div>';
+    // calendario: 5 settimane da lunedi', intensita' in base ai minuti
+    const perG = new Map(d.giorni.map((g) => [g.giorno, g]));
+    const oggiMs = Date.parse(d.oggi + 'T12:00:00Z');
+    const dow = (new Date(oggiMs).getUTCDay() + 6) % 7;
+    const inizio = oggiMs - (28 + dow) * 864e5;
+    const maxMin = Math.max(10, ...d.giorni.map((g) => g.minuti));
+    let celle = '';
+    for (let i = 0; i < 35; i++) {
+      const iso = new Date(inizio + i * 864e5).toISOString().slice(0, 10);
+      const g = perG.get(iso), futuro = iso > d.oggi;
+      const liv = g ? Math.max(1, Math.ceil(g.minuti / maxMin * 4)) : 0;
+      celle += '<i class="uc l' + liv + (futuro ? ' fut' : '') + (iso === d.oggi ? ' oggi' : '') + '" title="' + esc(fmtData(iso)) + (g ? ': ' + g.minuti + '′, ' + g.aperture + T(' aperture', ' opens') : '') + '"></i>';
+    }
+    // fascia oraria: le 3 ore consecutive con piu' minuti
+    const tot = d.ore.reduce((a, b) => a + b, 0);
+    let fascia = '';
+    if (tot) {
+      let best = 0, h0 = 0;
+      for (let h = 0; h < 24; h++) { const s3 = d.ore[h] + d.ore[(h + 1) % 24] + d.ore[(h + 2) % 24]; if (s3 > best) { best = s3; h0 = h; } }
+      const nome = h0 >= 5 && h0 < 12 ? T('la mattina', 'in the morning') : h0 >= 12 && h0 < 18 ? T('il pomeriggio', 'in the afternoon') : h0 >= 18 && h0 < 23 ? T('la sera', 'in the evening') : T('di notte', 'at night');
+      fascia = T('di solito ', 'usually ') + nome + ', ' + h0 + '–' + ((h0 + 3) % 24);
+    }
+    const maxOra = Math.max(1, ...d.ore);
+    const barre = d.ore.map((m, h) => '<i style="height:' + Math.max(m ? 8 : 2, Math.round(m / maxOra * 100)) + '%"' + (m ? ' class="on"' : '') + ' title="' + h + ':00 · ' + m + '′"></i>').join('');
+    const al = d.allenamento;
+    const allen = !al ? '' : al.piano && al.previste
+      ? '<div class="uso-al"><b>' + al.fatte + '<small>/' + al.previste + '</small></b><span>' + T('sedute fatte del piano', 'plan sessions done') + ' · ' + Math.round(al.fatte / al.previste * 100) + '%</span></div>'
+      : '<div class="uso-al"><b>' + al.corse + '</b><span>' + T('corse', 'runs') + '</span></div>';
+    const html =
+      '<section class="acc-head">' + avatar(u, 'av-lg') + '<div><h1>' + esc(u.nome || u.email) + '</h1><p>' + esc(u.email) + '</p></div></section>' +
+      '<section class="card adm-sum">' + big(d.giorni30, T('giorni su 30', 'days of 30')) + big(d.minuti_medi + '′', T('al giorno', 'per day')) + big(esc(quandoUso(d.ultima, d.oggi)).replace(/ (\d\d:\d\d)$/, '<small> $1</small>'), T('ultima visita', 'last visit')) + '</section>' +
+      '<section class="card"><h3>' + T('Ultime 5 settimane', 'Last 5 weeks') + '</h3>' +
+        '<div class="uso-cal"><span>L</span><span>M</span><span>M</span><span>G</span><span>V</span><span>S</span><span>D</span>' + celle + '</div>' +
+        '<p class="uso-leg"><span>' + T('meno', 'less') + '</span><i class="uc l1"></i><i class="uc l2"></i><i class="uc l3"></i><i class="uc l4"></i><span>' + T('più minuti', 'more minutes') + '</span></p></section>' +
+      '<section class="card"><h3>' + T('Quando la usa', 'When they use it') + '</h3>' +
+        (tot ? '<p class="sub">' + fascia + '</p><div class="uso-ore">' + barre + '</div><div class="uso-ore-x"><span>0</span><span>6</span><span>12</span><span>18</span><span>24</span></div>'
+          : '<p class="sub">' + T('Nessun utilizzo registrato negli ultimi 30 giorni.', 'No usage in the last 30 days.') + '</p>') + '</section>' +
+      (allen ? '<section class="card"><h3>' + T('Allenamento · 4 settimane', 'Training · 4 weeks') + '</h3>' + allen + '</section>' : '') +
+      '<p class="uso-nota">' + T('Dal 8 nov 2026 · solo giorni e minuti con l’app aperta, mai cosa guarda.', 'Since 8 Nov 2026 · only days and minutes with the app open, never what they look at.') + '</p>';
+    mostraSheet(T('Utilizzo', 'Usage'), html);
+  }
+
   // dopo un'azione si ricarica il pannello aperto (amministrazione o profilo)
   const riapri = () => (location.hash === '#admin' ? apriAdmin() : apriAccount());
 

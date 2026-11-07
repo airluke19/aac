@@ -3270,6 +3270,47 @@ function creaApp() {
   // Login con Google, sessioni, profilo e amministrazione utenti; da qui in poi ogni richiesta ha il suo utente
   account.monta(app, { L, demo });
 
+  // Statistiche di utilizzo di un utente (solo amministratore, non durante il "Vedi come"):
+  // ultimi 35 giorni, fascia oraria (30 giorni) e allenamento rispetto al piano (4 settimane).
+  app.get('/api/admin/utenti/:id/uso', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (!req.vero || req.vero.ruolo !== 'admin' || req.vero !== req.utente) return res.status(403).json({ errore: L('Solo per l’amministratore', 'Admins only') });
+    const sis = account.sistema;
+    const u = sis.prepare('SELECT * FROM utenti WHERE id = ?').get(parseInt(req.params.id, 10));
+    if (!u) return res.status(404).json({ errore: L('Utente non trovato', 'User not found') });
+    const oggiStr = oggi();
+    const giorniFa = (n) => addDays(oggiStr, -n);
+    const righe = sis.prepare('SELECT giorno, aperture, minuti, prima, ultima, ore FROM uso WHERE utente_id = ? AND giorno >= ? ORDER BY giorno').all(u.id, giorniFa(34));
+    const ore = Array(24).fill(0);
+    for (const r of righe.filter((x) => x.giorno >= giorniFa(29))) r.ore.split(',').forEach((m, h) => { ore[h] += Number(m) || 0; });
+    const ult = sis.prepare('SELECT giorno, ultima FROM uso WHERE utente_id = ? ORDER BY giorno DESC LIMIT 1').get(u.id);
+    const r30 = righe.filter((x) => x.giorno >= giorniFa(29));
+    // allenamento nelle ultime 4 settimane: corse fatte e sedute del piano gia' passate
+    let allenamento = null;
+    try {
+      contesto.run(account.contestoDi(u), () => {
+        const da = giorniFa(27);
+        const corse = db.prepare("SELECT COUNT(*) AS n FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ?").get(da, oggiStr).n;
+        const prog = costruisciProgramma(oggiStr);
+        const passate = prog ? prog.calendario.filter((c) => c.data >= da && c.data < oggiStr) : [];
+        allenamento = { corse, previste: passate.length, fatte: passate.filter((c) => c.fatta).length, piano: Boolean(prog) };
+      });
+    } catch (e) {
+      console.warn(`[admin] allenamento u${u.id}: ${e.message}`);
+    }
+    res.json({
+      utente: { id: u.id, nome: u.nome, email: u.email, foto: u.foto, creato: u.creato },
+      oggi: oggiStr,
+      ultima: ult ? `${ult.giorno} ${ult.ultima}` : null,
+      giorni30: r30.length,
+      minuti_medi: r30.length ? Math.round(r30.reduce((t, x) => t + x.minuti, 0) / r30.length) : 0,
+      aperture30: r30.reduce((t, x) => t + x.aperture, 0),
+      giorni: righe.map((x) => ({ giorno: x.giorno, minuti: x.minuti, aperture: x.aperture, prima: x.prima, ultima: x.ultima })),
+      ore,
+      allenamento,
+    });
+  });
+
   app.get('/api/coach-data', async (req, res) => {
     res.set('Cache-Control', 'no-store');
     // All'apertura dell'app: se l'ultimo sync ha piu' di 2 minuti, prendo i dati nuovi da Intervals

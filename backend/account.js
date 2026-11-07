@@ -67,6 +67,20 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     if (!col.has('intensita')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita TEXT'); // tranquilla | equilibrata | ambiziosa (vuoto = equilibrata)
     if (!col.has('intensita_auto')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita_auto INTEGER'); // 0 = bloccata; vuoto/1 = regolata dal coach
   }
+  // Utilizzo dell'app per le statistiche dell'amministratore: un record per utente e giorno (ora locale).
+  // Niente IP, dispositivo o pagine viste. Si conserva USO_GIORNI giorni.
+  sis.exec(`
+    CREATE TABLE IF NOT EXISTS uso (
+      utente_id INTEGER NOT NULL,
+      giorno    TEXT NOT NULL,              -- AAAA-MM-GG (fuso dell'app)
+      aperture  INTEGER NOT NULL DEFAULT 0, -- volte che l'app e' stata aperta (pausa > 30 min = nuova apertura)
+      minuti    INTEGER NOT NULL DEFAULT 0, -- minuti con l'app aperta e in primo piano
+      prima     TEXT,                       -- HH:MM primo segnale del giorno
+      ultima    TEXT,                       -- HH:MM ultimo segnale del giorno
+      ore       TEXT NOT NULL DEFAULT '0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0', -- minuti per ora
+      PRIMARY KEY (utente_id, giorno)
+    );
+  `);
   // Impersonificazione: una sessione dell'amministratore puo' "vedere come" un altro utente
   if (!sis.prepare('PRAGMA table_info(sessioni)').all().some((c) => c.name === 'impersona_id')) {
     sis.exec('ALTER TABLE sessioni ADD COLUMN impersona_id INTEGER');
@@ -435,6 +449,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     const u = perId(id);
     if (!u || u.ruolo === 'admin') return false;
     sis.prepare('DELETE FROM sessioni WHERE utente_id = ?').run(id);
+    sis.prepare('DELETE FROM uso WHERE utente_id = ?').run(id);
     sis.prepare('DELETE FROM utenti WHERE id = ?').run(id);
     dimentica(id);
     return true;
@@ -576,8 +591,60 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       res.json({ ok: true, ...profiloPubblico(r.utente) });
     });
 
+    // ---- Utilizzo dell'app ----
+    // L'app manda un segnale al minuto mentre e' aperta e in primo piano. Non si contano la demo e il "Vedi come".
+    // Un segnale ogni 50 s al massimo per utente (niente minuti gonfiati); pausa > 30 min = nuova apertura.
+    const ultimoSegnale = new Map();
+    const oraLocale = () => {
+      const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: process.env.TZ || 'Europe/Rome', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+        .formatToParts(new Date()).map((x) => [x.type, x.value]));
+      return { giorno: `${p.year}-${p.month}-${p.day}`, hhmm: `${p.hour}:${p.minute}`, ora: Number(p.hour) };
+    };
+    const USO_GIORNI = 183;
+    let ultimaPulizia = '';
+    app.post('/api/uso/battito', csrf, (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      if (req.demo || req.vero !== req.utente || !req.vero || !req.vero.id) return res.status(204).end();
+      const id = req.vero.id, ora = Date.now(), prec = ultimoSegnale.get(id) || 0;
+      if (ora - prec < 50e3) return res.status(204).end();
+      ultimoSegnale.set(id, ora);
+      const t = oraLocale();
+      const nuovaApertura = ora - prec > 30 * 60e3 ? 1 : 0;
+      const riga = sis.prepare('SELECT ore FROM uso WHERE utente_id = ? AND giorno = ?').get(id, t.giorno);
+      const ore = (riga ? riga.ore : '0,'.repeat(23) + '0').split(',').map(Number);
+      ore[t.ora] = Math.min(60, (ore[t.ora] || 0) + 1);
+      sis.prepare(`INSERT INTO uso (utente_id, giorno, aperture, minuti, prima, ultima, ore) VALUES (?, ?, ?, 1, ?, ?, ?)
+        ON CONFLICT(utente_id, giorno) DO UPDATE SET aperture = aperture + excluded.aperture, minuti = minuti + 1, ultima = excluded.ultima, ore = excluded.ore`)
+        .run(id, t.giorno, Math.max(nuovaApertura, riga ? 0 : 1), t.hhmm, t.hhmm, ore.join(','));
+      if (ultimaPulizia !== t.giorno) { // una volta al giorno: via i dati oltre la conservazione
+        ultimaPulizia = t.giorno;
+        sis.prepare("DELETE FROM uso WHERE giorno < date(?, ?)").run(t.giorno, `-${USO_GIORNI} days`);
+      }
+      res.status(204).end();
+    });
+
     const soloAdmin = (req, res, next) => (req.utente.ruolo === 'admin' ? next() : res.status(403).json({ errore: L('Solo per l’amministratore', 'Admins only') }));
-    app.get('/api/admin/utenti', soloAdmin, (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ login: attivo, utenti: elencoUtenti() }); });
+    app.get('/api/admin/utenti', soloAdmin, (req, res) => {
+      res.set('Cache-Control', 'no-store');
+      const oggi = oraLocale().giorno;
+      const giorniFa = (n) => new Date(Date.parse(oggi + 'T12:00:00Z') - n * 864e5).toISOString().slice(0, 10);
+      const righe = sis.prepare('SELECT utente_id, giorno, minuti, ultima FROM uso WHERE giorno >= ? ORDER BY giorno').all(giorniFa(29));
+      const per = new Map();
+      for (const r of righe) { if (!per.has(r.utente_id)) per.set(r.utente_id, []); per.get(r.utente_id).push(r); }
+      const ultimi7 = Array.from({ length: 7 }, (_, i) => giorniFa(6 - i));
+      const utenti = elencoUtenti().map((u) => {
+        const g = per.get(u.id) || [];
+        const ult = sis.prepare('SELECT giorno, ultima FROM uso WHERE utente_id = ? ORDER BY giorno DESC LIMIT 1').get(u.id);
+        return { ...u, uso: {
+          ultima: ult ? `${ult.giorno} ${ult.ultima}` : null,
+          giorni7: ultimi7.map((d) => (g.find((r) => r.giorno === d) || { minuti: 0 }).minuti),
+          giorni30: g.length,
+          minuti_medi: g.length ? Math.round(g.reduce((t, r) => t + r.minuti, 0) / g.length) : 0,
+        } };
+      });
+      const attiviDa = (n) => new Set(righe.filter((r) => r.giorno >= giorniFa(n - 1)).map((r) => r.utente_id)).size;
+      res.json({ login: attivo, utenti, uso: { oggi: attiviDa(1), sette: attiviDa(7), trenta: attiviDa(30) } });
+    });
     app.post('/api/admin/utenti', csrf, soloAdmin, json, (req, res) => {
       const r = invita(req.body && req.body.email);
       if (r.ok) console.log(`[admin] ${req.vero.email} invita/attiva ${String(req.body.email).trim().toLowerCase()}`);

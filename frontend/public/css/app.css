@@ -1568,3 +1568,36 @@ body.demo .admin-wrap { display: none; }
 .cd.fuori { cursor: pointer; font: inherit; color: var(--text); background: transparent; }
 .cd .fp-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 3px; }
 .legend-inline i.fp-leg { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+/* ---- Amministrazione: utilizzo dell'app ---- */
+.adm-sum-in { padding: 0; margin-top: 4px; }
+.adm-n b small { font-size: .55em; color: var(--muted); font-weight: 600; }
+.adm-uso { display: inline-flex; align-items: center; gap: 7px; font-size: .74rem; color: var(--muted); font-weight: 600; }
+.uso7 { display: inline-flex; gap: 3px; }
+.uso7 i { width: 7px; height: 7px; border-radius: 50%; background: var(--fill); }
+.uso7 i.on { background: var(--accent); }
+a.pill { text-decoration: none; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.adm-az a.pill-btn { text-decoration: none; }
+/* calendario delle ultime 5 settimane */
+.uso-cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-top: 6px; }
+.uso-cal span { text-align: center; font-size: .7rem; color: var(--muted); font-weight: 600; }
+.uc { display: block; aspect-ratio: 1 / 1; border-radius: 7px; background: var(--fill); }
+.uc.l1 { background: color-mix(in srgb, var(--accent) 30%, transparent); }
+.uc.l2 { background: color-mix(in srgb, var(--accent) 55%, transparent); }
+.uc.l3 { background: color-mix(in srgb, var(--accent) 80%, transparent); }
+.uc.l4 { background: var(--accent); }
+.uc.fut { background: transparent; border: 1px dashed var(--line); }
+.uc.oggi { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3.5px var(--text); }
+.uso-leg { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin: 10px 0 0; font-size: .7rem; color: var(--muted); }
+.uso-leg .uc { width: 12px; border-radius: 3px; }
+.uso-leg span { margin: 0 4px; }
+/* minuti per ora del giorno */
+.uso-ore { display: grid; grid-template-columns: repeat(24, 1fr); gap: 2px; align-items: end; height: 72px; margin-top: 8px; }
+.uso-ore i { display: block; border-radius: 3px 3px 1px 1px; background: var(--fill); }
+.uso-ore i.on { background: var(--accent); }
+.uso-ore-x { display: flex; justify-content: space-between; font-size: .68rem; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.uso-al { display: flex; align-items: baseline; gap: 10px; }
+.uso-al b { font-family: var(--f-num); font-size: 2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.uso-al b small { font-size: .55em; color: var(--muted); }
+.uso-al span { color: var(--muted); font-size: .86rem; }
+.uso-nota { margin: 2px 4px 0; font-size: .74rem; color: var(--muted); text-align: center; }

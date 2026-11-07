@@ -29,7 +29,7 @@ It works with any watch that uploads to Intervals.icu: Apple Watch (via a compan
 - **Plan** — calendar with every adaptation explained; copy a completed session as Markdown for any AI assistant
 - **Runs** — history, filters, shoe tracking; run detail with GPS map, HR, pace, cadence, power, elevation, running dynamics, run/walk laps, RPE, weather and shoes
 - **Progress** — goal, predictions, training load
-- Multi‑user with Google login, invite‑based sign‑up with admin approval
+- Multi‑user with Google login, invite‑based sign‑up with admin approval; admin panel with per‑user usage stats (active days, minutes per day, usual time of day, plan adherence) — only days and minutes with the app open in the foreground are stored, aggregated per day, for 6 months
 - Light/dark theme, Italian/English, 9 accent colours, mobile‑first
 
 ---
