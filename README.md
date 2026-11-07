@@ -79,6 +79,7 @@ Edit `.env`:
 | `AAC_TAG` | Optional, image tag for all services (default `latest`; `staging`, or `sha-<commit>` to roll back) |
 | `LOGIN_GOOGLE` | Optional, `off` turns Google sign‑in off even when configured: single‑user mode, and the backend rejects every request coming from the internet (Cloudflare headers), so the instance is usable only locally |
 | `AAC_AMBIENTE` | Optional, `staging` shows a **BETA** badge next to the logo (app and sign‑in page) and prefixes the tab title, so a test instance is never mistaken for production (default `production`) |
+| `AAC_BACKUP` | Optional, `0` disables the backup service (e.g. on a staging copy); default `1` |
 | `COMPOSE_PROJECT_NAME` / `AAC_PREFIX` | Optional, run several instances on one host (e.g. production `ai-adaptive-coach`/`coach`, staging `aac-staging`/`coach-staging`): containers and volumes are named `<AAC_PREFIX>-backend`, `<AAC_PREFIX>-db`… |
 
 Google login is enabled only when `PUBLIC_URL`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` and `ADMIN_EMAIL` are all set. Without them AAC runs in **single‑user mode with no login**: in that case keep it bound to `127.0.0.1` and never expose it to the internet.

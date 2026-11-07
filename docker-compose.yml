@@ -6,6 +6,7 @@ name: ai-adaptive-coach
 #   HOST_PORT             porta su 127.0.0.1 (production: 8088, staging: 8089)
 #   LOGIN_GOOGLE          on/off (off = utente singolo, solo accesso locale)
 #   AAC_AMBIENTE          production/staging (staging = badge BETA)
+#   AAC_BACKUP            1/0 (0 = nessun servizio di backup, es. staging)
 
 # ---------------------------------------------------------------------------
 # Due servizi:
@@ -110,6 +111,9 @@ services:
     build:
       context: ./coach-backup
     container_name: ${AAC_PREFIX:-coach}-backup
+    # AAC_BACKUP=0 nel .env spegne il servizio (es. staging); di default e' acceso
+    deploy:
+      replicas: ${AAC_BACKUP:-1}
     restart: unless-stopped
     # Non ha bisogno di rete: legge i database e scrive nel volume dei backup
     network_mode: none
