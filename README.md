@@ -107,6 +107,34 @@ git pull
 docker compose up -d --build
 ```
 
+### Prebuilt images (GHCR)
+
+GitHub Actions builds the backend image on every push that touches `backend/` and publishes it to GitHub Container Registry:
+
+| Branch | Image |
+|---|---|
+| `staging` | `ghcr.io/airluke19/aac:staging` |
+| `main` | `ghcr.io/airluke19/aac:latest` |
+
+Every build is also tagged `sha-<commit>`. The package is private: log in once with a classic token that has only `read:packages`:
+
+```bash
+docker login ghcr.io -u <github-user>
+```
+
+Then deploy with the script, which picks `:staging` on the `staging` branch and `:latest` otherwise, pulls, restarts and waits for `(healthy)`:
+
+```bash
+./deploy.sh
+AAC_TAG=sha-abc1234 ./deploy.sh   # roll back to a specific build
+```
+
+`docker compose up -d --build` still builds the image locally instead.
+
+### Branches
+
+Work happens on `staging`; `main` only receives merges of tested changes.
+
 ### Security notes
 
 - The container runs as a non‑root user with a read‑only root filesystem, no capabilities and `no-new-privileges`.
