@@ -114,7 +114,7 @@ The **`backup`** service (`coach-backup`, no network, non‑root) backs up every
 
 - hot, consistent copy of each SQLite database (SQLite backup API), `integrity_check` on the copy, gzip and SHA‑256 in a `manifest.json` with row counts; the encryption key file is included;
 - one folder per backup (`AAAA-MM-GG_HHMM`), written to a temporary folder and published only when complete;
-- retention: last 7 days, then one per week (4) and one per month (6) — `BACKUP_KEEP_DAILY/WEEKLY/MONTHLY`;
+- retention (`BACKUP_KEEP_DAILY/WEEKLY/MONTHLY`, defaults 7/4/6): the newest backup of each of the last N days, plus the **first** backup of each of the previous W weeks and M months (and of the current week and month, which become the “previous” copy when the period ends) — so with 7/1/1 you always have 7 daily copies, one 7–13 days old and one 30–60 days old;
 - the container is healthy only if the last successful backup is less than 26 hours old.
 
 Restore (verifies every checksum and the integrity of every database before touching anything; current databases are moved to `/data/pre-restore-<date>/`, never deleted; refuses to run while the backend is using the databases):

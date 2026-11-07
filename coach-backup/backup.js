@@ -136,21 +136,42 @@ function scriviStato(nuovo) {
   fs.writeFileSync(STATO, JSON.stringify(s, null, 2), { mode: 0o600 });
 }
 
-// Conservazione: gli ultimi N giorni, poi il piu' recente di ogni settimana e di ogni mese
-function pulisci() {
-  const cartelle = fs.readdirSync(DEST).filter((f) => NOME.test(f)).sort().reverse();
+// Conservazione (cartelle dal piu' recente):
+//   giornalieri  il piu' recente di ciascuno degli ultimi N giorni
+//   settimanali  il PRIMO backup di ciascuna delle W settimane precedenti a quella in corso (copie di 1-2 settimane fa)
+//   mensili      il PRIMO backup di ciascuno degli M mesi precedenti a quello in corso (copie di 1-2 mesi fa)
+// Si tiene anche il primo backup della settimana e del mese in corso: alla fine del periodo diventa
+// la copia "precedente" (altrimenti verrebbe cancellato prima, quando e' ancora del periodo in corso).
+// Il primo backup di un periodo concluso non cambia piu': resta una copia stabile e davvero vecchia.
+const settimanaDi = (c) => {
+  const d = new Date(c.slice(0, 10) + 'T12:00:00Z');
+  d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
+  return d.toISOString().slice(0, 10);
+};
+function daTenere(cartelle, tengo = TENGO) {
+  const ord = cartelle.filter((f) => NOME.test(f)).sort().reverse();
   const tieni = new Set();
-  const giorni = new Set(), settimane = new Set(), mesi = new Set();
-  for (const c of cartelle) {
-    const d = new Date(c.slice(0, 10) + 'T12:00:00Z');
-    const giorno = c.slice(0, 10);
-    const lun = new Date(d); lun.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7));
-    const settimana = lun.toISOString().slice(0, 10);
-    const mese = c.slice(0, 7);
-    if (!giorni.has(giorno) && giorni.size < TENGO.giorni) { giorni.add(giorno); tieni.add(c); }
-    if (!settimane.has(settimana) && settimane.size < TENGO.settimane) { settimane.add(settimana); tieni.add(c); }
-    if (!mesi.has(mese) && mesi.size < TENGO.mesi) { mesi.add(mese); tieni.add(c); }
+  if (!ord.length) return tieni;
+  const giorni = new Set();
+  for (const c of ord) {
+    const g = c.slice(0, 10);
+    if (!giorni.has(g) && giorni.size < tengo.giorni) { giorni.add(g); tieni.add(c); }
   }
+  const primoPer = (chiave, inCorso, quanti) => {
+    if (!quanti) return;
+    const primo = new Map(); // periodo -> backup piu' vecchio di quel periodo
+    for (const c of ord) primo.set(chiave(c), c);
+    if (primo.has(inCorso)) tieni.add(primo.get(inCorso)); // candidato per il prossimo periodo
+    [...primo.keys()].filter((k) => k < inCorso).sort().reverse().slice(0, quanti).forEach((k) => tieni.add(primo.get(k)));
+  };
+  primoPer(settimanaDi, settimanaDi(ord[0]), tengo.settimane);
+  primoPer((c) => c.slice(0, 7), ord[0].slice(0, 7), tengo.mesi);
+  return tieni;
+}
+
+function pulisci() {
+  const cartelle = fs.readdirSync(DEST).filter((f) => NOME.test(f));
+  const tieni = daTenere(cartelle);
   for (const c of cartelle) {
     if (tieni.has(c)) continue;
     fs.rmSync(path.join(DEST, c), { recursive: true, force: true });
@@ -177,4 +198,6 @@ async function main() {
   }, { timezone: TZ });
 }
 
-main().catch((e) => { log(`ERRORE: ${e.message}`); process.exit(1); });
+if (require.main === module) main().catch((e) => { log(`ERRORE: ${e.message}`); process.exit(1); });
+
+module.exports = { daTenere }; // per i test della conservazione
