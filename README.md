@@ -116,13 +116,7 @@ GitHub Actions builds the backend image on every push that touches `backend/` an
 | `staging` | `ghcr.io/airluke19/aac:staging` |
 | `main` | `ghcr.io/airluke19/aac:latest` |
 
-Every build is also tagged `sha-<commit>`. The package is private: log in once with a classic token that has only `read:packages`:
-
-```bash
-docker login ghcr.io -u <github-user>
-```
-
-Then deploy with the script, which picks `:staging` on the `staging` branch and `:latest` otherwise, pulls, restarts and waits for `(healthy)`:
+Every build is also tagged `sha-<commit>`. Images are public, so no login is needed. Deploy with the script, which picks `:staging` on the `staging` branch and `:latest` otherwise, pulls, restarts and waits for `(healthy)`:
 
 ```bash
 ./deploy.sh
@@ -137,6 +131,8 @@ Work happens on `staging`; `main` only receives merges of tested changes.
 
 ### Security notes
 
+- Every image is scanned with [Trivy](https://trivy.dev) in CI before it is published: fixable HIGH/CRITICAL vulnerabilities or secrets in the image, and HIGH/CRITICAL misconfigurations or secrets in the repository, block the release. The image is rebuilt and rescanned every Monday. Third‑party actions are pinned to commit SHAs.
+- The runtime image ships only `node`: npm, npx, corepack and yarn are removed.
 - The container runs as a non‑root user with a read‑only root filesystem, no capabilities and `no-new-privileges`.
 - Never commit `.env`, databases or certificates — `.gitignore` already excludes them.
 - Do not expose the app publicly without Google login configured.
@@ -149,4 +145,5 @@ Don't want to host it yourself? Use the free cloud version at **[aac.run](https:
 
 ## License
 
-All rights reserved. This is a private repository.
+AAC is free software, released under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0-only).
+You can use, modify and self-host it; if you run a modified version as a network service, you must make your source code available to its users under the same license.
