@@ -2396,7 +2396,7 @@
   const RANGE = () => [[7, T('S', 'W')], [30, T('M', 'M')], [90, T('3M', '3M')], [365, T('A', 'Y')]];
 
   async function apriSalute() {
-    if (!METRICHE[saluteMetrica]) saluteMetrica = 'fc_riposo';
+    if (!Object.hasOwn(METRICHE, saluteMetrica)) saluteMetrica = 'fc_riposo'; // solo metriche note (il valore arriva dall'URL)
     if (!storiaSalute) {
       mostraSheet(T('Salute e recupero', 'Health and recovery'), '<div class="skeleton" style="height:320px"></div>');
       try { storiaSalute = await caricaJson('/api/salute/storia'); }

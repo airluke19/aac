@@ -75,7 +75,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
   const chiave = (() => {
     if (BASE.appSecret) return crypto.createHash('sha256').update(BASE.appSecret).digest();
     const f = path.join(BASE.dataDir, '.chiave-app');
-    if (!fs.existsSync(f)) fs.writeFileSync(f, crypto.randomBytes(32).toString('base64'), { mode: 0o600 });
+    // 'wx': crea il file solo se non esiste, in un'unica operazione (niente race tra controllo e scrittura)
+    try { fs.writeFileSync(f, crypto.randomBytes(32).toString('base64'), { mode: 0o600, flag: 'wx' }); } catch (e) { if (e.code !== 'EEXIST') throw e; }
     return Buffer.from(fs.readFileSync(f, 'utf8').trim(), 'base64');
   })();
   const cifra = (testo) => {
@@ -389,7 +390,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
   }
   function invita(email) {
     email = String(email || '').trim().toLowerCase();
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, errore: 'email' };
+    // lunghezza massima RFC 5321 e regex lineare (parti del dominio senza punti: niente backtracking)
+    if (email.length > 254 || !/^[^@\s]{1,64}@[^@\s.]+(?:\.[^@\s.]+)+$/.test(email)) return { ok: false, errore: 'email' };
     const u = sis.prepare('SELECT * FROM utenti WHERE email = ?').get(email);
     if (u) {
       if (u.ruolo !== 'admin') sis.prepare("UPDATE utenti SET stato = 'attivo' WHERE id = ?").run(u.id);
