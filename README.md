@@ -51,7 +51,7 @@ Two services, each with its own image:
 | `frontend` | `ghcr.io/airluke19/aac-frontend` | nginx (unprivileged, port 8080): serves the app (`frontend/public`) and proxies `/api`, `/auth` and `/demo` to the backend. The app page is served only after the backend confirms the sign‑in (`auth_request` → `/auth/verifica`). It is the only service published on the host. |
 | `backend` | `ghcr.io/airluke19/aac-backend` | Node.js 22, Express, SQLite (better‑sqlite3), node‑cron: API, Google sign‑in, Intervals.icu sync, plan engine. Reachable only from the frontend on the internal Compose network. |
 
-Frontend: plain HTML/CSS/JS (`index.html`, `css/`, `js/`) with Chart.js and MapLibre (OpenFreeMap tiles); CSS/JS links carry a content hash so browsers cache them until they change. Weather from Open‑Meteo.
+Frontend: plain HTML/CSS/JS (`index.html`, `css/`, `js/`) with Chart.js, MapLibre (OpenFreeMap tiles) and the Inter font, all served by the frontend itself (`/vendor`, downloaded at build time with pinned checksums); CSS/JS links carry a content hash so browsers cache them until they change. Weather from Open‑Meteo.
 
 Both containers run as non‑root users with a read‑only root filesystem.
 
@@ -142,14 +142,26 @@ For frontend development without nginx, the backend can serve the static files i
 
 Work happens on `staging`; `main` only receives merges of tested changes.
 
-### Security notes
+### Security
 
-- Both images are scanned with [Trivy](https://trivy.dev) in CI before it is published: fixable HIGH/CRITICAL vulnerabilities or secrets in the image, and HIGH/CRITICAL misconfigurations or secrets in the repository, block the release. The image is rebuilt and rescanned every Monday. Third‑party actions are pinned to commit SHAs.
-- The frontend sends security headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`) and serves only known files; the backend is not published on the host.
-- The backend runtime image ships only `node`: npm, npx, corepack and yarn are removed.
-- The container runs as a non‑root user with a read‑only root filesystem, no capabilities and `no-new-privileges`.
-- Never commit `.env`, databases or certificates — `.gitignore` already excludes them.
-- Do not expose the app publicly without Google login configured.
+AAC is designed to be exposed on the internet. Controls, mapped to the OWASP Top 10 (2025):
+
+| Area | What AAC does |
+|---|---|
+| **Access control** (A01) | Every API call is bound to the signed‑in user's own database; admin endpoints check the role; the app page is served only after the backend confirms the session (`auth_request`); the demo is read‑only. |
+| **Configuration** (A02) | Strict Content‑Security‑Policy (scripts only from the app itself, no inline code, no `eval`), HSTS, `X-Frame-Options`/`frame-ancestors`, COOP/CORP, `nosniff`, `Referrer-Policy`, `Permissions-Policy`; no directory listing, only known files are served, no server version; generic error messages (no stack traces). |
+| **Supply chain** (A03, A08) | `package-lock.json` + `npm ci`; third‑party JS and fonts (Chart.js, MapLibre, Inter) are downloaded at build time with pinned versions and SHA‑256 checksums and served by the frontend, so no CDN or Google Fonts at runtime; all GitHub Actions pinned to commit SHAs; images published with SLSA provenance and SBOM attestations; Dependabot for npm, Docker and Actions. |
+| **Cryptography** (A04) | Intervals.icu API keys encrypted at rest with AES‑256‑GCM; session tokens are 256‑bit random values stored only as SHA‑256 hashes; HTTPS only. |
+| **Injection** (A05) | Parameterised SQL everywhere; all dynamic HTML escaped; input validated against allow‑lists; JSON bodies limited to a few KB. |
+| **Authentication** (A07) | Google OpenID Connect with PKCE and `state`; invite/approval for new accounts; session cookie `__Host-aac_sess` (`Secure`, `HttpOnly`, `SameSite=Lax`, host‑only), 30‑day expiry, server‑side logout; CSRF protection via a custom request header on every state‑changing call; rate limits on sign‑in, sync and API per client IP. |
+| **Logging** (A09) | Sign‑ins, blocked attempts, admin actions and impersonation are logged; nginx access logs with the real client IP; Docker logs rotated (3 × 10 MB). |
+| **Exceptional conditions** (A10) | Central error handler, request timeouts, body size limits, memory and process limits on both containers. |
+
+CI scans the repository and both images with [Trivy](https://trivy.dev): fixable HIGH/CRITICAL vulnerabilities, secrets or misconfigurations block the release. Images are rebuilt and rescanned every Monday.
+
+Both containers run as non‑root users with a read‑only root filesystem, no capabilities and `no-new-privileges`. Only the frontend is published on the host, by default on `127.0.0.1`.
+
+Never commit `.env`, databases or certificates (`.gitignore` excludes them), and do not expose the app publicly without Google login configured. To report a vulnerability, see [SECURITY.md](SECURITY.md).
 
 ---
 
