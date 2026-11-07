@@ -63,6 +63,7 @@ Edit `.env`:
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth client (type *Web application*). Authorized redirect URI: `<PUBLIC_URL>/auth/google/callback` |
 | `ADMIN_EMAIL` | Google account of the administrator, who approves new users |
 | `APP_SECRET` | Random secret used to encrypt Intervals.icu API keys — generate with `openssl rand -base64 32` and never change it |
+| `ATHLETE_AGE` | Optional, initial age of the admin user, used to estimate max HR (default `33`); every user can change it later in **Account** |
 | `SYNC_CRON` | Optional, sync schedule (default `*/30 * * * *`) |
 | `BIND_ADDR` / `HOST_PORT` | Optional, host listen address and port (default `127.0.0.1:3000`) |
 

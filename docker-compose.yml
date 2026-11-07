@@ -25,7 +25,8 @@ services:
       INTERVALS_API_KEY: ${INTERVALS_API_KEY:-}
       INTERVALS_ATHLETE_ID: ${INTERVALS_ATHLETE_ID:-}
       SYNC_CRON: ${SYNC_CRON:-*/30 * * * *}
-      ATHLETE_AGE: "33"
+      # Eta' iniziale del primo utente (admin), per stimare la FC massima; poi si cambia dal profilo
+      ATHLETE_AGE: ${ATHLETE_AGE:-33}
       # Programma di ripartenza corsa/cammino (8 settimane): data della prima seduta
       PROGRAMMA_INIZIO: ${PROGRAMMA_INIZIO:-}
       PROGRAMMA_ORA: ${PROGRAMMA_ORA:-06:30}
