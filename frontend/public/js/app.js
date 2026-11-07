@@ -352,7 +352,9 @@
   /* ---- Info: come funziona AAC (regole reali del motore) ---- */
   function renderInfo(d) {
     const fcMax = d.atleta ? d.atleta.fc_max_stimata : 185;
-    const facile = Math.round(fcMax * 0.75), soglia = Math.round(fcMax * 0.82);
+    // soglie del piano dalle zone (calcolate dal server): facile = Z2, settimana troppo dura = media in Z4
+    const sp = d.atleta && d.atleta.soglie_piano;
+    const facile = sp ? sp.facile : Math.floor(fcMax * 0.7) + 1, soglia = sp ? sp.dura : Math.floor(fcMax * 0.8) + 1;
     const ora = d.programma ? d.programma.ora : '06:30';
     const settAtt = d.programma ? d.programma.settimana_piano : null;
     const tot = d.programma ? d.programma.totale_settimane : 26;
@@ -397,7 +399,7 @@
       '<section class="card nf-card"><div class="nf-when">' + T('Ogni settimana', 'Every week') + '</div><h3>' + T('Il piano decide il passo successivo', 'The plan picks the next step') + '</h3>' +
         '<ul class="nf-esiti">' +
           esito('ok', '↗', T('Avanza', 'Forward'), T('2 sedute su 3, nessun allarme', '2 of 3 sessions, no warnings')) +
-          esito('warn', '↻', T('Ripete', 'Repeat'), T('0–1 sedute o FC media &gt; ' + soglia + ' bpm', '0–1 sessions or avg HR &gt; ' + soglia + ' bpm')) +
+          esito('warn', '↻', T('Ripete', 'Repeat'), T('0–1 sedute o FC media in Z4 (≥ ' + soglia + ' bpm)', '0–1 sessions or avg HR in Z4 (≥ ' + soglia + ' bpm)')) +
           esito('bad', '↙', T('Indietro', 'Back'), T('2 settimane vuote o forma &lt; −25', '2 empty weeks or form &lt; −25')) +
         '</ul></section>' +
       '<section class="card nf-card"><div class="nf-when">' + T('Ogni 3 settimane', 'Every 3 weeks') + '</div><h3>' + T('L’intensità si regola da sola', 'Intensity tunes itself') + '</h3>' +
@@ -542,10 +544,10 @@
     if (!ps) return '';
     const how = comeCalcolo(T(
       'Per ogni corsa delle ultime 6 settimane calcolo l’<b>efficienza</b>: velocità ÷ battiti (nelle sedute corsa-cammino uso <b>solo i tratti di corsa</b>, riconosciuti dalla cadenza o dalla velocità). Prendo la mediana delle ultime 8 corse e la trasformo in passo per ogni fascia di frequenza: ' +
-      '<b>facile</b> 68–75% della FC max, <b>ritmo medio</b> 78–82%, <b>ritmo gara</b> (la zona del tuo obiettivo). Il <b>passo gara</b> viene dalla previsione del tempo (se disponibile) oppure dall’80% della FC con un 4% di margine per la fatica. ' +
+      '<b>facile</b> Z2 (60–70% della FC max), <b>ritmo medio</b> Z3 (70–80%), <b>ritmo gara</b> (la zona del tuo obiettivo). Il <b>passo gara</b> viene dalla previsione del tempo (se disponibile) oppure dall’80% della FC con un 4% di margine per la fatica. ' +
       'È un’indicazione: se il cuore supera la soglia della seduta, conta il cuore.',
       'For each run in the last 6 weeks I compute <b>efficiency</b>: speed ÷ heart rate (in run-walk sessions I use <b>only the running parts</b>, detected from cadence or speed). I take the median of the last 8 runs and turn it into a pace for each heart-rate band: ' +
-      '<b>easy</b> 68–75% of max HR, <b>steady</b> 78–82%, <b>race pace</b> (your goal’s zone). <b>Race pace</b> comes from the time forecast (when available) or from 80% HR with a 4% fatigue margin. ' +
+      '<b>easy</b> Z2 (60–70% of max HR), <b>steady</b> Z3 (70–80%), <b>race pace</b> (your goal’s zone). <b>Race pace</b> comes from the time forecast (when available) or from 80% HR with a 4% fatigue margin. ' +
       'It is a guide: if your heart goes above the session threshold, your heart wins.'));
     if (!ps.disponibile && !ps.ultimo) return '';
     if (!ps.disponibile) {
@@ -2140,7 +2142,7 @@
     catch (e) { mostraSheet(T('Allenamento', 'Workout'), '<div class="card empty">' + esc(e.message) + '</div>'); return; }
     if (!SCARPE.length) await caricaScarpe();
     const c = a.corsa, s = a.serie, pr = a.prevista, cf = a.confronto;
-    if (pr) pr.lim = pr.fc_target ? Number(String(pr.fc_target).replace(/[^\d]/g, '')) || null : null;
+    if (pr) { const n = String(pr.fc_target || '').match(/\d+/g); pr.lim = n ? Math.max(...n.map(Number)) : null; }
     const z = a.zone.find((x) => x.z === c.zona);
     const at = s ? analisiTratti(s, a.giri) : null;
 

@@ -1475,8 +1475,8 @@ function conIntensita(d, it) {
   return d;
 }
 
-const fcFacile = () => `< ${Math.round(CONFIG.fcMax * 0.75)}`;
-const fcQualita = () => `${Math.round(CONFIG.fcMax * 0.8)}–${Math.round(CONFIG.fcMax * 0.87)}`;
+const fcFacile = () => sottoZona(3); // Z2 o meno (< 70% FC max)
+const fcQualita = () => zonaRange(4); // Z4 (80-90% FC max)
 const ripeti = (n, f) => Array.from({ length: n }).flatMap(f);
 
 function specSeduta(d) {
@@ -1751,7 +1751,7 @@ function costruisciProgramma(oggiStr) {
 
     const corseSett = dati.corse.filter((r) => r.data >= da && r.data <= a && r.fc_media);
     const fcMedia = corseSett.length ? corseSett.reduce((s, r) => s + r.fc_media, 0) / corseSett.length : null;
-    const fcAlta = corseSett.length >= 2 && fcMedia > CONFIG.fcMax * 0.82;
+    const fcAlta = corseSett.length >= 2 && fcMedia != null && indiceZona(fcMedia, soglieZone()) >= 3; // media in Z4-Z5
     let giorniNonRecuperato = 0;
     for (let d = da; d <= a; d = addDays(d, 1)) if (segnaliRecupero(dati.benessere, d).length) giorniNonRecuperato++;
     const recuperoScarso = giorniNonRecuperato >= 3;
@@ -1788,7 +1788,7 @@ function costruisciProgramma(oggiStr) {
     // segnali per l'intensità: settimana "facile" (tutto fatto, FC bassa, recupero buono, sforzo percepito basso) o "dura"
     const rpeSett = corseSett.filter((r) => r.rpe).map((r) => r.rpe);
     const rpeMed = rpeSett.length ? rpeSett.reduce((x, y) => x + y, 0) / rpeSett.length : null;
-    const settFacile = fatte === 3 && esito === 'avanti' && fcMedia != null && fcMedia < CONFIG.fcMax * 0.78 && giorniNonRecuperato === 0 && (rpeMed == null || rpeMed <= 4);
+    const settFacile = fatte === 3 && esito === 'avanti' && fcMedia != null && indiceZona(fcMedia, soglieZone()) <= 1 && giorniNonRecuperato === 0 && (rpeMed == null || rpeMed <= 4);
     const settDura = sovraccarico || fcAlta || recuperoScarso || (rpeMed != null && rpeMed >= 8);
     segnaliInt.push({ facile: settFacile, dura: settDura });
     const intSett = intensitaDi(auto); // intensità usata in questa settimana
@@ -2083,7 +2083,7 @@ function pianificaAllenamenti(righe, stato, oggiStr) {
         distanza_km: 4,
         durata_min: 45,
         passo_target: '11:00–12:30',
-        fc_target: `< ${Math.round(CONFIG.fcMax * 0.6)}`,
+        fc_target: sottoZona(2),
         zona_fc: 'Z1',
         variazione_pct: null,
         camminata: true,
@@ -2113,7 +2113,7 @@ function pianificaAllenamenti(righe, stato, oggiStr) {
         distanza_km: 3.5,
         durata_min: 40,
         passo_target: '11:00–12:30',
-        fc_target: `< ${Math.round(CONFIG.fcMax * 0.6)}`,
+        fc_target: sottoZona(2),
         zona_fc: 'Z1',
         variazione_pct: null,
         camminata: true,
@@ -2151,7 +2151,7 @@ function pianificaAllenamenti(righe, stato, oggiStr) {
       distanza_km: kmFacile,
       durata_min: durata(kmFacile, passoFacile),
       passo_target: rangePasso(passoBase, 10, 25),
-      fc_target: rangeFc(0.65, 0.78),
+      fc_target: zonaRange(2),
       zona_fc: 'Z2',
       variazione_pct: pct(f.facile),
       camminata: false,
@@ -2167,8 +2167,8 @@ function pianificaAllenamenti(righe, stato, oggiStr) {
       distanza_km: kmQualita,
       durata_min: durata(kmQualita, passoBase),
       passo_target: rangePasso(passoBase, -25, -10),
-      fc_target: rangeFc(0.84, 0.91),
-      zona_fc: verde ? 'Z3–Z4' : 'Z3',
+      fc_target: verde ? zonaRange(4) : zonaRange(3),
+      zona_fc: verde ? 'Z4' : 'Z3',
       variazione_pct: pct(f.qualita),
       camminata: false,
       bloccato: false,
@@ -2181,7 +2181,7 @@ function pianificaAllenamenti(righe, stato, oggiStr) {
       distanza_km: kmLungo,
       durata_min: durata(kmLungo, passoLungo),
       passo_target: rangePasso(passoBase, 5, 20),
-      fc_target: rangeFc(0.7, 0.8),
+      fc_target: zonaRange(2),
       zona_fc: 'Z2',
       variazione_pct: pct(f.lungo),
       camminata: false,
@@ -2271,6 +2271,12 @@ const limitiZone = (fcMax = CONFIG.fcMax) => {
     a: i < s.length - 1 ? s[i + 1] : fcMax,
   }));
 };
+// Soglie FC del piano, tutte dalle zone:
+//   facile/lungo = Z2 (sotto l'inizio di Z3), qualita' = Z4, recupero = Z1 (sotto l'inizio di Z2)
+//   regole settimanali: FC media in Z4-Z5 = settimana troppo dura (si ripete), in Z1-Z2 = facile
+const zonaRange = (n) => { const z = limitiZone()[n - 1]; return `${z.da}–${z.a}`; };
+const sottoZona = (n) => `< ${limitiZone()[n - 1].da}`;
+const soglieFcPiano = () => { const z = limitiZone(); return { facile: z[2].da, recupero: z[1].da, dura: z[3].da, qualita: [z[3].da, z[3].a] }; };
 const sottoZone = (fcMax = CONFIG.fcMax) => ({ z: '< Z1', nome: L('Fuori zona', 'Below zones'), a: soglieZone(fcMax)[0] });
 
 // FC max in uso e sua origine: misurata/inserita dall'utente oppure stimata dall'eta' (Tanaka)
@@ -2881,6 +2887,7 @@ function costruisciPasso(oggiStr, p, previsioni) {
   const passoA = (fc) => round(60000 / (ef * fc), 0);
   const fc = (pct) => Math.round(CONFIG.fcMax * pct);
   const zona = (da, a) => ({ fc_da: fc(da), fc_a: fc(a), passo_lento: passoA(fc(da)), passo_veloce: passoA(fc(a)) });
+  const zonaBpm = (n) => { const z = limitiZone()[n - 1]; return { fc_da: z.da, fc_a: z.a, passo_lento: passoA(z.da), passo_veloce: passoA(z.a) }; };
 
   const og = obiettivoCorrente();
   const t = previsioni && previsioni.tempo;
@@ -2895,7 +2902,7 @@ function costruisciPasso(oggiStr, p, previsioni) {
     solo_corsa: recenti.some((x) => x.c.solo_corsa),
     provvisoria,
     efficienza: round(ef, 4),
-    zone: { facile: zona(0.68, 0.75), medio: zona(0.78, 0.82), mezza: zona(og.zonaGara[0], og.zonaGara[1]) }, // 'mezza' = zona del ritmo gara dell'obiettivo
+    zone: { facile: zonaBpm(2), medio: zonaBpm(3), mezza: zona(og.zonaGara[0], og.zonaGara[1]) }, // 'mezza' = zona del ritmo gara dell'obiettivo
     obiettivo: { codice: CONFIG.obiettivo || 'mezza', nome: P(og.nome), ritmo: P(og.titoloRitmo) },
     passo_gara: passoGara,
     tendenza_sett_sec: t && t.disponibile ? t.tendenza_sett_sec : null,
@@ -3158,7 +3165,7 @@ function costruisciCoachData() {
   const base = {
     generato_il: new Date().toISOString(),
     oggi: oggiStr,
-    atleta: { eta: CONFIG.eta, eta_impostata: CONFIG.etaImpostata || null, fc_max_stimata: CONFIG.fcMax, fc_max_info: infoFcMax(), obiettivo: P(obiettivoCorrente().nome), codice_obiettivo: CONFIG.obiettivo || 'mezza' },
+    atleta: { eta: CONFIG.eta, eta_impostata: CONFIG.etaImpostata || null, fc_max_stimata: CONFIG.fcMax, fc_max_info: infoFcMax(), soglie_piano: soglieFcPiano(), obiettivo: P(obiettivoCorrente().nome), codice_obiettivo: CONFIG.obiettivo || 'mezza' },
     soglie: SOGLIE,
     sincronizzazione: statoSync(),
     salute: costruisciSalute(oggiStr),
