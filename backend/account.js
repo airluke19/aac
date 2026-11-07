@@ -70,7 +70,9 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     sis.exec('ALTER TABLE sessioni ADD COLUMN impersona_id INTEGER');
   }
 
-  const attivo = Boolean(BASE.googleClientId && BASE.googleClientSecret && BASE.publicUrl && BASE.adminEmail);
+  // LOGIN_GOOGLE=off spegne il login anche se configurato (es. staging): modalita' utente singolo.
+  const loginSpento = String(process.env.LOGIN_GOOGLE || 'on').trim().toLowerCase() === 'off';
+  const attivo = !loginSpento && Boolean(BASE.googleClientId && BASE.googleClientSecret && BASE.publicUrl && BASE.adminEmail);
   const sicuro = BASE.publicUrl.startsWith('https://');
   // In HTTPS il cookie di sessione usa il prefisso __Host-: il browser lo accetta solo Secure, Path=/
   // e senza Domain, quindi nessun sottodominio puo' impostarlo o sovrascriverlo.
@@ -150,7 +152,9 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     sis.prepare('DELETE FROM sessioni WHERE scade < ?').run(ora());
     console.log(attivo
       ? `[account] Login con Google attivo su ${BASE.publicUrl} (amministratore: ${admin().email}).`
-      : '[account] Login non configurato: modalita\' utente singolo, nessun accesso richiesto.');
+      : loginSpento
+        ? '[account] Login Google DISATTIVATO (LOGIN_GOOGLE=off): modalita\' utente singolo. Le richieste da internet (Cloudflare) vengono rifiutate.'
+        : '[account] Login non configurato: modalita\' utente singolo, nessun accesso richiesto.');
   }
 
   const admin = () => sis.prepare("SELECT * FROM utenti WHERE ruolo = 'admin' ORDER BY id LIMIT 1").get();
@@ -438,6 +442,17 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
   const PUBBLICI = new Set(['/login.html', '/logo.svg', '/apple-touch-icon.png', '/favicon.ico', '/manifest.webmanifest']);
 
   function monta(app, { L, demo }) {
+    // Senza login chiunque sarebbe l'amministratore: si accettano solo richieste locali.
+    // Tutto cio' che arriva da internet passa da Cloudflare (intestazioni CF-*) e viene rifiutato.
+    if (!attivo) {
+      app.use((req, res, next) => {
+        if (req.get('cf-ray') || req.get('cf-connecting-ip')) {
+          return res.status(403).json({ errore: L('Accesso da internet disabilitato: il login non è attivo', 'Internet access disabled: sign-in is not enabled') });
+        }
+        next();
+      });
+    }
+
     const json = require('express').json({ limit: '16kb' });
     const csrf = (req, res, next) => (req.get('x-requested-with') === 'coach' ? next() : res.status(400).json({ errore: L('Richiesta non valida', 'Invalid request') }));
 

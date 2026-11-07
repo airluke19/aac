@@ -1,4 +1,10 @@
 name: ai-adaptive-coach
+# Due ambienti sulla stessa macchina (cartelle /opt/aac/production e /opt/aac/staging), ognuno col suo .env:
+#   COMPOSE_PROJECT_NAME  progetto Compose (production: ai-adaptive-coach, staging: aac-staging)
+#   AAC_PREFIX            prefisso di container e volumi (production: coach, staging: coach-staging)
+#   AAC_TAG               immagine (production: latest = branch main, staging: staging)
+#   HOST_PORT             porta su 127.0.0.1 (production: 8088, staging: 8089)
+#   LOGIN_GOOGLE          on/off (off = utente singolo, solo accesso locale)
 
 # ---------------------------------------------------------------------------
 # Due servizi:
@@ -28,7 +34,7 @@ services:
     image: ghcr.io/airluke19/aac-frontend:${AAC_TAG:-latest}
     build:
       context: ./frontend
-    container_name: coach-frontend
+    container_name: ${AAC_PREFIX:-coach}-frontend
     restart: unless-stopped
     depends_on:
       backend:
@@ -54,7 +60,7 @@ services:
       context: ./backend
       secrets:
         - extra_ca
-    container_name: coach-backend
+    container_name: ${AAC_PREFIX:-coach}-backend
     restart: unless-stopped
     # Nessuna porta sull'host: ci arriva solo il frontend.
     expose:
@@ -78,6 +84,8 @@ services:
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       APP_SECRET: ${APP_SECRET:-}
+      # off = login Google spento (utente singolo): il backend rifiuta le richieste da internet
+      LOGIN_GOOGLE: ${LOGIN_GOOGLE:-on}
       # CA aggiuntiva (proxy aziendale) per le chiamate a Intervals.icu
       NODE_EXTRA_CA_CERTS: /etc/extra-ca.pem
     logging: *logging
@@ -98,7 +106,7 @@ services:
     image: ghcr.io/airluke19/aac-backup:${AAC_TAG:-latest}
     build:
       context: ./coach-backup
-    container_name: coach-backup
+    container_name: ${AAC_PREFIX:-coach}-backup
     restart: unless-stopped
     # Non ha bisogno di rete: legge i database e scrive nel volume dei backup
     network_mode: none
@@ -133,6 +141,6 @@ secrets:
 
 volumes:
   coach-db:
-    name: coach-db
+    name: ${AAC_PREFIX:-coach}-db
   coach-backup:
-    name: coach-backup
+    name: ${AAC_PREFIX:-coach}-backup
