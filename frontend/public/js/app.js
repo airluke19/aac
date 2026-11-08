@@ -172,7 +172,7 @@
   const TIPI_SEDUTA_DEF = [
     { tipo: 'corsa-cammino', sigla: ['CC', 'RW'], nome: ['Corsa e cammino', 'Run-walk'], testo: ['Brevi frazioni di corsa lenta alternate a camminata. Abitua cuore, muscoli e tendini a correre senza sovraccaricarli: è la base della ripartenza.', 'Short bouts of slow running alternated with walking. It gets heart, muscles and tendons used to running without overloading them: the foundation of your comeback.'] },
     { tipo: 'facile', sigla: ['F', 'E'], nome: ['Corsa facile', 'Easy run'], testo: ['Corsa continua a ritmo da conversazione (Z2). È l’80% del lavoro: costruisce la resistenza aerobica. Con “allunghi” chiudi con 4 accelerazioni da 20″ per la tecnica.', 'Continuous running at conversational pace (Z2). It is 80% of the work: it builds aerobic endurance. With “strides” you finish with 4 × 20″ accelerations for technique.'] },
-    { tipo: 'lungo', sigla: ['L', 'L'], nome: ['Lungo', 'Long run'], testo: ['La seduta chiave, sempre la domenica: corsa lenta e costante che cresce di settimana in settimana fino a quasi 2 ore. Prepara il corpo a durare 21 km.', 'The key session, always on Sunday: slow, steady running that grows week by week up to almost 2 hours. It prepares your body to last 21 km.'] },
+    { tipo: 'lungo', sigla: ['L', 'L'], nome: ['Lungo', 'Long run'], testo: ['La seduta chiave, di preferenza nel weekend: corsa lenta e costante che cresce di settimana in settimana fino a quasi 2 ore. Prepara il corpo a durare 21 km.', 'The key session, preferably at the weekend: slow, steady running that grows week by week up to almost 2 hours. It prepares your body to last 21 km.'] },
     { tipo: 'qualita', sigla: ['Q', 'Q'], nome: ['Qualità', 'Quality'], testo: ['Fartlek (tratti brillanti liberi) o frazioni a ritmo medio / ritmo gara. Insegnano a tenere un passo più sostenuto senza andare in crisi. Solo dalla fase 2.', 'Fartlek (free lively bursts) or reps at steady / race pace. They teach you to hold a faster pace without blowing up. Only from phase 2.'] },
     { tipo: 'recupero', sigla: ['R', 'R'], nome: ['Recupero', 'Recovery'], testo: ['Camminata tranquilla: aiuta a smaltire la fatica senza aggiungere carico.', 'Easy walk: helps clear fatigue without adding load.'] },
     { tipo: 'gara', sigla: ['🏁', '🏁'], nome: ['Gara', 'Race'], testo: ['La gara del tuo obiettivo, a ritmo costante: 5 km, 10 km, mezza o maratona.', 'The race of your goal, at a steady pace: 5K, 10K, half or marathon.'] },
@@ -233,7 +233,8 @@
         '<div class="cal-det-head"><div><b>' + esc(fmtDataLunga(x.data)) + ' · ' + esc(p.ora) + '</b>' +
         '<span>' + esc(x.fase) + T(' · sett. ' + x.settimana, ' · wk ' + x.settimana) + (x.scarico ? T(' · scarico', ' · recovery week') : '') + '</span></div>' +
         '<span class="stato ' + stato[0] + '">' + esc(stato[1]) + '</span></div>' +
-        '<h4 class="det-title"><span class="sig">' + siglaTipo(x.tipo) + '</span>' + esc(x.titolo.replace(/^(Sett\.|Wk) \d+ · /, '')) + '</h4>' +
+        '<h4 class="det-title"><span class="sig">' + siglaTipo(x.tipo) + '</span>' + esc(x.titolo.replace(/^(Sett\.|Wk) \d+ · /, '')) + (x.extra ? '<em class="det-extra">' + T('in più', 'extra') + '</em>' : '') + '</h4>' +
+        (x.perche_giorno ? '<p class="det-giorno">' + esc(x.perche_giorno) + '</p>' : '') +
         bannerAdattata(x) + confrontoPasso(x) + corpoSeduta(x, true, tipo ? '<p class="det-why">' + esc(tipo.testo) + '</p>' : '') + '<div class="azioni">' + azioni + '</div></div>';
     }
 
@@ -242,7 +243,7 @@
       '<div class="tipo-s' + (x && x.tipo === t.tipo ? ' on' : '') + '"><span class="sig">' + t.sigla + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('');
 
     return '<section class="card cal" id="cal">' +
-      '<div class="cal-top"><div><h3>' + T('Calendario allenamenti', 'Training calendar') + '</h3><p class="sub" style="margin:0">' + p.calendario.length + T(' sedute alla gara · 3 a settimana', ' sessions to race day · 3 a week') + '</p></div>' +
+      '<div class="cal-top"><div><h3>' + T('Calendario allenamenti', 'Training calendar') + '</h3><p class="sub" style="margin:0">' + p.calendario.length + T(' sedute alla gara · ' + ((p.frequenza && p.frequenza.attuale) || 3) + ' a settimana', ' sessions to race day · ' + ((p.frequenza && p.frequenza.attuale) || 3) + ' a week') + '</p></div>' +
         '<a class="btn-mini" href="' + conLang('/api/programma.ics') + '" download title="' + T('Scarica le sedute in programma per Calendario iPhone/Mac, Google o Outlook', 'Download planned sessions for iPhone/Mac Calendar, Google or Outlook') + '">' + ICO.cal + T('Esporta', 'Export') + '</a></div>' +
       '<div class="cal-layout"><div class="cal-left">' +
         '<div class="cal-head"><button type="button" class="icon-btn sm" data-mese="-1" aria-label="' + T('Mese precedente', 'Previous month') + '"' + (meseCal <= minMese ? ' disabled' : '') + '>‹</button>' +
@@ -441,7 +442,14 @@
       const qui = settAtt && settAtt >= da && settAtt <= a;
       return '<li class="' + (qui ? 'qui' : settAtt && settAtt > a ? 'fatta' : '') + '"><span class="in-ph-n">' + (i + 1) + '</span><div><b>' + f[0] + (qui ? '<em>' + T('sei qui', 'you are here') + '</em>' : '') + '</b><small>' + T('settimane ', 'weeks ') + da + '–' + a + '</small><p>' + f[1] + '</p></div></li>';
     }).join('') + '</ol>' +
-      '<p class="sub">' + T('Le 3 sedute cadono a giorni alterni dalla prima seduta, oppure nei 3 giorni che scegli in Account → Giorni delle sedute. Cambiandoli si spostano anche le sedute della settimana in corso; per avanzare contano le corse fatte nella settimana, in qualunque giorno.', 'The 3 sessions fall every other day from your first session, or on the 3 days you pick in Account → Session days. Changing them also moves this week’s sessions; to move forward, the runs done during the week count, on any day.') + '</p>';
+      '<h4 class="in-h">' + T('Quante sedute e in che giorni', 'How many sessions, on which days') + '</h4>' +
+      '<ul class="in-list">' +
+        '<li>' + T('Si parte con <b>3 sedute</b> a settimana. La 4ª (e la 5ª per mezza e maratona) si guadagna: 3 settimane di fila tutte fatte, senza fatica e con il carico che cresce in modo sicuro (rapporto carico acuto/cronico ≤ 1,3). Il tetto dipende da obiettivo, fase e intensità: “Ambiziosa” una in più, “Tranquilla” una in meno.', 'You start with <b>3 sessions</b> a week. The 4th (and the 5th for half and marathon) is earned: 3 weeks in a row all done, without fatigue and with load rising safely (acute/chronic load ratio ≤ 1.3). The cap depends on goal, phase and intensity: “Ambitious” one more, “Easy-going” one fewer.') + '</li>' +
+        '<li>' + T('Le sedute in più sono corse facili in Z2: più volume, non più intensità (principio 80/20). Con segnali di fatica, o se per 2 settimane non entrano, il coach la toglie. Scarico, gara e corsa-cammino restano a 3.', 'Extra sessions are easy Z2 runs: more volume, not more intensity (80/20 principle). With signs of fatigue, or if they do not fit for 2 weeks, the coach removes one. Recovery, race and run-walk weeks stay at 3.') + '</li>' +
+        '<li>' + T('I giorni li sceglie il coach: mai due sedute impegnative (lungo, ritmo, gara) in giorni di fila, il lungo di preferenza nel weekend, i tuoi giorni preferiti (Account) quando possibile. Se corri in un altro giorno la seduta va lì; se ne salti una, passa ai giorni che restano della settimana.', 'The coach picks the days: never two hard sessions (long, pace, race) on consecutive days, the long run preferably at the weekend, your preferred days (Account) whenever possible. If you run on another day the session moves there; if you miss one, it moves to the remaining days of the week.') + '</li>' +
+        '<li>' + T('Per avanzare contano le corse fatte nella settimana, in qualunque giorno.', 'To move forward, the runs done during the week count, on any day.') + '</li>' +
+      '</ul>' +
+      '<p class="in-p">' + T('Fonti: progressione di frequenza dei piani di Daniels, Pfitzinger e Higdon; carico acuto/cronico (Gabbett, 2016); distribuzione 80/20 (Seiler).', 'Sources: frequency progression from the Daniels, Pfitzinger and Higdon plans; acute/chronic load (Gabbett, 2016); 80/20 distribution (Seiler).') + '</p>';
 
     const fmi = d.atleta && d.atleta.fc_max_info;
     const zone = '<div class="in-zones">' + [['&lt; Z1', '&lt; 50%', 'z0'], ['Z1', '50–60%'], ['Z2', '60–70%'], ['Z3', '70–80%'], ['Z4', '80–90%'], ['Z5', '90–100%']].map((z, i) => '<div><span class="zchip ' + (z[2] || 'z' + i) + '">' + z[0] + '</span><small>' + z[1] + '</small></div>').join('') + '</div>' +
@@ -641,7 +649,7 @@
     const prossima = w.settimana_piano + 1;
     let msg;
     if (!w.iniziato) msg = T('Il piano parte ' + fmtDataLunga(p.inizio) + '.', 'The plan starts on ' + fmtDataLunga(p.inizio) + '.');
-    else if (w.fatte >= 2) msg = T('Settimana ' + prossima + ' da ' + decide + (w.fatte === 2 ? '. La terza è un di più.' : '.'), 'Week ' + prossima + ' from ' + decide + (w.fatte === 2 ? '. The third is a bonus.' : '.'));
+    else if (w.fatte >= 2) msg = T('Settimana ' + prossima + ' da ' + decide + (w.fatte === 2 && (w.sedute || 3) > 2 ? '. Le altre sono un di più.' : '.'), 'Week ' + prossima + ' from ' + decide + (w.fatte === 2 && (w.sedute || 3) > 2 ? '. The rest are a bonus.' : '.'));
     else if (w.fatte === 1) msg = T('Ancora <b>1</b> entro ' + decide + ' per la settimana ' + prossima + '.', '<b>1 more</b> by ' + decide + ' for week ' + prossima + '.');
     else msg = T('<b>2</b> entro ' + decide + ' per la settimana ' + prossima + '.', '<b>2</b> by ' + decide + ' for week ' + prossima + '.');
     if (w.iniziato && w.fatte === 0 && w.rischio_indietro) msg += T(' Se resta vuota, il piano torna indietro.', ' If it stays empty, the plan steps back.');
@@ -651,7 +659,7 @@
     }).join('');
     const extra = w.giorni_fatti.filter((g) => !w.previste.some((c) => c.data === g)).length;
     return '<section class="card week-card">' +
-      '<div class="wk-top">' + anello(w.fatte, 3) +
+      '<div class="wk-top">' + anello(w.fatte, w.sedute || 3) +
         '<div class="wk-txt"><h3>' + T('Questa settimana', 'This week') + '</h3><p>' + msg + '</p>' +
           '<ul class="wk-days">' + giorni + '</ul>' +
           (extra ? '<small class="wk-extra">' + T('+ ' + extra + ' corsa fuori piano, conta lo stesso', '+ ' + extra + ' unscheduled run, it still counts') + '</small>' : '') +
@@ -1340,15 +1348,7 @@
     if (e.target.id === 'f-mese') { filtroMese = e.target.value; apertaId = null; aggiornaStorico(); }
     if (e.target.id === 'f-tipo') { filtroTipo = e.target.value; apertaId = null; aggiornaStorico(); }
     if (e.target.id === 'f-scarpa') { filtroScarpa = e.target.value; apertaId = null; aggiornaStorico(); }
-    if (e.target.name === 'giorni_sedute') limitaGiorni(e.target.closest('.giorni-pick'));
   });
-  // al massimo 3 giorni: arrivati a 3, gli altri si disattivano
-  function limitaGiorni(box) {
-    if (!box) return;
-    const tutti = [...box.querySelectorAll('input')];
-    const pieni = tutti.filter((x) => x.checked).length >= 3;
-    tutti.forEach((x) => { x.disabled = pieni && !x.checked; });
-  }
 
   async function caricaStorico() {
     try {
@@ -2009,15 +2009,16 @@
       '<div class="acc-row2b">' +
         campo('acc-int', T('Intensità', 'Intensity'), '<select id="acc-int" name="intensita">' + INTENSITA_UI().map((o) => '<option value="' + o[0] + '"' + ((p.intensita || 'equilibrata') === o[0] ? ' selected' : '') + '>' + (LANG === 'en' ? o[2] : o[1]) + ' · ' + o[3] + '</option>').join('') + '</select>') +
       '</div>' +
+      '<div id="acc-anteprima" class="acc-anteprima" aria-live="polite" hidden></div>' +
       (ultimiDati && ultimiDati.programma && ultimiDati.programma.intensita ? (() => { const it = ultimiDati.programma.intensita; return '<p class="acc-int-stato">' + T('Adesso: ', 'Now: ') + '<b>' + esc(it.nome) + (it.percentuale ? ' · ' + (it.percentuale > 0 ? '+' : '') + it.percentuale + '%' : '') + '</b>' + (it.ultima_modifica ? ' · ' + esc(it.ultima_modifica.motivo) : T(' · il coach la ritocca da solo se serve', ' · the coach fine-tunes it when needed')) + '</p>'; })() : '') +
-      // giorni preferiti per le 3 sedute (vuoto = a giorni alterni dalla prima seduta)
+      // giorni preferiti: il coach li usa quando puo' (vuoto = sceglie il coach)
       (() => {
         const scelti = new Set(p.giorni_sedute || []);
         const nomi = LANG === 'en' ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
         const lunghi = LANG === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
-        return '<fieldset class="acc-f acc-giorni"><legend>' + T('Giorni delle sedute', 'Session days') + '</legend><div class="giorni-pick">' +
+        return '<fieldset class="acc-f acc-giorni"><legend>' + T('Giorni preferiti', 'Preferred days') + '</legend><div class="giorni-pick">' +
           [1, 2, 3, 4, 5, 6, 0].map((g, i) => '<label title="' + lunghi[i] + '"><input type="checkbox" name="giorni_sedute" value="' + g + '"' + (scelti.has(g) ? ' checked' : '') + ' aria-label="' + lunghi[i] + '"><span>' + nomi[i] + '</span></label>').join('') +
-          '</div><small>' + T('Scegline 3, meglio non di fila: il piano sposta lì le sedute, anche quelle di questa settimana. Nessuno = a giorni alterni.', 'Pick 3, ideally not back to back: the plan moves your sessions there, this week included. None = every other day.') + '</small></fieldset>';
+          '</div><small>' + T('Sono una proposta: il coach mette lì le sedute quando può. Se servono più sedute, recupero tra quelle impegnative o una seduta saltata da rimettere, ne sceglie altri e te lo scrive. Nessuno = decide il coach.', 'They are a suggestion: the coach puts sessions there when it can. If more sessions are needed, rest between hard ones or a missed session to make up, it picks other days and tells you why. None = the coach decides.') + '</small></fieldset>';
       })() +
       // prima seduta e orario solo finche' il piano non e' iniziato (dopo restano quelli salvati)
       (!p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10))
@@ -2168,10 +2169,35 @@
   // dopo un'azione si ricarica il pannello aperto (amministrazione o profilo)
   const riapri = () => (location.hash === '#admin' ? apriAdmin() : apriAccount());
 
+  // Cambio di obiettivo o intensità nel profilo: anteprima del nuovo piano prima di salvare
+  let anteprimaReq = 0;
+  document.addEventListener('change', async (e) => {
+    if (e.target.id !== 'acc-ob' && e.target.id !== 'acc-int') return;
+    const box = $('#acc-anteprima');
+    if (!box || !ME || !ME.profilo) return;
+    const ob = $('#acc-ob').value, it = $('#acc-int').value;
+    if (ob === (ME.profilo.obiettivo || 'mezza') && it === (ME.profilo.intensita || 'equilibrata')) { box.hidden = true; return; }
+    const n = ++anteprimaReq;
+    box.hidden = false;
+    box.innerHTML = '<div class="skeleton" style="height:90px"></div>';
+    let a;
+    try { a = await caricaJson('/api/piano/anteprima?obiettivo=' + encodeURIComponent(ob) + '&intensita=' + encodeURIComponent(it)); } catch (_) { a = null; }
+    if (n !== anteprimaReq) return;
+    if (!a) { box.innerHTML = '<p class="sub">' + T('Anteprima non disponibile: il piano si ricalcola al salvataggio.', 'Preview not available: the plan is recalculated when you save.') + '</p>'; return; }
+    const fr = a.frequenza || {};
+    box.innerHTML = '<h4>' + T('Il tuo piano diventa', 'Your plan becomes') + '</h4>' +
+      '<div class="ap-kv">' +
+        '<div><b>' + a.settimana_piano + '<small>/' + a.settimane_totali + '</small></b><span>' + T('settimana', 'week') + ' · ' + esc(a.fase) + '</span></div>' +
+        '<div><b>' + (fr.attuale || 3) + (fr.massima > (fr.attuale || 3) ? '<small>→' + fr.massima + '</small>' : '') + '</b><span>' + T('sedute a settimana', 'sessions a week') + '</span></div>' +
+        '<div><b>' + esc(fmtData(a.data_gara)) + '</b><span>' + T('gara se tutto fila', 'race if all goes well') + '</span></div>' +
+      '</div>' +
+      (a.prossime && a.prossime.length ? '<ul class="ap-next">' + a.prossime.map((x) => '<li><span>' + esc(fmtData(x.data)) + '</span>' + esc(x.titolo.replace(/^(Sett\.|Wk) \d+ · /, '')) + ' · ' + x.durata_min + '′</li>').join('') + '</ul>' : '') +
+      '<p class="sub">' + (a.riparte_da_oggi ? T('Riparti da oggi dalla stessa fase. ', 'You restart from today at the same phase. ') : '') + T('Salva per confermare: poi ti mostro il piano.', 'Save to confirm: then I will show you the plan.') + '</p>';
+  });
+
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
     mostraSheet(T('Account', 'Account'), renderAccount());
-    limitaGiorni($('#sheet-body .giorni-pick'));
     riempiLivelloAccount();
     riempiScarpeAccount();
   }
@@ -2201,25 +2227,27 @@
       const f = new FormData(e.target), corpo = {};
       for (const [k, v] of f.entries()) if (k !== 'giorni_sedute' && (String(v).trim() !== '' || ['athlete_id', 'eta', 'fc_max', 'altezza', 'peso', 'data_nascita'].includes(k))) corpo[k] = String(v).trim();
       const giorni = f.getAll('giorni_sedute');
-      if (giorni.length && giorni.length !== 3) { const err = $('#acc-err'); err.textContent = T('Scegli 3 giorni per le sedute, oppure nessuno.', 'Pick 3 session days, or none.'); err.hidden = false; return; }
       corpo.giorni_sedute = giorni.join(',');
       const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
       const err = $('#acc-err'); err.hidden = true;
       try {
         const { ok, out } = await inviaJson('PUT', '/api/profilo', corpo);
         if (!ok) {
-          const msg = { fc_max: T('FC max tra 140 e 220 bpm.', 'Max HR between 140 and 220 bpm.'), altezza: T('Altezza tra 100 e 230 cm.', 'Height between 100 and 230 cm.'), peso: T('Peso tra 30 e 250 kg.', 'Weight between 30 and 250 kg.'), intervals: T('Intervals.icu non accetta questa API key con questo Athlete ID: ricontrollali.', 'Intervals.icu rejects this API key with this Athlete ID: please check them.'), athlete_id: T('Athlete ID non valido (es. i123456).', 'Invalid Athlete ID (e.g. i123456).'), intervals_key: T('API key non valida.', 'Invalid API key.'), eta: T('Età non valida.', 'Invalid age.'), data_nascita: T('Data di nascita non valida (età tra 14 e 90 anni).', 'Invalid date of birth (age between 14 and 90).'), programma_inizio: T('Data non valida.', 'Invalid date.'), programma_ora: T('Orario non valido.', 'Invalid time.'), giorni_sedute: T('Scegli 3 giorni diversi.', 'Pick 3 different days.') };
+          const msg = { fc_max: T('FC max tra 140 e 220 bpm.', 'Max HR between 140 and 220 bpm.'), altezza: T('Altezza tra 100 e 230 cm.', 'Height between 100 and 230 cm.'), peso: T('Peso tra 30 e 250 kg.', 'Weight between 30 and 250 kg.'), intervals: T('Intervals.icu non accetta questa API key con questo Athlete ID: ricontrollali.', 'Intervals.icu rejects this API key with this Athlete ID: please check them.'), athlete_id: T('Athlete ID non valido (es. i123456).', 'Invalid Athlete ID (e.g. i123456).'), intervals_key: T('API key non valida.', 'Invalid API key.'), eta: T('Età non valida.', 'Invalid age.'), data_nascita: T('Data di nascita non valida (età tra 14 e 90 anni).', 'Invalid date of birth (age between 14 and 90).'), programma_inizio: T('Data non valida.', 'Invalid date.'), programma_ora: T('Orario non valido.', 'Invalid time.'), giorni_sedute: T('Giorni preferiti non validi.', 'Invalid preferred days.') };
           err.textContent = (out.errori || []).map((x) => msg[x] || x).join(' ') || T('Salvataggio non riuscito.', 'Could not save.');
           err.hidden = false;
           return;
         }
         const cambiato = corpo.obiettivo && ME && ME.profilo && corpo.obiettivo !== (ME.profilo.obiettivo || 'mezza');
+        const cambiataInt = corpo.intensita && ME && ME.profilo && corpo.intensita !== (ME.profilo.intensita || 'equilibrata');
         const giorniPrima = ((ME && ME.profilo && ME.profilo.giorni_sedute) || []).slice().sort().join(',');
         const giorniCambiati = giorni.map(Number).sort().join(',') !== giorniPrima;
         ME = out;
-        toast(cambiato ? T('Obiettivo aggiornato: piano ricalcolato', 'Goal updated: plan recalculated') : giorniCambiati ? T('Giorni aggiornati: sedute spostate', 'Days updated: sessions moved') : T('Profilo salvato', 'Profile saved'), 'ok');
+        toast(cambiato ? T('Obiettivo aggiornato: ecco il nuovo piano', 'Goal updated: here is your new plan') : cambiataInt ? T('Intensità aggiornata: ecco il piano', 'Intensity updated: here is your plan') : giorniCambiati ? T('Giorni preferiti salvati: il coach ha rifatto il calendario', 'Preferred days saved: the coach has redone the calendar') : T('Profilo salvato', 'Profile saved'), 'ok');
         await caricaDati(true);
         if (ME.completo && ME.profilo.ha_chiave) sincronizza();
+        // nuovo obiettivo o intensità: si mostra subito il piano ricalcolato
+        if (cambiato || cambiataInt) { vaiTab('piano'); return; }
         apriAccount();
       } catch (_) { /* gestito */ } finally { btn.disabled = false; }
     } else if (e.target.id === 'acc-livello-form') {

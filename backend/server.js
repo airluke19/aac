@@ -1299,8 +1299,8 @@ function valutaStato(serie) {
 
 // ===========================================================================
 // Piano verso la mezza maratona: 26 settimane in 4 fasi, riadattato sui dati.
-// Ogni settimana-piano ha 3 sedute: [venerdì-tipo, domenica (lungo), martedì-tipo]
-// (giorni 0, 2, 4 di ogni blocco di 7 giorni dalla data di inizio, oppure i giorni preferiti: offsetSedute).
+// Ogni settimana-piano ha 3 sedute di base: [facile, lungo, qualità o facile] (+ sedute facili in più)
+// (i giorni li sceglie scegliGiorni, la frequenza cresce da 3 fino al tetto di frequenzaObiettivo).
 //
 // Adattamento:
 //  - settimanale: a fine settimana si decide se avanzare, ripetere o tornare
@@ -1336,7 +1336,7 @@ const PIANO_MEZZA = [
   { sedute: [cc(2, 12, 2), cc(2, 12, 2), cc(2, 12, 2)], nota: ['Due blocchi lunghi: il cammino serve solo per riprendere fiato.', 'Two long blocks: the walk is only there to catch your breath.'] },
   { sedute: [fa(22), fa(22), fa(22)], nota: ['Traguardo della fase 1: 20–25 minuti di corsa senza fermarti, sempre a ritmo conversazione.', 'Phase 1 milestone: 20–25 minutes of running without stopping, always at conversational pace.'] },
   // ---- Fase 2 · Base aerobica ----
-  { sedute: [fa(25), lu(28), fa(25)], nota: ['Da qui la domenica diventa il giorno del lungo: è la seduta più importante della settimana.', 'From now on Sunday is long-run day: it is the most important session of the week.'] },
+  { sedute: [fa(25), lu(28), fa(25)], nota: ['Da qui arriva il lungo: è la seduta più importante della settimana, il coach lo mette di preferenza nel weekend.', 'From now on there is a long run: it is the most important session of the week, and the coach prefers to put it at the weekend.'] },
   { sedute: [fa(25), lu(32), fa(28)], nota: ['Il ritmo resta da conversazione anche se i minuti aumentano.', 'The pace stays conversational even as the minutes go up.'] },
   { sedute: [fa(28), lu(36), fa(28, true)], nota: ['Allunghi: 4 accelerazioni progressive da 20" a fine corsa, recuperando camminando. Servono per la tecnica, non per la fatica.', 'Strides: 4 progressive 20" accelerations at the end of the run, walking to recover. They are for technique, not fatigue.'] },
   { sedute: [fa(25), lu(30), fa(25)], scarico: true, nota: ['Settimana di scarico: meno volume per consolidare.', 'Recovery week: less volume to consolidate.'] },
@@ -1357,15 +1357,109 @@ const PIANO_MEZZA = [
   { sedute: [fa(40), lu(75), ['ritmo', 3, 5, 2, 'mezza']], scarico: true, nota: ['Scarico pre-gara: meno volume, mantieni un po’ di ritmo per restare brillante.', 'Pre-race taper: less volume, keep a little pace work to stay sharp.'] },
   { sedute: [fa(20, true), ['gara'], ['recupero', 30]], nota: ['Settimana della gara. Dormi bene, mangia cose che conosci, niente novità.', 'Race week. Sleep well, eat what you know, nothing new.'] },
 ];
-const OFFSET_SEDUTE = [0, 2, 4];
-// Giorni delle 3 sedute in ogni blocco di 7 giorni dalla data di inizio. Se l'utente ha scelto i suoi
-// giorni preferiti (0 = domenica … 6 = sabato) le sedute cadono su quelli, nell'ordine del blocco;
-// altrimenti a giorni alterni dal primo giorno (0, 2, 4).
-function offsetSedute(inizio) {
-  const g = CONFIG.giorniSedute;
-  if (!Array.isArray(g) || g.length !== 3) return OFFSET_SEDUTE;
-  const dow = new Date(dayMs(inizio)).getUTCDay();
-  return g.map((x) => (x - dow + 7) % 7).sort((a, b) => a - b);
+// ===========================================================================
+// Frequenza e giorni delle sedute (il coach decide, l'utente indica le sue preferenze)
+//
+// Frequenza: si parte sempre da 3 sedute a settimana. La 4ª (e la 5ª per mezza e maratona) si guadagna
+// come nei piani classici (Daniels, Pfitzinger, Higdon): 3 settimane di fila tutte fatte, in avanti, senza
+// segnali di fatica e con il carico che cresce in modo sicuro (rapporto acuto/cronico ATL/CTL <= 1,3,
+// Gabbett 2016). Si toglie con fatica, passi indietro o se per 2 settimane non entra nella settimana.
+// Nelle settimane di scarico, di gara e nella fase corsa-cammino si torna a 3. Le sedute in più sono
+// corse facili in Z2 (80/20, Seiler): il volume aumenta senza aggiungere intensità.
+//
+// Giorni: per ogni settimana si provano tutte le combinazioni di giorni e si sceglie la migliore.
+//  - vincoli: mai due sedute impegnative (lungo, ritmo/fartlek, gara) in giorni di fila, anche a cavallo
+//    tra due settimane; nelle prime due fasi mai 3 giorni di corsa di fila
+//  - punti: giorni preferiti dall'utente, lungo e gara nel weekend, giorni non attaccati, stessi giorni della
+//    settimana prima, e nei giorni gia' passati la seduta va dove hai corso davvero (quella saltata si
+//    sposta sui giorni che restano)
+// ===========================================================================
+const FREQUENZA = { '5k': [3, 3, 3, 3], '10k': [3, 3, 4, 4], mezza: [3, 3, 4, 4], maratona: [3, 4, 4, 5, 4] };
+const FREQ_MAX = { '5k': 4, '10k': 4, mezza: 5, maratona: 5 };
+const ACWR_MAX = 1.3;
+const ruoloSeduta = (d) => (d[0] === 'lungo' ? 'L' : d[0] === 'gara' ? 'G' : d[0] === 'ritmo' || d[0] === 'fartlek' ? 'Q' : 'E');
+const sedutaDura = (d) => ruoloSeduta(d) !== 'E';
+
+// sedute a settimana previste dall'obiettivo per questa settimana-piano (il tetto: va comunque guadagnato)
+function frequenzaObiettivo(stepIdx) {
+  const cod = OBIETTIVI[CONFIG.obiettivo] ? CONFIG.obiettivo : 'mezza';
+  const st = pianoAttivo()[stepIdx];
+  const f = faseDi(stepIdx + 1);
+  if (!st || f.id === 1 || st.scarico || st.sedute.some((d) => d[0] === 'gara' || d[0] === 'cc')) return 3;
+  let n = FREQUENZA[cod][f.id - 1] ?? 3;
+  if (CONFIG.intensita === 'ambiziosa') n += 1;
+  if (CONFIG.intensita === 'tranquilla') n -= 1;
+  return Math.max(3, Math.min(FREQ_MAX[cod], n));
+}
+
+// seduta in più: corsa facile all'80% della prima corsa facile della settimana (minimo 20')
+function descExtra(stepIdx, intensita) {
+  const base = conIntensita(pianoAttivo()[stepIdx].sedute.find((d) => d[0] === 'facile') || fa(25), intensita);
+  return ['facile', Math.max(20, Math.round((base[1] * 0.8) / 5) * 5), false];
+}
+
+// Sceglie i giorni delle sedute di una settimana. sedute = descrittori nell'ordine del piano.
+// Restituisce [{ off, i }] (off = giorno 0-6 dall'inizio del blocco, i = indice nella lista sedute).
+function scegliGiorni(sedute, c) {
+  const n = sedute.length;
+  const dure = sedute.map((d, i) => (sedutaDura(d) ? i : -1)).filter((i) => i >= 0);
+  const facili = sedute.map((d, i) => (sedutaDura(d) ? -1 : i)).filter((i) => i >= 0);
+  const ordinata = sedute.some((d) => d[0] === 'gara'); // settimana della gara: l'ordine del piano non si tocca
+  const dataDi = (off) => addDays(c.da, off);
+  const dowDi = (off) => new Date(dayMs(dataDi(off))).getUTCDay();
+  let migliore = null;
+  const valuta = (giorni, mappa) => {
+    // mappa[k] = indice della seduta nel giorno giorni[k]
+    const dura = new Set(), corsa = new Set(giorni.map(dataDi));
+    giorni.forEach((g, k) => { if (sedutaDura(sedute[mappa[k]])) dura.add(dataDi(g)); });
+    for (const d of dura) if (dura.has(addDays(d, -1)) || c.precDure.has(addDays(d, -1))) return null;
+    let p = 0;
+    for (const d of corsa) {
+      const ieri = corsa.has(addDays(d, -1)) || c.precCorsa.has(addDays(d, -1));
+      const altroieri = corsa.has(addDays(d, -2)) || c.precCorsa.has(addDays(d, -2));
+      if (ieri) p -= 1;
+      if (ieri && altroieri) { if (c.maxFila2) return null; p -= 2; }
+    }
+    giorni.forEach((g, k) => {
+      const d = dataDi(g), dow = dowDi(g), sed = sedute[mappa[k]];
+      if (c.preferiti.has(dow)) p += 4;
+      if (sed[0] === 'lungo' && (dow === 0 || dow === 6)) p += 2;
+      if (sed[0] === 'gara' && (dow === 0 || dow === 6)) p += 6; // le gare si corrono quasi sempre nel weekend
+      if (c.precDow.has(dow)) p += 0.5;
+      if (d < c.oggi) p += c.giorniCorsa.has(d) ? 5 : -6;
+      else if (d === c.oggi && c.giorniCorsa.has(d)) p += 5;
+    });
+    return p;
+  };
+  const combina = (da, scelti) => {
+    if (scelti.length === n) {
+      if (ordinata) {
+        const mappa = scelti.map((_, k) => k);
+        const p = valuta(scelti, mappa);
+        if (p != null && (!migliore || p > migliore.p)) migliore = { p, giorni: scelti.slice(), mappa };
+        return;
+      }
+      // posti delle sedute impegnative (in ogni ordine), le facili nei giorni rimasti nell'ordine del piano
+      const posti = (rest, usati) => {
+        if (!rest.length) {
+          const mappa = new Array(n);
+          usati.forEach((k, j) => { mappa[k] = dure[j]; });
+          let f = 0;
+          for (let k = 0; k < n; k++) if (mappa[k] == null) mappa[k] = facili[f++];
+          const p = valuta(scelti, mappa);
+          if (p != null && (!migliore || p > migliore.p)) migliore = { p, giorni: scelti.slice(), mappa };
+          return;
+        }
+        for (let k = 0; k < n; k++) if (!usati.includes(k)) posti(rest.slice(1), [...usati, k]);
+      };
+      posti(dure, []);
+      return;
+    }
+    for (let g = da; g <= 6; g++) combina(g + 1, [...scelti, g]);
+  };
+  combina(0, []);
+  if (!migliore) return sedute.map((_, i) => ({ off: [0, 2, 4, 6, 1][i] ?? i, i })); // nessuna combinazione valida
+  return migliore.giorni.map((off, k) => ({ off, i: migliore.mappa[k] }));
 }
 
 // ---------------------------------------------------------------------------
@@ -1380,7 +1474,7 @@ const settGara = (nota) => ({ sedute: [fa(20, true), ['gara'], ['recupero', 30]]
 const PIANO_5K = [
   ...RIPARTENZA,
   // ---- Base aerobica (corta) ----
-  { sedute: [fa(25), lu(28), fa(25)], nota: ['Da qui la domenica è il giorno del lungo, anche per il 5 km: costruisce la resistenza che ti serve in gara.', 'From now on Sunday is long-run day, even for the 5K: it builds the endurance you need on race day.'] },
+  { sedute: [fa(25), lu(28), fa(25)], nota: ['Da qui arriva il lungo, anche per il 5 km: costruisce la resistenza che ti serve in gara.', 'From now on there is a long run, even for the 5K: it builds the endurance you need on race day.'] },
   { sedute: [fa(25), lu(32), fa(25, true)], nota: ['Allunghi: 4 accelerazioni da 20" a fine corsa. Preparano le gambe ai lavori veloci.', 'Strides: 4 × 20" accelerations at the end of the run. They prepare your legs for faster work.'] },
   { sedute: [fa(28), lu(36), ['fartlek', 6, 1, 2]], nota: ['Primo fartlek: 1 minuto brillante (sforzo 7/10) e 2 facili. Divertiti, non è una gara.', 'First fartlek: 1 minute lively (effort 7/10) and 2 easy. Have fun, it is not a race.'] },
   { sedute: [fa(25), lu(30), fa(25, true)], scarico: true, nota: ['Settimana di scarico prima dei lavori di velocità.', 'Recovery week before the speed work.'] },
@@ -1612,6 +1706,7 @@ function datiAdattamento(inizio, oggiStr) {
     manuali: new Set(manuali.map((r) => r.data)),
     benessere,
     tsb: new Map(serie.map((p) => [p.data, p.tsb])),
+    acwr: new Map(serie.filter((p) => p.ctl >= 5).map((p) => [p.data, p.atl / p.ctl])), // carico acuto / cronico
   };
 }
 
@@ -1745,7 +1840,6 @@ function costruisciProgramma(oggiStr) {
   const inizio = CONFIG.programmaInizio;
   const dati = datiAdattamento(inizio, oggiStr);
   const settCorrente = Math.max(0, Math.floor(diffDays(oggiStr, inizio) / 7));
-  const offsets = offsetSedute(inizio);
   const ultimo = pianoAttivo().length - 1;
   const og = obiettivoCorrente();
 
@@ -1761,12 +1855,15 @@ function costruisciProgramma(oggiStr) {
   const segnaliInt = [];
   const intensitaDi = (g) => ({ mult: round(baseInt.mult + g * PASSO_AUTO, 2), rep: baseInt.rep });
   const pctDi = (g) => Math.round((baseInt.mult + g * PASSO_AUTO - 1) * 100);
+  // frequenza: livello raggiunto (3-5 sedute), settimane buone di fila e settimane in cui le sedute non entrano
+  let livelloFreq = 3, buoneDiFila = 0, scarseDiFila = 0, ultimaFreqInfo = null;
   for (let w = 0; w < settCorrente; w++) {
     const da = addDays(inizio, w * 7);
     const a = addDays(da, 6);
+    const nSett = Math.min(livelloFreq, frequenzaObiettivo(step));
     let fatte = 0;
     for (let d = da; d <= a; d = addDays(d, 1)) if (dati.giorniCorsa.has(d)) fatte++;
-    fatte = Math.min(3, fatte);
+    fatte = Math.min(nSett, fatte);
 
     const corseSett = dati.corse.filter((r) => r.data >= da && r.data <= a && r.fc_media);
     const fcMedia = corseSett.length ? corseSett.reduce((s, r) => s + r.fc_media, 0) / corseSett.length : null;
@@ -1789,7 +1886,7 @@ function costruisciProgramma(oggiStr) {
       motivi.push(vuoteDiFila >= 2 ? L('due settimane senza sedute: si riparte con calma', 'two weeks without sessions: easing back in') : L('nessuna seduta registrata', 'no sessions recorded'));
     } else if (fatte === 1) {
       esito = 'ripeti';
-      motivi.push(L('1 seduta su 3', '1 of 3 sessions'));
+      motivi.push(L(`1 seduta su ${nSett}`, `1 of ${nSett} sessions`));
     } else if (fcAlta) {
       esito = 'ripeti';
       motivi.push(L(`FC media nelle corse ${Math.round(fcMedia)} bpm: troppo alta per corse facili`, `average run HR ${Math.round(fcMedia)} bpm: too high for easy runs`));
@@ -1798,7 +1895,7 @@ function costruisciProgramma(oggiStr) {
       motivi.push(L(`${giorniNonRecuperato} giorni con segnali di recupero incompleto`, `${giorniNonRecuperato} days with signs of incomplete recovery`));
     } else {
       esito = 'avanti';
-      motivi.push(L(`${fatte} sedute su 3${fcMedia ? `, FC media ${Math.round(fcMedia)} bpm` : ''}`, `${fatte} of 3 sessions${fcMedia ? `, average HR ${Math.round(fcMedia)} bpm` : ''}`));
+      motivi.push(L(`${fatte} sedute su ${nSett}${fcMedia ? `, FC media ${Math.round(fcMedia)} bpm` : ''}`, `${fatte} of ${nSett} sessions${fcMedia ? `, average HR ${Math.round(fcMedia)} bpm` : ''}`));
     }
     if (fatte > 0) vuoteDiFila = 0;
     if (esito === 'avanti') step = Math.min(ultimo, step + 1);
@@ -1807,7 +1904,7 @@ function costruisciProgramma(oggiStr) {
     // segnali per l'intensità: settimana "facile" (tutto fatto, FC bassa, recupero buono, sforzo percepito basso) o "dura"
     const rpeSett = corseSett.filter((r) => r.rpe).map((r) => r.rpe);
     const rpeMed = rpeSett.length ? rpeSett.reduce((x, y) => x + y, 0) / rpeSett.length : null;
-    const settFacile = fatte === 3 && esito === 'avanti' && fcMedia != null && indiceZona(fcMedia, soglieZone()) <= 1 && giorniNonRecuperato === 0 && (rpeMed == null || rpeMed <= 4);
+    const settFacile = fatte >= nSett && esito === 'avanti' && fcMedia != null && indiceZona(fcMedia, soglieZone()) <= 1 && giorniNonRecuperato === 0 && (rpeMed == null || rpeMed <= 4);
     const settDura = sovraccarico || fcAlta || recuperoScarso || (rpeMed != null && rpeMed >= 8);
     segnaliInt.push({ facile: settFacile, dura: settDura });
     const intSett = intensitaDi(auto); // intensità usata in questa settimana
@@ -1823,7 +1920,29 @@ function costruisciProgramma(oggiStr) {
       }
       if (motivo) { ultimaModifica = w; motivi.push(motivo); ultimaModificaInfo = { settimana: w + 1, data: a, motivo }; }
     }
-    storia.push({ numero: w + 1, da, a, settimana_piano: eseguito + 1, fatte, esito, motivi, intensita: intSett, intensita_pct: Math.round((intSett.mult - 1) * 100) });
+
+    // frequenza della settimana dopo: si guadagna con 3 settimane buone, si perde con fatica o sedute che non entrano
+    const acwr = dati.acwr.get(a);
+    const caricoOk = acwr == null || acwr <= ACWR_MAX;
+    const prima = livelloFreq;
+    let motivoFreq = null;
+    if (settDura || esito === 'indietro') {
+      buoneDiFila = 0; scarseDiFila = 0;
+      if (livelloFreq > 3) { livelloFreq--; motivoFreq = L(`si torna a ${livelloFreq} sedute: segnali di fatica`, `back to ${livelloFreq} sessions: signs of fatigue`); }
+    } else if (nSett > 3 && fatte < nSett - 1) {
+      buoneDiFila = 0;
+      if (++scarseDiFila >= 2) { livelloFreq = Math.max(3, nSett - 1); scarseDiFila = 0; motivoFreq = L(`si torna a ${livelloFreq} sedute: da 2 settimane non entrano tutte`, `back to ${livelloFreq} sessions: for 2 weeks they did not all fit`); }
+    } else {
+      scarseDiFila = 0;
+      buoneDiFila = esito === 'avanti' && fatte >= nSett && caricoOk ? buoneDiFila + 1 : 0;
+      if (buoneDiFila >= 3 && livelloFreq < frequenzaObiettivo(step)) {
+        livelloFreq++; buoneDiFila = 0;
+        motivoFreq = L(`da ora ${livelloFreq} sedute a settimana: 3 settimane complete senza fatica`, `from now on ${livelloFreq} sessions a week: 3 complete weeks without fatigue`)
+          + (acwr != null ? L(`, carico in crescita sicura (${it1(acwr)})`, `, load rising safely (${round(acwr, 1)})`) : '');
+      }
+    }
+    if (motivoFreq) { motivi.push(motivoFreq); if (livelloFreq !== prima) ultimaFreqInfo = { settimana: w + 1, data: a, motivo: motivoFreq }; }
+    storia.push({ numero: w + 1, da, a, settimana_piano: eseguito + 1, sedute: nSett, fatte, esito, motivi, intensita: intSett, intensita_pct: Math.round((intSett.mult - 1) * 100) });
   }
   const intensitaAttuale = intensitaDi(auto);
   const ultimiSegnali = segnaliInt.slice(-3);
@@ -1837,20 +1956,43 @@ function costruisciProgramma(oggiStr) {
   const calendario = [];
   // seduta fatta: una corsa quel giorno (o segnata a mano); la "Camminata di recupero" si fa camminando
   const fattaIl = (sed, data) => dati.giorniCorsa.has(data) || (sed.tipo === 'recupero' && dati.giorniCamminata.has(data));
-  storia.forEach((s, w) =>
-    offsets.forEach((off, i) => {
-      const data = addDays(inizio, w * 7 + off);
-      const sed = sedutaDa(s.settimana_piano - 1, i, data, null, s.intensita);
-      calendario.push({ ...sed, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: true });
-    })
-  );
-  for (let k = 0; step + k <= ultimo; k++) {
-    const w = settCorrente + k;
-    offsets.forEach((off, i) => {
-      const data = addDays(inizio, w * 7 + off);
-      const sed = sedutaDa(step + k, i, data, null, intensitaAttuale);
-      calendario.push({ ...sed, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: data < oggiStr });
+  const preferiti = new Set(Array.isArray(CONFIG.giorniSedute) ? CONFIG.giorniSedute : []);
+  const descPerData = new Map(); // descrittore di ogni seduta (per alleggerire quella di oggi)
+  let prec = { dure: new Set(), corsa: new Set(), dow: new Set() };
+  const settimanaCal = (w, stepIdx, n, intensita, proiezione) => {
+    const da = addDays(inizio, w * 7);
+    const descs = pianoAttivo()[stepIdx].sedute.map((d) => conIntensita(d, intensita));
+    for (let k = descs.length; k < n; k++) descs.push(descExtra(stepIdx, intensita));
+    const giorni = scegliGiorni(descs, {
+      da, oggi: oggiStr, preferiti, giorniCorsa: dati.giorniCorsa, maxFila2: faseDi(stepIdx + 1).id <= 2,
+      precDure: prec.dure, precCorsa: prec.corsa, precDow: prec.dow,
+    }).sort((x, y) => x.off - y.off);
+    prec = { dure: new Set(), corsa: new Set(), dow: new Set() };
+    giorni.forEach(({ off, i }, pos) => {
+      const data = addDays(da, off);
+      const desc = descs[i];
+      const extra = i >= 3;
+      const sed = sedutaDa(stepIdx, Math.min(i, 2), data, desc, null);
+      const dow = new Date(dayMs(data)).getUTCDay();
+      let perche = null;
+      if (extra) perche = proiezione
+        ? L(`Seduta in più prevista: il coach la aggiunge se reggi bene il carico (${n} a settimana).`, `Extra session planned: the coach adds it if you handle the load well (${n} a week).`)
+        : L(`Seduta in più (${n} a settimana): la tua forma regge più volume, sempre a ritmo facile.`, `Extra session (${n} a week): your fitness can take more volume, always at an easy pace.`);
+      if (preferiti.size && !preferiti.has(dow) && !(data <= oggiStr && dati.giorniCorsa.has(data)))
+        perche = (perche ? perche + ' ' : '') + L('Fuori dai tuoi giorni preferiti: lì non c’era posto senza due sedute impegnative di fila o senza recuperare quella saltata.', 'Outside your preferred days: there was no room there without two hard sessions back to back or without making up a missed one.');
+      descPerData.set(data, desc);
+      calendario.push({ ...sed, seduta: pos + 1, sedute_settimana: n, extra, perche_giorno: perche, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: data < oggiStr });
+      prec.corsa.add(data); prec.dow.add(dow);
+      if (sedutaDura(desc)) prec.dure.add(data);
     });
+  };
+  storia.forEach((s, w) => settimanaCal(w, s.settimana_piano - 1, s.sedute, s.intensita, false));
+  // futuro: la frequenza cresce come da regola (3 settimane buone) fino al tetto dell'obiettivo
+  const freqCorrente = Math.min(livelloFreq, frequenzaObiettivo(step));
+  let livProj = livelloFreq, buoneProj = buoneDiFila;
+  for (let k = 0; step + k <= ultimo; k++) {
+    if (k > 0 && ++buoneProj >= 3 && livProj < frequenzaObiettivo(step + k)) { livProj++; buoneProj = 0; }
+    settimanaCal(settCorrente + k, step + k, k === 0 ? freqCorrente : Math.min(livProj, frequenzaObiettivo(step + k)), intensitaAttuale, k > 0);
   }
   const gara = calendario.find((s) => s.tipo === 'gara');
 
@@ -1858,7 +2000,8 @@ function costruisciProgramma(oggiStr) {
   const netto = storia.filter((s) => s.esito === 'avanti').length - storia.filter((s) => s.esito === 'indietro').length;
   const ritmoAvanzamento = storia.length >= 3 ? Math.max(0.25, Math.min(1, netto / storia.length)) : 1;
   const settimaneStimate = Math.ceil((ultimo - step) / ritmoAvanzamento);
-  const dataStimata = addDays(inizio, (settCorrente + settimaneStimate) * 7 + offsets[1]);
+  const offGara = ((diffDays(calendario.find((c) => c.tipo === 'gara').data, inizio) % 7) + 7) % 7;
+  const dataStimata = addDays(inizio, (settCorrente + settimaneStimate) * 7 + offGara);
 
   // Tempo indicativo sulla distanza dell'obiettivo (formula di Riegel) dalla migliore corsa >= 20' delle ultime 6 settimane
   let previsione = null;
@@ -1889,8 +2032,9 @@ function costruisciProgramma(oggiStr) {
     prontezza.motivi = motivi;
     const p0 = prossime[0];
     if (motivi.length && p0.tipo !== 'gara' && p0.tipo !== 'recupero') {
-      const desc = conIntensita(pianoAttivo()[p0.settimana - 1].sedute[p0.seduta - 1], intensitaAttuale);
-      const ridotta = sedutaDa(p0.settimana - 1, p0.seduta - 1, p0.data, riduci(desc));
+      const desc = descPerData.get(p0.data);
+      const ridotta = sedutaDa(p0.settimana - 1, Math.min(2, p0.seduta - 1), p0.data, riduci(desc));
+      delete ridotta.seduta;
       prossime[0] = { ...p0, ...ridotta, adattata: { motivi, originale: `${p0.blocchi} (${p0.durata_min}′)` } };
       const idx = calendario.findIndex((s) => s.data === p0.data);
       if (idx >= 0) calendario[idx] = { ...calendario[idx], ...prossime[0] };
@@ -1905,7 +2049,8 @@ function costruisciProgramma(oggiStr) {
   const settimana = {
     da: settDa,
     a: settA,
-    fatte: Math.min(3, giorniFatti.length),
+    fatte: Math.min(freqCorrente, giorniFatti.length),
+    sedute: freqCorrente,
     giorni_fatti: giorniFatti,
     obiettivo: 2,
     previste: calendario.filter((c) => c.data >= settDa && c.data <= settA).map((c) => ({ data: c.data, titolo: c.titolo, fatta: c.fatta, passata: c.passata })),
@@ -1935,6 +2080,7 @@ function costruisciProgramma(oggiStr) {
     const t = L({ avanti: 'si avanza', ripeti: 'la ripetiamo', indietro: 'torniamo indietro di una settimana' }, { avanti: 'moving forward', ripeti: 'repeating it', indietro: 'stepping back one week' })[ultima.esito];
     consigli.push(L(`Settimana scorsa (piano S${ultima.settimana_piano}): ${ultima.motivi.join(', ')} → ${t}.`, `Last week (plan wk ${ultima.settimana_piano}): ${ultima.motivi.join(', ')} → ${t}.`));
   }
+  if (ultimaFreqInfo && settCorrente - ultimaFreqInfo.settimana <= 1) consigli.push(L(`Frequenza: ${ultimaFreqInfo.motivo}.`, `Frequency: ${ultimaFreqInfo.motivo}.`));
   if (ultimaModificaInfo && settCorrente - ultimaModificaInfo.settimana <= 2) consigli.push(L(`Ho regolato il piano: ${ultimaModificaInfo.motivo}.`, `I adjusted the plan: ${ultimaModificaInfo.motivo}.`));
   if (suggerimentoInt) consigli.push(suggerimentoInt);
   if (prossime[0] && prossime[0].adattata) {
@@ -1958,6 +2104,14 @@ function costruisciProgramma(oggiStr) {
     attivo: oggiStr <= fine,
     inizio,
     fine,
+    offset_gara: offGara,
+    // sedute a settimana: adesso, tetto previsto dall'obiettivo in questa fase e ultima modifica del coach
+    frequenza: {
+      attuale: freqCorrente,
+      massima: Math.max(...pianoAttivo().map((_, i) => frequenzaObiettivo(i))),
+      ultima_modifica: ultimaFreqInfo,
+      preferiti: [...preferiti],
+    },
     ora: CONFIG.programmaOra,
     obiettivo: {
       nome: nomeOb,
@@ -2047,7 +2201,7 @@ function generaIcs() {
   ];
   for (const s of p.calendario.filter((x) => !x.passata)) {
     const descr =
-      `${s.fase} · ${s.titolo} · ${L('seduta', 'session')} ${s.seduta}/3\n\n` +
+      `${s.fase} · ${s.titolo} · ${L('seduta', 'session')} ${s.seduta}/${s.sedute_settimana || 3}\n\n` +
       `${s.struttura.map((f) => `${f.fase} ${f.min}': ${f.testo}`).join('\n')}\n\n` +
       `${L('FC', 'HR')}: ${s.fc_target} bpm.\n${s.nota}\n\n` +
       L('Il piano si adatta ai tuoi dati: se cambia, riscarica il calendario dall’app.', 'The plan adapts to your data: if it changes, download the calendar again from the app.');
@@ -2762,7 +2916,7 @@ function previsioneDataGara(oggiStr, p) {
   const w0 = p.settimana_calendario - 1;
   const rnd = mulberry32(424242);
   const N = 4000;
-  const offLungo = offsetSedute(p.inizio)[1];
+  const offLungo = p.offset_gara;
   const date = [];
   for (let n = 0; n < N; n++) {
     // incertezza sui parametri: probabilità estratte dalla distribuzione a posteriori (Dirichlet)
@@ -3066,8 +3220,8 @@ function markdownSessione(data, perParere = false) {
   if (seduta) {
     R.push(L('## Seduta prevista dal piano', '## Planned session'));
     R.push(L(
-      `- ${seduta.fase} · ${seduta.titolo} · seduta ${seduta.seduta}/3 · tipo: ${P(NOMI_TIPO_SEDUTA[seduta.tipo]) || seduta.tipo}${seduta.scarico ? ' · settimana di scarico' : ''}`,
-      `- ${seduta.fase} · ${seduta.titolo} · session ${seduta.seduta}/3 · type: ${P(NOMI_TIPO_SEDUTA[seduta.tipo]) || seduta.tipo}${seduta.scarico ? ' · recovery week' : ''}`
+      `- ${seduta.fase} · ${seduta.titolo} · seduta ${seduta.seduta}/${seduta.sedute_settimana || 3} · tipo: ${P(NOMI_TIPO_SEDUTA[seduta.tipo]) || seduta.tipo}${seduta.scarico ? ' · settimana di scarico' : ''}`,
+      `- ${seduta.fase} · ${seduta.titolo} · session ${seduta.seduta}/${seduta.sedute_settimana || 3} · type: ${P(NOMI_TIPO_SEDUTA[seduta.tipo]) || seduta.tipo}${seduta.scarico ? ' · recovery week' : ''}`
     ));
     R.push(L(
       `- Orario previsto ${CONFIG.programmaOra}, durata totale ${seduta.durata_min}′ di cui ${seduta.corsa_min}′ di corsa; FC obiettivo ${seduta.fc_target} bpm.`,
@@ -3425,6 +3579,40 @@ function creaApp() {
     }
   });
 
+  // Anteprima del piano con un altro obiettivo/intensita' (profilo, prima di salvare): stesso motore, niente scritto
+  app.get('/api/piano/anteprima', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    try {
+      const c = contesto.getStore();
+      const ob = String(req.query.obiettivo || '');
+      const int = String(req.query.intensita || '');
+      if (!c || !OBIETTIVI[ob] || (int && !INTENSITA[int])) return res.status(400).json({ errore: L('Parametri non validi', 'Invalid parameters') });
+      if (!c.cfg.programmaInizio) return res.status(404).json({ errore: L('Piano non ancora impostato', 'Plan not set up yet') });
+      const cambio = ob !== (c.cfg.obiettivo || 'mezza') ? mappaCambioObiettivo(c, ob) : null;
+      const cfg = { ...c.cfg, obiettivo: ob, intensita: int || c.cfg.intensita, ...(cambio ? { settimanaIniziale: cambio.settimana_iniziale, programmaInizio: cambio.programma_inizio } : {}) };
+      const out = contesto.run({ ...c, cfg }, () => {
+        const p = costruisciProgramma(oggi());
+        if (!p) return null;
+        const f = faseDi(p.settimana_piano);
+        return {
+          obiettivo: p.obiettivo.nome,
+          riparte_da_oggi: Boolean(cambio),
+          settimana_piano: p.settimana_piano,
+          settimane_totali: pianoAttivo().length,
+          fase: f.nome,
+          data_gara: p.obiettivo.data_gara,
+          frequenza: p.frequenza,
+          prossime: p.prossime.slice(0, 3).map((x) => ({ data: x.data, giorno: x.giorno, titolo: x.titolo, durata_min: x.durata_min, extra: x.extra })),
+        };
+      });
+      if (!out) return res.status(404).json({ errore: L('Piano non disponibile', 'Plan not available') });
+      res.json(out);
+    } catch (e) {
+      console.error('[api] anteprima piano:', e);
+      res.status(500).json({ errore: L('Errore interno', 'Internal error') });
+    }
+  });
+
   app.get('/api/storico', (req, res) => {
     res.set('Cache-Control', 'no-store');
     try {
@@ -3576,6 +3764,7 @@ module.exports = {
   istogrammaDaStreams,
   creaApp,
   costruisciCoachData,
+  costruisciProgramma,
   generaDatiSimulati,
   seedSeVuoto,
   eseguiSync,
