@@ -1665,12 +1665,27 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .ap-cons { margin: 12px 0 0; padding: 10px 12px 10px 28px; border-radius: 12px; background: color-mix(in srgb, var(--warn) 12%, transparent); font-size: .8rem; line-height: 1.45; display: grid; gap: 6px; }
 
 /* ---- Guida passo passo del piano (tab Piano) ---- */
-.guida-card h3 { margin: 0 0 8px; }
-.gc-kv { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
-.gc-kv span { padding: 5px 10px; border-radius: 999px; background: var(--surface-2); font-size: .8rem; font-weight: 600; }
-.gc-btn { width: 100%; margin-top: 14px; }
-.gc-nota { margin: 10px 0 0; font-size: .78rem; color: var(--muted); line-height: 1.45; }
-.acc-piano { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.guida-card { display: flex; flex-direction: column; gap: 18px; }
+.gc-eyebrow { margin: 0 0 -10px; font-size: .7rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); }
+.gc-ob { display: flex; flex-direction: column; gap: 2px; }
+.gc-ob b { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; line-height: 1.1; }
+.gc-ob span { font-size: .88rem; color: var(--muted); }
+.gc-lab { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; font-size: .74rem; font-weight: 600; color: var(--muted); }
+.gc-lab > span:first-child { text-transform: uppercase; letter-spacing: .06em; }
+.gc-modo { color: var(--text); }
+.gc-modo.fissi { color: var(--accent); }
+.gc-week { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.gc-week li { height: 36px; border-radius: 10px; display: grid; place-items: center; font-size: .8rem; font-weight: 700; color: var(--muted); background: var(--surface-2); }
+.gc-week li.on { background: var(--accent); color: var(--accent-ink); }
+.gc-bar { height: 6px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.gc-bar i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--accent-2), var(--accent)); }
+.gc-cta { display: flex; align-items: center; justify-content: space-between; gap: 10px; width: 100%; height: 48px; padding: 0 16px; border-radius: 14px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); color: var(--text); font: inherit; font-size: .92rem; font-weight: 600; cursor: pointer; transition: background .15s; }
+.gc-cta svg { color: var(--accent); flex: none; }
+.gc-cta:hover { background: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); }
+.gc-cta:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.acc-piano { display: flex; flex-direction: column; gap: 14px; }
+.acc-piano .gc-ob b { font-size: 1.4rem; }
+@media (prefers-reduced-motion: reduce) { .gc-cta { transition: none; } }
 .guida { display: flex; flex-direction: column; gap: 16px; }
 .gd-passi { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
 .gd-passi button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: .72rem; font-weight: 600; cursor: pointer; }
@@ -1680,7 +1695,7 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .gd-passi .ora i { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .gd-passi .ora button { color: var(--text); }
 .gd-coach { display: flex; gap: 10px; align-items: flex-start; }
-.gd-av { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); font-size: 1.1rem; }
+.gd-av { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); color: var(--accent); }
 .gd-coach p { margin: 0; padding: 10px 14px; border-radius: 4px 16px 16px 16px; background: var(--surface-2); font-size: .9rem; line-height: 1.45; }
 .gd-opzioni { display: grid; gap: 8px; }
 .gd-opzioni.gd-due { grid-template-columns: 1fr 1fr; }

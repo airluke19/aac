@@ -2031,8 +2031,7 @@
       campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
       '<h3>' + T('Programma', 'Plan') + '</h3>' +
       // obiettivo, intensita' e giorni si scelgono con la guida passo passo (tab Piano)
-      (() => { const r = riepilogoGuida(p); return '<div class="acc-piano"><p class="gc-kv"><span>🎯 ' + esc(r.ob) + '</span><span>⚡ ' + esc(r.it) + '</span><span>📅 ' + esc(r.giorni) + '</span></p>' +
-        '<button type="button" class="pill-btn" data-guida-apri>' + T('Rivedi con il coach', 'Review with the coach') + '</button></div>'; })() +
+      '<div class="acc-piano">' + htmlRiepilogoPiano(p) + '<button type="button" class="gc-cta" data-guida-apri><span>' + T('Rivedi con il coach', 'Review with the coach') + '</span>' + FRECCIA + '</button></div>' +
       // prima seduta e orario solo finche' il piano non e' iniziato (dopo restano quelli salvati)
       (!p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10))
         ? '<div class="acc-row acc-row2">' +
@@ -2216,18 +2215,26 @@
   function riepilogoGuida(pr) {
     const ob = OBIETTIVI_UI.find((o) => o[0] === (pr.obiettivo || 'mezza')) || OBIETTIVI_UI[2];
     const it = INTENSITA_UI().find((o) => o[0] === (pr.intensita || 'equilibrata')) || INTENSITA_UI()[1];
-    const brevi = LANG === 'en' ? ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] : ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
-    const gg = (pr.giorni_sedute || []).slice().sort((x, y) => ((x + 6) % 7) - ((y + 6) % 7)).map((g) => brevi[g]).join(' ');
-    const giorni = gg ? gg + ' · ' + (pr.giorni_modo === 'fissi' ? T('obbligatori', 'fixed') : T('proposti', 'suggested')) : T('decide il coach', 'coach decides');
-    return { ob: LANG === 'en' ? ob[2] : ob[1], it: LANG === 'en' ? it[2] : it[1], giorni };
+    return { ob: LANG === 'en' ? ob[2] : ob[1], it: LANG === 'en' ? it[2] : it[1], settimane: ob[3], giorni: new Set(pr.giorni_sedute || []), fissi: pr.giorni_modo === 'fissi' };
   }
+  // riepilogo del piano senza emoji: obiettivo grande, intensita', settimana dei giorni
+  function htmlRiepilogoPiano(pr) {
+    const r = riepilogoGuida(pr);
+    const nomi = LANG === 'en' ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+    const lunghi = LANG === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+    const modo = !r.giorni.size ? T('Decide il coach', 'Coach decides') : r.fissi ? T('Obbligatori', 'Fixed') : T('Proposti', 'Suggested');
+    return '<div class="gc-ob"><b>' + esc(r.ob) + '</b><span>' + esc(r.it) + ' · ' + r.settimane + T(' settimane', ' weeks') + '</span></div>' +
+      '<div class="gc-giorni"><div class="gc-lab"><span>' + T('Giorni', 'Days') + '</span><span class="gc-modo' + (r.fissi && r.giorni.size ? ' fissi' : '') + '">' + modo + '</span></div>' +
+      '<ol class="gc-week">' + [1, 2, 3, 4, 5, 6, 0].map((g, i) => '<li class="' + (r.giorni.has(g) ? 'on' : '') + '" title="' + lunghi[i] + '"><span>' + nomi[i] + '</span></li>').join('') + '</ol></div>';
+  }
+  const FRECCIA = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   function renderGuidaCard() {
     if (!ME || !ME.profilo) return '';
-    const r = riepilogoGuida(ME.profilo);
-    return '<section class="card guida-card"><div class="gc-top"><div><h3>' + T('Il tuo piano con il coach', 'Your plan with the coach') + '</h3>' +
-      '<p class="gc-kv"><span>🎯 ' + esc(r.ob) + '</span><span>⚡ ' + esc(r.it) + '</span><span>📅 ' + esc(r.giorni) + '</span></p></div></div>' +
-      '<button type="button" class="btn-primary gc-btn" data-guida-apri>' + T('Rivedi il piano passo passo', 'Review the plan step by step') + '</button>' +
-      '<p class="gc-nota">' + T('Scegli obiettivo, intensità e giorni: il coach ti propone il piano e ti dice cosa ne pensa. Poi lo adatta da solo ogni settimana.', 'Pick goal, intensity and days: the coach proposes the plan and tells you what it thinks. Then it adapts it by itself every week.') + '</p></section>';
+    const p = ultimiDati && ultimiDati.programma;
+    const sett = p && p.settimana_piano, tot = p && p.totale_settimane;
+    return '<section class="card guida-card"><p class="gc-eyebrow">' + T('Il tuo piano', 'Your plan') + '</p>' + htmlRiepilogoPiano(ME.profilo) +
+      (sett && tot ? '<div class="gc-prog"><div class="gc-lab"><span>' + T('Avanzamento', 'Progress') + '</span><span>' + T('Settimana ', 'Week ') + sett + T(' di ', ' of ') + tot + '</span></div><div class="gc-bar"><i style="width:' + Math.max(3, Math.round((sett / tot) * 100)) + '%"></i></div></div>' : '') +
+      '<button type="button" class="gc-cta" data-guida-apri><span>' + T('Rivedi il piano con il coach', 'Review the plan with the coach') + '</span>' + FRECCIA + '</button></section>';
   }
   function apriGuida() {
     if (!ME || !ME.profilo) return;
@@ -2238,7 +2245,7 @@
   }
   function htmlGuida() {
     const g = guida, P = 4;
-    const bolla = (t) => '<div class="gd-coach"><span class="gd-av" aria-hidden="true">🧑‍🏫</span><p>' + t + '</p></div>';
+    const bolla = (t) => '<div class="gd-coach"><span class="gd-av" aria-hidden="true"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-5 4 10 2-5h6"/></svg></span><p>' + t + '</p></div>';
     const passi = '<ol class="gd-passi" aria-label="' + T('Passi', 'Steps') + '">' + [T('Obiettivo', 'Goal'), T('Intensità', 'Intensity'), T('Giorni', 'Days'), T('Piano', 'Plan')].map((x, i) =>
       '<li class="' + (i + 1 < g.passo ? 'fatto' : i + 1 === g.passo ? 'ora' : '') + '"' + (i + 1 === g.passo ? ' aria-current="step"' : '') + '><button type="button" data-guida-passo="' + (i + 1) + '"' + (i + 1 > g.passo ? ' disabled' : '') + '><i>' + (i + 1) + '</i>' + x + '</button></li>').join('') + '</ol>';
     const scelta = (nome, v, on, tit, sotto, extra) => '<label class="gd-opz' + (on ? ' on' : '') + '"><input type="radio" name="' + nome + '" value="' + v + '"' + (on ? ' checked' : '') + '><span><b>' + tit + (extra ? '<small>' + extra + '</small>' : '') + '</b><small>' + sotto + '</small></span></label>';
@@ -2281,7 +2288,7 @@
   function consigliGuidaHtml() {
     const a = guida && guida.anteprima;
     const c = a && a.frequenza && a.frequenza.consigli;
-    if (!c || !c.length) return guida && guida.giorni.size ? '<p class="gd-ok">' + T('👍 Va bene così: con questi giorni il piano resta quello ideale.', '👍 All good: with these days the plan stays the ideal one.') + '</p>' : '';
+    if (!c || !c.length) return guida && guida.giorni.size ? '<p class="gd-ok">' + T('Va bene così: con questi giorni il piano resta quello ideale.', 'All good: with these days the plan stays the ideal one.') + '</p>' : '';
     return '<ul class="ap-cons">' + c.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>';
   }
   async function caricaAnteprimaGuida() {
