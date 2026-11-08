@@ -2005,7 +2005,7 @@
       campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
       '<h3>' + T('Programma', 'Plan') + '</h3>' +
       campo('acc-ob', T('Obiettivo', 'Goal'), '<select id="acc-ob" name="obiettivo">' + OBIETTIVI_UI.map((o) => '<option value="' + o[0] + '"' + ((p.obiettivo || 'mezza') === o[0] ? ' selected' : '') + '>' + (LANG === 'en' ? o[2] : o[1]) + T(' · ' + o[3] + ' settimane', ' · ' + o[3] + ' weeks') + '</option>').join('') + '</select>',
-        T('Cambiandolo a piano iniziato riparti da oggi dalla stessa fase del nuovo piano. La maratona è consigliata a chi corre già da almeno 6 mesi.', 'Changing it mid-plan restarts from today at the same phase of the new plan. The marathon is recommended if you have been running for at least 6 months.')) +
+        T('Cambiandolo a piano iniziato prosegui dalla stessa fase del nuovo piano, dalla settimana in corso; le corse fatte restano. La maratona è consigliata a chi corre già da almeno 6 mesi.', 'Changing it mid-plan continues at the same phase of the new plan from the current week; your runs stay. The marathon is recommended if you have been running for at least 6 months.')) +
       '<div class="acc-row2b">' +
         campo('acc-int', T('Intensità', 'Intensity'), '<select id="acc-int" name="intensita">' + INTENSITA_UI().map((o) => '<option value="' + o[0] + '"' + ((p.intensita || 'equilibrata') === o[0] ? ' selected' : '') + '>' + (LANG === 'en' ? o[2] : o[1]) + ' · ' + o[3] + '</option>').join('') + '</select>') +
       '</div>' +
@@ -2192,7 +2192,7 @@
         '<div><b>' + esc(fmtData(a.data_gara)) + '</b><span>' + T('gara se tutto fila', 'race if all goes well') + '</span></div>' +
       '</div>' +
       (a.prossime && a.prossime.length ? '<ul class="ap-next">' + a.prossime.map((x) => '<li><span>' + esc(fmtData(x.data)) + '</span>' + esc(x.titolo.replace(/^(Sett\.|Wk) \d+ · /, '')) + ' · ' + x.durata_min + '′</li>').join('') + '</ul>' : '') +
-      '<p class="sub">' + (a.riparte_da_oggi ? T('Riparti da oggi dalla stessa fase. ', 'You restart from today at the same phase. ') : '') + T('Salva per confermare: poi ti mostro il piano.', 'Save to confirm: then I will show you the plan.') + '</p>';
+      '<p class="sub">' + (a.riparte_da_oggi ? T('Stessa fase, dalla settimana in corso: le corse fatte restano. ', 'Same phase, from the current week: your runs stay. ') : '') + T('Salva per confermare: poi ti mostro il piano.', 'Save to confirm: then I will show you the plan.') + '</p>';
   });
 
   async function apriAccount() {

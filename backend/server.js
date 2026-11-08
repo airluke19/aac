@@ -58,7 +58,7 @@ BASE.fcMax = fcMaxTanaka(BASE.eta);
 
 // Ogni richiesta (e ogni sincronizzazione) gira nel contesto di un utente: database e impostazioni sono i suoi.
 const contesto = new AsyncLocalStorage();
-const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'dataNascita', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto', 'giorniSedute']);
+const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'dataNascita', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto', 'giorniSedute', 'ripartiData', 'ripartiSett']);
 const CONFIG = new Proxy(BASE, {
   get(t, k) {
     const c = contesto.getStore();
@@ -1831,7 +1831,8 @@ function mappaCambioObiettivo(ctx, nuovo) {
     const fn = nuove[j];
     let nuovaSett = fn.da + Math.floor(frazione * (fn.a - fn.da + 1));
     if (!ultimaVecchia) nuovaSett = Math.min(nuovaSett, nuove[nuove.length - 1].da - 1);
-    return { settimana_iniziale: Math.max(1, nuovaSett), programma_inizio: oggiStr };
+    // la data di inizio non cambia: storico e corse fatte restano, dalla settimana in corso si segue il nuovo piano
+    return { riparti_settimana: Math.max(1, nuovaSett), riparti_data: p.settimana.da };
   });
 }
 
@@ -1857,9 +1858,15 @@ function costruisciProgramma(oggiStr) {
   const pctDi = (g) => Math.round((baseInt.mult + g * PASSO_AUTO - 1) * 100);
   // frequenza: livello raggiunto (3-5 sedute), settimane buone di fila e settimane in cui le sedute non entrano
   let livelloFreq = 3, buoneDiFila = 0, scarseDiFila = 0, ultimaFreqInfo = null;
+  // cambio di obiettivo: nella settimana che contiene riparti_data si salta alla settimana scelta del nuovo piano
+  const riparti = (da) => {
+    const r = CONFIG.ripartiData;
+    if (r && CONFIG.ripartiSett && r >= da && r <= addDays(da, 6)) step = Math.min(ultimo, Math.max(0, CONFIG.ripartiSett - 1));
+  };
   for (let w = 0; w < settCorrente; w++) {
     const da = addDays(inizio, w * 7);
     const a = addDays(da, 6);
+    riparti(da);
     const nSett = Math.min(livelloFreq, frequenzaObiettivo(step));
     let fatte = 0;
     for (let d = da; d <= a; d = addDays(d, 1)) if (dati.giorniCorsa.has(d)) fatte++;
@@ -1944,6 +1951,7 @@ function costruisciProgramma(oggiStr) {
     if (motivoFreq) { motivi.push(motivoFreq); if (livelloFreq !== prima) ultimaFreqInfo = { settimana: w + 1, data: a, motivo: motivoFreq }; }
     storia.push({ numero: w + 1, da, a, settimana_piano: eseguito + 1, sedute: nSett, fatte, esito, motivi, intensita: intSett, intensita_pct: Math.round((intSett.mult - 1) * 100) });
   }
+  riparti(addDays(inizio, settCorrente * 7));
   const intensitaAttuale = intensitaDi(auto);
   const ultimiSegnali = segnaliInt.slice(-3);
   const suggerimentoInt = auto === 1 && CONFIG.intensita !== 'ambiziosa' && ultimiSegnali.length === 3 && ultimiSegnali.every((x) => x.facile)
@@ -2083,6 +2091,8 @@ function costruisciProgramma(oggiStr) {
     const t = L({ avanti: 'si avanza', ripeti: 'la ripetiamo', indietro: 'torniamo indietro di una settimana' }, { avanti: 'moving forward', ripeti: 'repeating it', indietro: 'stepping back one week' })[ultima.esito];
     consigli.push(L(`Settimana scorsa (piano S${ultima.settimana_piano}): ${ultima.motivi.join(', ')} → ${t}.`, `Last week (plan wk ${ultima.settimana_piano}): ${ultima.motivi.join(', ')} → ${t}.`));
   }
+  if (CONFIG.ripartiData && CONFIG.ripartiSett && diffDays(oggiStr, CONFIG.ripartiData) <= 13 && CONFIG.ripartiData >= inizio)
+    consigli.push(L(`Nuovo obiettivo (${P(og.nome)}): dalla settimana del ${CONFIG.ripartiData.slice(8)}/${CONFIG.ripartiData.slice(5, 7)} segui la settimana ${CONFIG.ripartiSett} del nuovo piano. Le corse fatte prima restano e contano.`, `New goal (${P(og.nome)}): from the week of ${CONFIG.ripartiData.slice(5, 7)}/${CONFIG.ripartiData.slice(8)} you follow week ${CONFIG.ripartiSett} of the new plan. Earlier runs stay and count.`));
   if (ultimaFreqInfo && settCorrente - ultimaFreqInfo.settimana <= 1) consigli.push(L(`Frequenza: ${ultimaFreqInfo.motivo}.`, `Frequency: ${ultimaFreqInfo.motivo}.`));
   if (ultimaModificaInfo && settCorrente - ultimaModificaInfo.settimana <= 2) consigli.push(L(`Ho regolato il piano: ${ultimaModificaInfo.motivo}.`, `I adjusted the plan: ${ultimaModificaInfo.motivo}.`));
   if (suggerimentoInt) consigli.push(suggerimentoInt);
@@ -3592,14 +3602,14 @@ function creaApp() {
       if (!c || !OBIETTIVI[ob] || (int && !INTENSITA[int])) return res.status(400).json({ errore: L('Parametri non validi', 'Invalid parameters') });
       if (!c.cfg.programmaInizio) return res.status(404).json({ errore: L('Piano non ancora impostato', 'Plan not set up yet') });
       const cambio = ob !== (c.cfg.obiettivo || 'mezza') ? mappaCambioObiettivo(c, ob) : null;
-      const cfg = { ...c.cfg, obiettivo: ob, intensita: int || c.cfg.intensita, ...(cambio ? { settimanaIniziale: cambio.settimana_iniziale, programmaInizio: cambio.programma_inizio } : {}) };
+      const cfg = { ...c.cfg, obiettivo: ob, intensita: int || c.cfg.intensita, ...(cambio ? { ripartiData: cambio.riparti_data, ripartiSett: cambio.riparti_settimana } : {}) };
       const out = contesto.run({ ...c, cfg }, () => {
         const p = costruisciProgramma(oggi());
         if (!p) return null;
         const f = faseDi(p.settimana_piano);
         return {
           obiettivo: p.obiettivo.nome,
-          riparte_da_oggi: Boolean(cambio),
+          riparte_da_oggi: Boolean(cambio), // dalla settimana in corso, con lo storico che resta
           settimana_piano: p.settimana_piano,
           settimane_totali: pianoAttivo().length,
           fase: f.nome,
@@ -3768,6 +3778,7 @@ module.exports = {
   creaApp,
   costruisciCoachData,
   costruisciProgramma,
+  mappaCambioObiettivo,
   generaDatiSimulati,
   seedSeVuoto,
   eseguiSync,

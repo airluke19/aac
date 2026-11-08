@@ -75,6 +75,10 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     if (!col.has('intensita')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita TEXT'); // tranquilla | equilibrata | ambiziosa (vuoto = equilibrata)
     if (!col.has('data_nascita')) sis.exec('ALTER TABLE utenti ADD COLUMN data_nascita TEXT'); // AAAA-MM-GG: se presente l'eta' si calcola da qui
     if (!col.has('intensita_auto')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita_auto INTEGER'); // 0 = bloccata; vuoto/1 = regolata dal coach
+    // cambio di obiettivo a piano iniziato: dalla settimana che contiene riparti_data si prosegue dalla
+    // settimana riparti_settimana del nuovo piano (data di inizio e storico restano quelli di prima)
+    if (!col.has('riparti_data')) sis.exec('ALTER TABLE utenti ADD COLUMN riparti_data TEXT');
+    if (!col.has('riparti_settimana')) sis.exec('ALTER TABLE utenti ADD COLUMN riparti_settimana INTEGER');
     if (!col.has('giorni_sedute')) sis.exec('ALTER TABLE utenti ADD COLUMN giorni_sedute TEXT'); // giorni preferiti per le sedute, es. "1,3,5" (0 = domenica); vuoto = sceglie il coach
   }
   // Utilizzo dell'app per le statistiche dell'amministratore: un record per utente e giorno (ora locale).
@@ -216,6 +220,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
           obiettivo: u.obiettivo || 'mezza',
           intensita: u.intensita || 'equilibrata',
           giorniSedute: giorniDa(u.giorni_sedute),
+          ripartiData: u.riparti_data || null,
+          ripartiSett: u.riparti_settimana || null,
         },
       };
       cacheCtx.set(u.id, c);
@@ -434,13 +440,18 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       if (!ok) return { ok: false, errori: ['intervals'] };
     }
     let settFinale = settIn ?? null, inizioFinale = inizio || null;
+    let ripartiData = u.riparti_data || null, ripartiSett = u.riparti_settimana || null;
     const cambiaObiettivo = obiettivoIn && obiettivoIn !== (u.obiettivo || 'mezza');
     if (cambiaObiettivo && b.settimana_iniziale === undefined && cambioObiettivo) {
-      const m = cambioObiettivo(contestoDi(u), obiettivoIn); // stessa fase nel nuovo piano, da oggi
-      if (m) { settFinale = m.settimana_iniziale; inizioFinale = m.programma_inizio; }
+      const m = cambioObiettivo(contestoDi(u), obiettivoIn); // stessa fase nel nuovo piano, dalla settimana in corso
+      if (m) { ripartiData = m.riparti_data; ripartiSett = m.riparti_settimana; }
     }
-    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ?, data_nascita = ?, giorni_sedute = ? WHERE id = ?')
-      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), nascitaIn, giorniIn, u.id);
+    // nuova data di inizio o nuovo livello di partenza scelti a mano: il vecchio punto di ripartenza non vale piu'
+    if ((inizioFinale || null) !== (u.programma_inizio || null) || (b.settimana_iniziale !== undefined && settIn !== u.settimana_iniziale)) {
+      if (!(cambiaObiettivo && ripartiData)) { ripartiData = null; ripartiSett = null; }
+    }
+    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ?, data_nascita = ?, giorni_sedute = ?, riparti_data = ?, riparti_settimana = ? WHERE id = ?')
+      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), nascitaIn, giorniIn, ripartiData, ripartiSett, u.id);
     dimentica(u.id);
     return { ok: true, utente: perId(u.id) };
   }

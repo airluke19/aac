@@ -77,7 +77,7 @@ Only runs count (and sessions you mark as done by hand). Runs on days without a 
 | Half marathon | 26 | Restart → aerobic base → build → peak, taper and race |
 | Marathon | 36 | Restart → aerobic base → build → marathon block → taper and race |
 
-Changing goal or intensity in your profile shows a **preview of the new plan** before you save.
+Changing goal or intensity in your profile shows a **preview of the new plan** before you save. A new goal continues from the same phase of the new plan, starting from the current week: your history and the runs you already did stay.
 
 ### What you see in the app
 
