@@ -2972,7 +2972,7 @@
         renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
-        renderGuidaCard() + renderProgramma(d)) +
+        renderProgramma(d) + renderGuidaCard()) +
       pane('corse', T('Corse', 'Runs'), T('tocca una corsa per grafici e mappa', 'tap a run for charts and map'), '<div id="corse-wrap"></div>') +
       pane('progressi', T('Progressi', 'Progress'), '',
         renderObiettivo(d) + renderSblocchi(d) + renderPasso(d) + renderPrevisioni(d) + renderCorsa(d) + '<div id="storico-wrap" class="wrap"></div>') +
