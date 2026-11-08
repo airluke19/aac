@@ -2205,7 +2205,7 @@
       '<div class="ap-kv">' +
         '<div><b>' + a.settimana_piano + '<small>/' + a.settimane_totali + '</small></b><span>' + T('settimana', 'week') + ' · ' + esc(a.fase) + '</span></div>' +
         '<div><b>' + (fr.attuale || 3) + (fr.massima > (fr.attuale || 3) && fr.modo !== 'fissi' ? '<small>→' + fr.massima + '</small>' : '') + '</b><span>' + T('sedute a settimana', 'sessions a week') + '</span></div>' +
-        '<div><b>' + esc(fmtData(a.data_stimata || a.data_gara)) + '</b><span>' + T('gara se tutto fila', 'race if all goes well') + '</span></div>' +
+        (() => { const dg = a.data_stimata || a.data_gara; const altroAnno = dg.slice(0, 4) !== String(new Date().getFullYear()); return '<div><b>' + esc(fmtData(dg)) + (altroAnno ? '<small>' + dg.slice(0, 4) + '</small>' : '') + '</b><span>' + T('gara se tutto fila', 'race if all goes well') + '</span></div>'; })() +
       '</div>' +
       (a.prossime && a.prossime.length ? '<p class="ap-sett">' + T('Settimana ' + sett + ' del piano', 'Plan week ' + sett) + '</p><ul class="ap-sed">' + a.prossime.map((x) =>
         '<li><b>S' + x.seduta + '</b><span class="sig">' + (sigle[x.tipo] || '') + '</span><span class="ap-nome">' + esc(x.nome) + (x.extra ? T(' · in più', ' · extra') : '') + '</span><span class="ap-d">' + esc(fmtData(x.data)) + '</span></li>').join('') + '</ul>' : '') +
