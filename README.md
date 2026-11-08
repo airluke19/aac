@@ -26,7 +26,7 @@ It works with any watch that uploads to Intervals.icu: Apple Watch (via a compan
 
 - **Today** — next session, readiness, last run, weekly summary
 - **Health** — resting HR, HRV, sleep, steps, BMI (latest weight from your scale or profile; height and weight are asked once in a pop‑up if missing) and more
-- **Plan** — calendar with every adaptation explained; copy a completed session as Markdown for any AI assistant
+- **Plan** — calendar with every adaptation explained; copy a completed session as Markdown for any AI assistant. The 3 weekly sessions fall every other day from the first session, or on 3 preferred weekdays chosen in **Account** (changing them also moves the current week's sessions)
 - **Runs** — history, filters, shoe tracking; run detail with GPS map, HR, pace, cadence, power, elevation, running dynamics, run/walk laps, RPE, weather and shoes
 - **Progress** — goal, predictions, training load
 - Multi‑user with Google login, invite‑based sign‑up with admin approval; admin panel with per‑user usage stats (active days, minutes per day, usual time of day, plan adherence) — only days and minutes with the app open in the foreground are stored, aggregated per day, until the account is removed

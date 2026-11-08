@@ -58,7 +58,7 @@ BASE.fcMax = fcMaxTanaka(BASE.eta);
 
 // Ogni richiesta (e ogni sincronizzazione) gira nel contesto di un utente: database e impostazioni sono i suoi.
 const contesto = new AsyncLocalStorage();
-const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'dataNascita', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto']);
+const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'dataNascita', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto', 'giorniSedute']);
 const CONFIG = new Proxy(BASE, {
   get(t, k) {
     const c = contesto.getStore();
@@ -1300,7 +1300,7 @@ function valutaStato(serie) {
 // ===========================================================================
 // Piano verso la mezza maratona: 26 settimane in 4 fasi, riadattato sui dati.
 // Ogni settimana-piano ha 3 sedute: [venerdì-tipo, domenica (lungo), martedì-tipo]
-// (giorni 0, 2, 4 di ogni blocco di 7 giorni dalla data di inizio).
+// (giorni 0, 2, 4 di ogni blocco di 7 giorni dalla data di inizio, oppure i giorni preferiti: offsetSedute).
 //
 // Adattamento:
 //  - settimanale: a fine settimana si decide se avanzare, ripetere o tornare
@@ -1358,6 +1358,15 @@ const PIANO_MEZZA = [
   { sedute: [fa(20, true), ['gara'], ['recupero', 30]], nota: ['Settimana della gara. Dormi bene, mangia cose che conosci, niente novità.', 'Race week. Sleep well, eat what you know, nothing new.'] },
 ];
 const OFFSET_SEDUTE = [0, 2, 4];
+// Giorni delle 3 sedute in ogni blocco di 7 giorni dalla data di inizio. Se l'utente ha scelto i suoi
+// giorni preferiti (0 = domenica … 6 = sabato) le sedute cadono su quelli, nell'ordine del blocco;
+// altrimenti a giorni alterni dal primo giorno (0, 2, 4).
+function offsetSedute(inizio) {
+  const g = CONFIG.giorniSedute;
+  if (!Array.isArray(g) || g.length !== 3) return OFFSET_SEDUTE;
+  const dow = new Date(dayMs(inizio)).getUTCDay();
+  return g.map((x) => (x - dow + 7) % 7).sort((a, b) => a - b);
+}
 
 // ---------------------------------------------------------------------------
 // Piani per obiettivo. Ripartenza (sett. 1-8) e Base aerobica (9-16) sono comuni; poi ogni distanza ha i suoi lavori.
@@ -1736,6 +1745,7 @@ function costruisciProgramma(oggiStr) {
   const inizio = CONFIG.programmaInizio;
   const dati = datiAdattamento(inizio, oggiStr);
   const settCorrente = Math.max(0, Math.floor(diffDays(oggiStr, inizio) / 7));
+  const offsets = offsetSedute(inizio);
   const ultimo = pianoAttivo().length - 1;
   const og = obiettivoCorrente();
 
@@ -1828,7 +1838,7 @@ function costruisciProgramma(oggiStr) {
   // seduta fatta: una corsa quel giorno (o segnata a mano); la "Camminata di recupero" si fa camminando
   const fattaIl = (sed, data) => dati.giorniCorsa.has(data) || (sed.tipo === 'recupero' && dati.giorniCamminata.has(data));
   storia.forEach((s, w) =>
-    OFFSET_SEDUTE.forEach((off, i) => {
+    offsets.forEach((off, i) => {
       const data = addDays(inizio, w * 7 + off);
       const sed = sedutaDa(s.settimana_piano - 1, i, data, null, s.intensita);
       calendario.push({ ...sed, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: true });
@@ -1836,7 +1846,7 @@ function costruisciProgramma(oggiStr) {
   );
   for (let k = 0; step + k <= ultimo; k++) {
     const w = settCorrente + k;
-    OFFSET_SEDUTE.forEach((off, i) => {
+    offsets.forEach((off, i) => {
       const data = addDays(inizio, w * 7 + off);
       const sed = sedutaDa(step + k, i, data, null, intensitaAttuale);
       calendario.push({ ...sed, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: data < oggiStr });
@@ -1848,7 +1858,7 @@ function costruisciProgramma(oggiStr) {
   const netto = storia.filter((s) => s.esito === 'avanti').length - storia.filter((s) => s.esito === 'indietro').length;
   const ritmoAvanzamento = storia.length >= 3 ? Math.max(0.25, Math.min(1, netto / storia.length)) : 1;
   const settimaneStimate = Math.ceil((ultimo - step) / ritmoAvanzamento);
-  const dataStimata = addDays(inizio, (settCorrente + settimaneStimate) * 7 + OFFSET_SEDUTE[1]);
+  const dataStimata = addDays(inizio, (settCorrente + settimaneStimate) * 7 + offsets[1]);
 
   // Tempo indicativo sulla distanza dell'obiettivo (formula di Riegel) dalla migliore corsa >= 20' delle ultime 6 settimane
   let previsione = null;
@@ -2752,6 +2762,7 @@ function previsioneDataGara(oggiStr, p) {
   const w0 = p.settimana_calendario - 1;
   const rnd = mulberry32(424242);
   const N = 4000;
+  const offLungo = offsetSedute(p.inizio)[1];
   const date = [];
   for (let n = 0; n < N; n++) {
     // incertezza sui parametri: probabilità estratte dalla distribuzione a posteriori (Dirichlet)
@@ -2764,7 +2775,7 @@ function previsioneDataGara(oggiStr, p) {
       else if (u > 1 - pi) step = Math.max(0, step - 1);
       w += 1;
     }
-    date.push(addDays(p.inizio, w * 7 + OFFSET_SEDUTE[1]));
+    date.push(addDays(p.inizio, w * 7 + offLungo));
   }
   date.sort();
   const perc = (q) => date[Math.min(N - 1, Math.floor(q * N))];

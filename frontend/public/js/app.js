@@ -440,7 +440,8 @@
       const [da, a] = intervalli[i];
       const qui = settAtt && settAtt >= da && settAtt <= a;
       return '<li class="' + (qui ? 'qui' : settAtt && settAtt > a ? 'fatta' : '') + '"><span class="in-ph-n">' + (i + 1) + '</span><div><b>' + f[0] + (qui ? '<em>' + T('sei qui', 'you are here') + '</em>' : '') + '</b><small>' + T('settimane ', 'weeks ') + da + '–' + a + '</small><p>' + f[1] + '</p></div></li>';
-    }).join('') + '</ol>';
+    }).join('') + '</ol>' +
+      '<p class="sub">' + T('Le 3 sedute cadono a giorni alterni dalla prima seduta, oppure nei 3 giorni che scegli in Account → Giorni delle sedute. Cambiandoli si spostano anche le sedute della settimana in corso; per avanzare contano le corse fatte nella settimana, in qualunque giorno.', 'The 3 sessions fall every other day from your first session, or on the 3 days you pick in Account → Session days. Changing them also moves this week’s sessions; to move forward, the runs done during the week count, on any day.') + '</p>';
 
     const fmi = d.atleta && d.atleta.fc_max_info;
     const zone = '<div class="in-zones">' + [['&lt; Z1', '&lt; 50%', 'z0'], ['Z1', '50–60%'], ['Z2', '60–70%'], ['Z3', '70–80%'], ['Z4', '80–90%'], ['Z5', '90–100%']].map((z, i) => '<div><span class="zchip ' + (z[2] || 'z' + i) + '">' + z[0] + '</span><small>' + z[1] + '</small></div>').join('') + '</div>' +
@@ -1339,7 +1340,15 @@
     if (e.target.id === 'f-mese') { filtroMese = e.target.value; apertaId = null; aggiornaStorico(); }
     if (e.target.id === 'f-tipo') { filtroTipo = e.target.value; apertaId = null; aggiornaStorico(); }
     if (e.target.id === 'f-scarpa') { filtroScarpa = e.target.value; apertaId = null; aggiornaStorico(); }
+    if (e.target.name === 'giorni_sedute') limitaGiorni(e.target.closest('.giorni-pick'));
   });
+  // al massimo 3 giorni: arrivati a 3, gli altri si disattivano
+  function limitaGiorni(box) {
+    if (!box) return;
+    const tutti = [...box.querySelectorAll('input')];
+    const pieni = tutti.filter((x) => x.checked).length >= 3;
+    tutti.forEach((x) => { x.disabled = pieni && !x.checked; });
+  }
 
   async function caricaStorico() {
     try {
@@ -2001,6 +2010,15 @@
         campo('acc-int', T('Intensità', 'Intensity'), '<select id="acc-int" name="intensita">' + INTENSITA_UI().map((o) => '<option value="' + o[0] + '"' + ((p.intensita || 'equilibrata') === o[0] ? ' selected' : '') + '>' + (LANG === 'en' ? o[2] : o[1]) + ' · ' + o[3] + '</option>').join('') + '</select>') +
       '</div>' +
       (ultimiDati && ultimiDati.programma && ultimiDati.programma.intensita ? (() => { const it = ultimiDati.programma.intensita; return '<p class="acc-int-stato">' + T('Adesso: ', 'Now: ') + '<b>' + esc(it.nome) + (it.percentuale ? ' · ' + (it.percentuale > 0 ? '+' : '') + it.percentuale + '%' : '') + '</b>' + (it.ultima_modifica ? ' · ' + esc(it.ultima_modifica.motivo) : T(' · il coach la ritocca da solo se serve', ' · the coach fine-tunes it when needed')) + '</p>'; })() : '') +
+      // giorni preferiti per le 3 sedute (vuoto = a giorni alterni dalla prima seduta)
+      (() => {
+        const scelti = new Set(p.giorni_sedute || []);
+        const nomi = LANG === 'en' ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+        const lunghi = LANG === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+        return '<fieldset class="acc-f acc-giorni"><legend>' + T('Giorni delle sedute', 'Session days') + '</legend><div class="giorni-pick">' +
+          [1, 2, 3, 4, 5, 6, 0].map((g, i) => '<label title="' + lunghi[i] + '"><input type="checkbox" name="giorni_sedute" value="' + g + '"' + (scelti.has(g) ? ' checked' : '') + ' aria-label="' + lunghi[i] + '"><span>' + nomi[i] + '</span></label>').join('') +
+          '</div><small>' + T('Scegline 3, meglio non di fila: il piano sposta lì le sedute, anche quelle di questa settimana. Nessuno = a giorni alterni.', 'Pick 3, ideally not back to back: the plan moves your sessions there, this week included. None = every other day.') + '</small></fieldset>';
+      })() +
       // prima seduta e orario solo finche' il piano non e' iniziato (dopo restano quelli salvati)
       (!p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10))
         ? '<div class="acc-row acc-row2">' +
@@ -2153,6 +2171,7 @@
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
     mostraSheet(T('Account', 'Account'), renderAccount());
+    limitaGiorni($('#sheet-body .giorni-pick'));
     riempiLivelloAccount();
     riempiScarpeAccount();
   }
@@ -2180,20 +2199,25 @@
     if (e.target.id === 'acc-form') {
       e.preventDefault();
       const f = new FormData(e.target), corpo = {};
-      for (const [k, v] of f.entries()) if (String(v).trim() !== '' || ['athlete_id', 'eta', 'fc_max', 'altezza', 'peso', 'data_nascita'].includes(k)) corpo[k] = String(v).trim();
+      for (const [k, v] of f.entries()) if (k !== 'giorni_sedute' && (String(v).trim() !== '' || ['athlete_id', 'eta', 'fc_max', 'altezza', 'peso', 'data_nascita'].includes(k))) corpo[k] = String(v).trim();
+      const giorni = f.getAll('giorni_sedute');
+      if (giorni.length && giorni.length !== 3) { const err = $('#acc-err'); err.textContent = T('Scegli 3 giorni per le sedute, oppure nessuno.', 'Pick 3 session days, or none.'); err.hidden = false; return; }
+      corpo.giorni_sedute = giorni.join(',');
       const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
       const err = $('#acc-err'); err.hidden = true;
       try {
         const { ok, out } = await inviaJson('PUT', '/api/profilo', corpo);
         if (!ok) {
-          const msg = { fc_max: T('FC max tra 140 e 220 bpm.', 'Max HR between 140 and 220 bpm.'), altezza: T('Altezza tra 100 e 230 cm.', 'Height between 100 and 230 cm.'), peso: T('Peso tra 30 e 250 kg.', 'Weight between 30 and 250 kg.'), intervals: T('Intervals.icu non accetta questa API key con questo Athlete ID: ricontrollali.', 'Intervals.icu rejects this API key with this Athlete ID: please check them.'), athlete_id: T('Athlete ID non valido (es. i123456).', 'Invalid Athlete ID (e.g. i123456).'), intervals_key: T('API key non valida.', 'Invalid API key.'), eta: T('Età non valida.', 'Invalid age.'), data_nascita: T('Data di nascita non valida (età tra 14 e 90 anni).', 'Invalid date of birth (age between 14 and 90).'), programma_inizio: T('Data non valida.', 'Invalid date.'), programma_ora: T('Orario non valido.', 'Invalid time.') };
+          const msg = { fc_max: T('FC max tra 140 e 220 bpm.', 'Max HR between 140 and 220 bpm.'), altezza: T('Altezza tra 100 e 230 cm.', 'Height between 100 and 230 cm.'), peso: T('Peso tra 30 e 250 kg.', 'Weight between 30 and 250 kg.'), intervals: T('Intervals.icu non accetta questa API key con questo Athlete ID: ricontrollali.', 'Intervals.icu rejects this API key with this Athlete ID: please check them.'), athlete_id: T('Athlete ID non valido (es. i123456).', 'Invalid Athlete ID (e.g. i123456).'), intervals_key: T('API key non valida.', 'Invalid API key.'), eta: T('Età non valida.', 'Invalid age.'), data_nascita: T('Data di nascita non valida (età tra 14 e 90 anni).', 'Invalid date of birth (age between 14 and 90).'), programma_inizio: T('Data non valida.', 'Invalid date.'), programma_ora: T('Orario non valido.', 'Invalid time.'), giorni_sedute: T('Scegli 3 giorni diversi.', 'Pick 3 different days.') };
           err.textContent = (out.errori || []).map((x) => msg[x] || x).join(' ') || T('Salvataggio non riuscito.', 'Could not save.');
           err.hidden = false;
           return;
         }
         const cambiato = corpo.obiettivo && ME && ME.profilo && corpo.obiettivo !== (ME.profilo.obiettivo || 'mezza');
+        const giorniPrima = ((ME && ME.profilo && ME.profilo.giorni_sedute) || []).slice().sort().join(',');
+        const giorniCambiati = giorni.map(Number).sort().join(',') !== giorniPrima;
         ME = out;
-        toast(cambiato ? T('Obiettivo aggiornato: piano ricalcolato', 'Goal updated: plan recalculated') : T('Profilo salvato', 'Profile saved'), 'ok');
+        toast(cambiato ? T('Obiettivo aggiornato: piano ricalcolato', 'Goal updated: plan recalculated') : giorniCambiati ? T('Giorni aggiornati: sedute spostate', 'Days updated: sessions moved') : T('Profilo salvato', 'Profile saved'), 'ok');
         await caricaDati(true);
         if (ME.completo && ME.profilo.ha_chiave) sincronizza();
         apriAccount();

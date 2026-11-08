@@ -29,6 +29,8 @@ const etaDa = (nascita, al = oggiLocale()) => {
   const [a, m, g] = nascita.split('-').map(Number), [a2, m2, g2] = al.split('-').map(Number);
   return a2 - a - (m2 < m || (m2 === m && g2 < g) ? 1 : 0);
 };
+// "1,3,5" -> [1, 3, 5] (giorni della settimana delle 3 sedute, 0 = domenica); altrimenti null
+const giorniDa = (v) => (/^[0-6](,[0-6]){2}$/.test(v || '') ? String(v).split(',').map(Number) : null);
 const MAX_IN_ATTESA = 50; // richieste di accesso non ancora approvate
 
 function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
@@ -73,6 +75,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     if (!col.has('intensita')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita TEXT'); // tranquilla | equilibrata | ambiziosa (vuoto = equilibrata)
     if (!col.has('data_nascita')) sis.exec('ALTER TABLE utenti ADD COLUMN data_nascita TEXT'); // AAAA-MM-GG: se presente l'eta' si calcola da qui
     if (!col.has('intensita_auto')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita_auto INTEGER'); // 0 = bloccata; vuoto/1 = regolata dal coach
+    if (!col.has('giorni_sedute')) sis.exec('ALTER TABLE utenti ADD COLUMN giorni_sedute TEXT'); // giorni preferiti per le 3 sedute, es. "1,3,5" (0 = domenica); vuoto = a giorni alterni
   }
   // Utilizzo dell'app per le statistiche dell'amministratore: un record per utente e giorno (ora locale).
   // Niente IP, dispositivo o pagine viste. Si conserva finche' esiste l'account (si cancella con l'account).
@@ -212,6 +215,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
           fcMaxReale: u.fc_max || null,
           obiettivo: u.obiettivo || 'mezza',
           intensita: u.intensita || 'equilibrata',
+          giorniSedute: giorniDa(u.giorni_sedute),
         },
       };
       cacheCtx.set(u.id, c);
@@ -363,6 +367,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
         obiettivo: u.obiettivo || 'mezza',
         intensita: u.intensita || 'equilibrata',
         intensita_auto: u.intensita_auto !== 0,
+        giorni_sedute: giorniDa(u.giorni_sedute), // null = a giorni alterni dalla prima seduta
       },
       completo: Boolean(u.intervals_key && u.athlete_id && u.programma_inizio),
       // nuovo iscritto: utente (non amministratore) registrato negli ultimi 30 giorni -> domande iniziali sulla corsa
@@ -412,6 +417,14 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     const intensitaIn = b.intensita !== undefined ? String(b.intensita) : u.intensita;
     if (intensitaIn && !['tranquilla', 'equilibrata', 'ambiziosa'].includes(intensitaIn)) errori.push('intensita');
     const autoIn = b.intensita_auto !== undefined ? (b.intensita_auto === false || b.intensita_auto === 0 || b.intensita_auto === '0' ? 0 : 1) : u.intensita_auto;
+    // giorni preferiti: esattamente 3 giorni diversi (0 = domenica … 6 = sabato), oppure vuoto = automatici
+    let giorniIn = u.giorni_sedute || null;
+    if (b.giorni_sedute !== undefined) {
+      const v = b.giorni_sedute == null ? '' : String(b.giorni_sedute).trim();
+      if (v === '') giorniIn = null;
+      else if (!/^[0-6](,[0-6]){2}$/.test(v) || new Set(v.split(',')).size !== 3) errori.push('giorni_sedute');
+      else giorniIn = v.split(',').map(Number).sort((a, b2) => a - b2).join(',');
+    }
     if (coloreIn && !['verde', 'menta', 'azzurro', 'blu', 'indaco', 'viola', 'ambra', 'arancio', 'mandarino'].includes(coloreIn)) errori.push('colore');
     if (errori.length) return { ok: false, errori };
     const chiaveFinale = nuovaChiave || decifra(u.intervals_key);
@@ -426,8 +439,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       const m = cambioObiettivo(contestoDi(u), obiettivoIn); // stessa fase nel nuovo piano, da oggi
       if (m) { settFinale = m.settimana_iniziale; inizioFinale = m.programma_inizio; }
     }
-    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ?, data_nascita = ? WHERE id = ?')
-      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), nascitaIn, u.id);
+    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ?, data_nascita = ?, giorni_sedute = ? WHERE id = ?')
+      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), nascitaIn, giorniIn, u.id);
     dimentica(u.id);
     return { ok: true, utente: perId(u.id) };
   }
