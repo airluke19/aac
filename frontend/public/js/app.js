@@ -78,6 +78,7 @@
     document.documentElement.setAttribute('data-theme', t);
     document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f3f5f8' : '#0b0d10');
     if (salva) { try { localStorage.setItem('coach-tema', t); } catch (e) {} }
+    if (window.aacFavicon) window.aacFavicon();
     if (ultimiDati) disegnaGrafici(ultimiDati);
   }
   // Suono da tasto di tastiera meccanica ("thock"): pressione piena e sorda + rilascio più leggero.
@@ -1938,6 +1939,7 @@
     if (!COLORI.some((x) => x[0] === c)) c = 'verde';
     document.documentElement.setAttribute('data-accent', c);
     try { localStorage.setItem('coach-colore', c); } catch (_) {}
+    if (window.aacFavicon) window.aacFavicon();
   }
   // riga minimale con il colore attuale; al tocco si apre la tavolozza
   function renderColori() {
