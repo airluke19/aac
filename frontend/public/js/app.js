@@ -234,7 +234,6 @@
       let azioni = x.fatta ? az('data-copia', ICO.copy, T('Copia per AI', 'Copy for AI')) : '';
       if (x.fatta && ultimoStorico && ultimoStorico.corse.some((c) => c.data === x.data)) {
         azioni += az('data-apri-corsa', ICO.dati, T('Dettagli', 'Details'));
-        if (puoCondividere()) azioni += az('data-condividi-giorno', ICO.share, T('Condividi', 'Share'));
       }
       if (x.data <= d.oggi && (!x.fatta || x.manuale)) {
         azioni += az('data-segna', ICO.spunta, x.manuale ? T('Annulla “fatta”', 'Undo “done”') : T('Segna come fatta', 'Mark as done'));
@@ -2716,6 +2715,7 @@
           SCARPE.filter((x) => x.attiva || x.id === c.scarpa_id).map((x) => '<option value="' + x.id + '"' + (x.id === c.scarpa_id ? ' selected' : '') + '>' + esc(x.nome) + '</option>').join('') +
         '</select></label>' : (ME && !ME.demo ? '<button type="button" class="dd-scarpa-add" data-apri-account="1">👟 ' + T('Aggiungi le tue scarpe', 'Add your shoes') + '</button>' : '')) +
         '<div class="dd-kpi">' + kpi.map(([l, v, un]) => '<div><b>' + v + (un ? '<small>' + un + '</small>' : '') + '</b><span>' + l + '</span></div>').join('') + '</div>' +
+        (puoCondividere() ? '<button type="button" class="dd-share" data-condividi="' + esc(c.id) + '">' + ICO.share + '<span>' + T('Condividi la corsa', 'Share this run') + '</span></button>' : '') +
       '</div></section>' +
       '<div class="dd-groups">' +
         gruppo('cuore', ICO.heart, T('Cuore', 'Heart'), [
@@ -2849,7 +2849,6 @@
     if (!s) html += '<section class="card empty">' + T('I grafici secondo per secondo arrivano con la prossima sincronizzazione (servono i dati dettagliati da Intervals.icu).', 'Second-by-second charts arrive with the next sync (detailed data from Intervals.icu is needed).') + '</section>';
 
     html += '<div class="azioni dd-actions">' +
-      (puoCondividere() ? '<button type="button" class="btn-mini primary" data-condividi="' + esc(c.id) + '">' + ICO.share + T('Condividi', 'Share') + '</button>' : '') +
       '<a class="btn-mini" href="https://intervals.icu/activities/' + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">' + T('Apri su Intervals.icu', 'Open in Intervals.icu') + '</a></div>';
 
     mostraSheet(T('Allenamento', 'Workout'), html);
@@ -2862,11 +2861,6 @@
   /* ====================================================================== */
   const condividi = { id: null, a: null, formato: 'post', percorso: true, sfondo: (() => { try { return localStorage.getItem('coach-cond-sfondo') || 'scuro'; } catch (_) { return 'scuro'; } })(), url: null, file: null };
 
-  function idCorsaDelGiorno(data) {
-    const c = (ultimoStorico && ultimoStorico.corse.find((x) => x.data === data))
-      || (ultimiDati && ultimiDati.programma && (ultimiDati.programma.corse_fuori_piano || []).find((x) => x.data === data));
-    return c ? c.id : null;
-  }
   const puoCondividere = () => Boolean(ME && !ME.impersonato_da);
 
   async function apriCondividi(id) {
@@ -2910,8 +2904,6 @@
   }
 
   document.addEventListener('click', async (e) => {
-    const g = e.target.closest('[data-condividi-giorno]');
-    if (g) { const id = idCorsaDelGiorno(g.dataset.condividiGiorno); if (id) apriSheet('#condividi/' + encodeURIComponent(id)); return; }
     const b = e.target.closest('[data-condividi]');
     if (b) { apriSheet('#condividi/' + encodeURIComponent(b.dataset.condividi)); return; }
     const f = e.target.closest('[data-cond-formato],[data-cond-percorso],[data-cond-sfondo]');
@@ -3192,7 +3184,7 @@
       // vista satellitare (Esri World Imagery) con i nomi di strade e luoghi della mappa vettoriale sopra
       const stile = map.getStyle().layers;
       const primoSimbolo = stile.find((l) => l.type === 'symbol');
-      map.addSource('satellite', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: window.devicePixelRatio > 1 ? 128 : 256, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
+      map.addSource('satellite', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: window.devicePixelRatio > 1 ? 64 : 128, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
       map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-fade-duration': 150 } }, primoSimbolo && primoSimbolo.id);
       stile.forEach((l) => {
         if (['fill', 'line', 'fill-extrusion', 'background', 'hillshade'].includes(l.type)) map.setLayoutProperty(l.id, 'visibility', 'none');
@@ -3257,8 +3249,6 @@
       const $w = (q) => wrap.querySelector(q);
       ['dragPan', 'scrollZoom', 'touchZoomRotate', 'doubleClickZoom', 'keyboard', 'boxZoom'].forEach((h) => map[h] && map[h].disable());
       map.resize();
-      if (!map.getSource('dem')) map.addSource('dem', { type: 'raster-dem', tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 14 });
-      try { map.setTerrain({ source: 'dem', exaggeration: 1.4 }); } catch (_) { /* senza rilievo */ }
       ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 0.35));
       map.setPaintProperty('punto', 'circle-color', accent); map.setPaintProperty('punto', 'circle-radius', 9);
       map.setLayoutProperty('fatto', 'visibility', 'visible');
@@ -3335,7 +3325,6 @@
         cancelAnimationFrame(raf);
         wrap.classList.remove('rivivi'); document.body.classList.remove('rivivi-on');
         wrap.querySelectorAll('.rv-hud, .rv-bar, .rv-back, .rv-fine').forEach((x) => x.remove());
-        try { map.setTerrain(null); } catch (_) { /* ok */ }
         map.setLayoutProperty('fatto', 'visibility', 'none');
         ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 1));
         map.getSource('punto').setData({ type: 'FeatureCollection', features: [] });
