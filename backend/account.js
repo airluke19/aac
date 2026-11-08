@@ -19,7 +19,7 @@ const Database = require('better-sqlite3');
 // Ambiente dell'istanza: 'staging' mostra il badge BETA nell'app e nella pagina di login
 // colori d'accento ammessi (stessi id di FAMIGLIE in app.js e di css/accenti.css)
 const COLORI_AMMESSI = new Set(['verde', 'menta', 'azzurro', 'blu', 'indaco', 'viola', 'ambra', 'arancio', 'mandarino', 'volt', 'cremisi', 'fucsia', 'laser',
-  'ghiacciaio', 'salvia', 'rame', 'segnale', 'ardesia', 'ciano', 'magenta', 'elettrico', 'ultravioletto']);
+  'ghiacciaio', 'salvia', 'rame', 'segnale', 'ardesia', 'ciano', 'magenta', 'elettrico', 'ultravioletto', 'corallo', 'oro', 'smeraldo', 'turchese']);
 const AMBIENTE = String(process.env.AAC_AMBIENTE || 'production').trim().toLowerCase() === 'staging' ? 'staging' : 'production';
 const COOKIE_SESSIONE_VECCHIO = 'aac_sess'; // fino al 7 nov 2026; ora __Host-aac_sess in HTTPS
 const COOKIE_OAUTH = 'aac_oauth';

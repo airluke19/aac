@@ -46,3 +46,12 @@
 [data-theme="light"][data-accent="elettrico"]{ --accent: #806b00; --accent-ink: #ffffff; }
 [data-theme="dark"][data-accent="ultravioletto"] { --accent: #a46bff; --accent-ink: #160033; }
 [data-theme="light"][data-accent="ultravioletto"]{ --accent: #6b21d8; --accent-ink: #ffffff; }
+/* altri colori sportivi */
+[data-theme="dark"][data-accent="corallo"]   { --accent: #ff7f6e; --accent-ink: #2e0a05; }
+[data-theme="light"][data-accent="corallo"]  { --accent: #c2412f; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="oro"]       { --accent: #ffcc33; --accent-ink: #2b2000; }
+[data-theme="light"][data-accent="oro"]      { --accent: #8a6400; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="smeraldo"]  { --accent: #1fd59a; --accent-ink: #00261a; }
+[data-theme="light"][data-accent="smeraldo"] { --accent: #047857; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="turchese"]  { --accent: #2fd8c8; --accent-ink: #002623; }
+[data-theme="light"][data-accent="turchese"] { --accent: #0f766e; --accent-ink: #ffffff; }

@@ -89,7 +89,7 @@ Goal, intensity and days are set with a **step-by-step guide in the Plan tab** (
 - **Progress:** goal, predictions, training load
 - **Info:** every rule explained in plain language
 
-Light and dark theme, Italian and English, 22 accent colours in four families (classic, track, outdoor, neon). Multi‑user with Google sign‑in, invitations and admin approval.
+Light and dark theme, Italian and English, 26 sporty accent colours. Multi‑user with Google sign‑in, invitations and admin approval.
 
 ---
 

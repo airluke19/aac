@@ -1922,40 +1922,41 @@
   }
 
   /* ---- Colore principale ---- */
-  // Famiglie di colori: [id, nome IT, nome EN, colori]; ogni colore = [id, IT, EN, tema scuro, tema chiaro]
-  const FAMIGLIE = [
-    ['sistema', 'Classici', 'Classic', [['verde', 'Verde', 'Green', '#30d158', '#248a3d'], ['menta', 'Menta', 'Mint', '#63e6e2', '#0c817b'], ['azzurro', 'Azzurro', 'Cyan', '#64d2ff', '#0071a4'],
-      ['blu', 'Blu', 'Blue', '#0a84ff', '#0066cc'], ['indaco', 'Indaco', 'Indigo', '#7d7aff', '#3634a3'], ['viola', 'Viola', 'Purple', '#bf5af2', '#8944ab'],
-      ['ambra', 'Ambra', 'Amber', '#ffb340', '#a15c00'], ['arancio', 'Arancio', 'Orange', '#ff9f0a', '#c24e00'], ['mandarino', 'Mandarino', 'Tangerine', '#ff7a45', '#c2410c']]],
-    ['pista', 'Pista', 'Track', [['volt', 'Volt', 'Volt', '#d4ff1f', '#5c7300'], ['cremisi', 'Cremisi', 'Crimson', '#ff3b4f', '#c8102e'], ['fucsia', 'Fucsia', 'Fuchsia', '#ff4fa3', '#c2185b'],
-      ['laser', 'Blu laser', 'Laser blue', '#4d7cff', '#1d4ed8']]],
-    ['outdoor', 'Outdoor', 'Outdoor', [['ghiacciaio', 'Ghiacciaio', 'Glacier', '#1fb2ec', '#0072a3'], ['salvia', 'Salvia', 'Sage', '#9ccc9c', '#4a7a4a'], ['rame', 'Rame', 'Copper', '#e8894a', '#a8521a'],
-      ['segnale', 'Rosso segnale', 'Signal red', '#ff5a4a', '#c41e1e'], ['ardesia', 'Ardesia', 'Slate', '#a9bdd2', '#4a6178']]],
-    ['neon', 'Neon', 'Neon', [['ciano', 'Ciano', 'Cyan', '#00ecff', '#007a85'], ['magenta', 'Magenta', 'Magenta', '#ff3ddc', '#b0119a'], ['elettrico', 'Giallo elettrico', 'Electric yellow', '#ffe600', '#806b00'],
-      ['ultravioletto', 'Ultravioletto', 'Ultraviolet', '#a46bff', '#6b21d8']]]];
-  const COLORI = FAMIGLIE.flatMap((f) => f[3]);
-  let famigliaVista = null; // famiglia aperta nel profilo (solo per la vista, non si salva)
+  // Colori d'accento in ordine di tinta: [id, nome IT, nome EN, tema scuro, tema chiaro] (stessi id di css/accenti.css e COLORI_AMMESSI)
+  const COLORI = [
+    ['cremisi', 'Cremisi', 'Crimson', '#ff3b4f', '#c8102e'], ['segnale', 'Rosso segnale', 'Signal red', '#ff5a4a', '#c41e1e'], ['corallo', 'Corallo', 'Coral', '#ff7f6e', '#c2412f'],
+    ['mandarino', 'Mandarino', 'Tangerine', '#ff7a45', '#c2410c'], ['rame', 'Rame', 'Copper', '#e8894a', '#a8521a'], ['arancio', 'Arancio', 'Orange', '#ff9f0a', '#c24e00'],
+    ['ambra', 'Ambra', 'Amber', '#ffb340', '#a15c00'], ['oro', 'Oro', 'Gold', '#ffcc33', '#8a6400'], ['elettrico', 'Giallo elettrico', 'Electric yellow', '#ffe600', '#806b00'],
+    ['volt', 'Volt', 'Volt', '#d4ff1f', '#5c7300'], ['verde', 'Verde', 'Green', '#30d158', '#248a3d'], ['smeraldo', 'Smeraldo', 'Emerald', '#1fd59a', '#047857'],
+    ['salvia', 'Salvia', 'Sage', '#9ccc9c', '#4a7a4a'], ['menta', 'Menta', 'Mint', '#63e6e2', '#0c817b'], ['turchese', 'Turchese', 'Turquoise', '#2fd8c8', '#0f766e'],
+    ['ciano', 'Ciano', 'Cyan', '#00ecff', '#007a85'], ['azzurro', 'Azzurro', 'Sky', '#64d2ff', '#0071a4'], ['ghiacciaio', 'Ghiacciaio', 'Glacier', '#1fb2ec', '#0072a3'],
+    ['blu', 'Blu', 'Blue', '#0a84ff', '#0066cc'], ['laser', 'Blu laser', 'Laser blue', '#4d7cff', '#1d4ed8'], ['indaco', 'Indaco', 'Indigo', '#7d7aff', '#3634a3'],
+    ['ultravioletto', 'Ultravioletto', 'Ultraviolet', '#a46bff', '#6b21d8'], ['viola', 'Viola', 'Purple', '#bf5af2', '#8944ab'], ['magenta', 'Magenta', 'Magenta', '#ff3ddc', '#b0119a'],
+    ['fucsia', 'Fucsia', 'Fuchsia', '#ff4fa3', '#c2185b'], ['ardesia', 'Ardesia', 'Slate', '#a9bdd2', '#4a6178']];
+  let coloriAperti = false; // tavolozza aperta nel profilo (solo vista)
   function applicaColore(c) {
     if (!COLORI.some((x) => x[0] === c)) c = 'verde';
     document.documentElement.setAttribute('data-accent', c);
     try { localStorage.setItem('coach-colore', c); } catch (_) {}
   }
+  // riga minimale con il colore attuale; al tocco si apre la tavolozza
   function renderColori() {
     const att = document.documentElement.getAttribute('data-accent') || 'verde';
     const scuro = document.documentElement.getAttribute('data-theme') !== 'light';
-    const nome = (COLORI.find((x) => x[0] === att) || COLORI[0]);
-    const fam = FAMIGLIE.find((f) => f[0] === famigliaVista) || FAMIGLIE.find((f) => f[3].some((x) => x[0] === att)) || FAMIGLIE[0];
-    const sw = (x) => scuro ? x[3] : x[4];
-    return '<section class="card" id="acc-aspetto"><h3>' + T('Colore principale', 'Accent colour') + '</h3><p class="sub">' + T('Scegli una famiglia, poi il colore. Pulsanti, grafici e zone cardiache. Si salva nel tuo account.', 'Pick a family, then a colour. Buttons, charts and heart-rate zones. Saved to your account.') + '</p>' +
-      '<div class="acc-famiglie" role="tablist">' + FAMIGLIE.map((f) => '<button type="button" role="tab" aria-selected="' + (f === fam) + '" data-famiglia="' + f[0] + '" class="' + (f === fam ? 'on' : '') + '"><i aria-hidden="true">' +
-        f[3].slice(0, 3).map((x) => '<b style="--sw:' + sw(x) + '"></b>').join('') + '</i>' + (LANG === 'en' ? f[2] : f[1]) + '</button>').join('') + '</div>' +
-      '<div class="acc-colori" role="radiogroup">' + fam[3].map((x) => '<button type="button" role="radio" aria-checked="' + (x[0] === att) + '" aria-label="' + (LANG === 'en' ? x[2] : x[1]) + '" title="' + (LANG === 'en' ? x[2] : x[1]) + '" data-colore="' + x[0] + '" class="' + (x[0] === att ? 'on' : '') + '" style="--sw:' + sw(x) + ';color:' + (x[0] === att ? 'var(--accent-ink)' : '#fff') + '">' + (x[0] === att ? '✓' : '') + '</button>').join('') + '</div>' +
-      '<p class="acc-colori-nomi">' + T('Attuale: ', 'Current: ') + (LANG === 'en' ? nome[2] : nome[1]) + '</p></section>';
+    const x0 = COLORI.find((x) => x[0] === att) || COLORI.find((x) => x[0] === 'verde');
+    const nome = (x) => (LANG === 'en' ? x[2] : x[1]);
+    const sw = (x) => (scuro ? x[3] : x[4]);
+    return '<section class="card acc-col" id="acc-aspetto">' +
+      '<button type="button" class="acc-col-riga" data-colori-apri aria-expanded="' + coloriAperti + '" aria-controls="acc-tavolozza">' +
+        '<span class="acc-col-sw" style="--sw:' + sw(x0) + '"></span><span class="acc-col-t"><b>' + T('Colore', 'Colour') + '</b><small>' + esc(nome(x0)) + '</small></span>' +
+        '<svg class="acc-col-chev" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>' +
+      '<div id="acc-tavolozza" class="acc-tavolozza"' + (coloriAperti ? '' : ' hidden') + '><div class="acc-colori" role="radiogroup" aria-label="' + T('Colore principale', 'Accent colour') + '">' +
+        COLORI.map((x) => '<button type="button" role="radio" aria-checked="' + (x[0] === att) + '" aria-label="' + nome(x) + '" title="' + nome(x) + '" data-colore="' + x[0] + '" class="' + (x[0] === att ? 'on' : '') + '" style="--sw:' + sw(x) + '"></button>').join('') +
+      '</div><p class="acc-colori-nomi">' + T('Pulsanti, grafici e zone cardiache. Si salva nel tuo account.', 'Buttons, charts and heart-rate zones. Saved to your account.') + '</p></div></section>';
   }
   document.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-famiglia]');
-    if (!b) return;
-    famigliaVista = b.dataset.famiglia;
+    if (!e.target.closest('[data-colori-apri]')) return;
+    coloriAperti = !coloriAperti;
     const box = $('#acc-aspetto');
     if (box) box.outerHTML = renderColori();
   });
