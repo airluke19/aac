@@ -78,7 +78,7 @@ Only runs count (and sessions you mark as done by hand). Runs on days without a 
 | Half marathon | 26 | Restart → aerobic base → build → peak, taper and race |
 | Marathon | 36 | Restart → aerobic base → build → marathon block → taper and race |
 
-Goal, intensity and days are set with a **step-by-step guide in the Plan tab** (goal → intensity → days → the coach's proposal): at every step the coach explains the choice, warns you honestly when it is not ideal and, before you confirm, shows a **preview of the new plan** (plan week, sessions S1, S2, S3…, estimated race date and tips). After that the plan adapts by itself. A new goal continues from the same phase of the new plan, starting from the current week: your history and the runs you already did stay.
+Goal, intensity and days are set with a **step-by-step guide that opens inside the Plan tab** (the profile only has a shortcut to it) (goal → intensity → days → the coach's proposal): at every step the coach explains the choice, warns you honestly when it is not ideal and, before you confirm, shows a **preview of the new plan** (plan week, sessions S1, S2, S3…, estimated race date and tips). After that the plan adapts by itself. A new goal continues from the same phase of the new plan, starting from the current week: your history and the runs you already did stay.
 
 ### What you see in the app
 

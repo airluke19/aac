@@ -1587,7 +1587,6 @@
     const sh = $('#sheet');
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
-    if (location.hash === '#piano-guida') { apriGuida(); return; }
     const mu = location.hash.match(/^#uso\/(\d+)$/);
     if (mu) { apriUso(mu[1]); return; }
     const m = location.hash.match(/^#(seduta|salute)\/(.+)$/);
@@ -2034,7 +2033,7 @@
       campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
       '<h3>' + T('Programma', 'Plan') + '</h3>' +
       // obiettivo, intensita' e giorni si scelgono con la guida passo passo (tab Piano)
-      '<div class="acc-piano">' + htmlRiepilogoPiano(p) + '<button type="button" class="gc-cta" data-guida-apri><span>' + T('Rivedi con il coach', 'Review with the coach') + '</span>' + FRECCIA + '</button></div>' +
+      '<button type="button" class="gc-cta" data-vai-piano><span>' + T('Rivedi il tuo piano', 'Review your plan') + '</span>' + FRECCIA + '</button>' +
       // prima seduta e orario solo finche' il piano non e' iniziato (dopo restano quelli salvati)
       (!p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10))
         ? '<div class="acc-row acc-row2">' +
@@ -2229,18 +2228,22 @@
   const FRECCIA = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   function renderGuidaCard() {
     if (!ME || !ME.profilo) return '';
+    if (guida) return '<section class="card guida-card guida-aperta" id="guida-box">' + htmlGuida() + '</section>';
     const p = ultimiDati && ultimiDati.programma;
     const sett = p && p.settimana_piano, tot = p && p.totale_settimane;
-    return '<section class="card guida-card"><p class="gc-eyebrow">' + T('Il tuo piano', 'Your plan') + '</p>' + htmlRiepilogoPiano(ME.profilo) +
+    return '<section class="card guida-card" id="guida-box"><p class="gc-eyebrow">' + T('Il tuo piano', 'Your plan') + '</p>' + htmlRiepilogoPiano(ME.profilo) +
       (sett && tot ? '<div class="gc-prog"><div class="gc-lab"><span>' + T('Avanzamento', 'Progress') + '</span><span>' + T('Settimana ', 'Week ') + sett + T(' di ', ' of ') + tot + '</span></div><div class="gc-bar"><i style="width:' + Math.max(3, Math.round((sett / tot) * 100)) + '%"></i></div></div>' : '') +
       '<button type="button" class="gc-cta" data-guida-apri><span>' + T('Rivedi il piano con il coach', 'Review the plan with the coach') + '</span>' + FRECCIA + '</button></section>';
   }
   function apriGuida() {
     if (!ME || !ME.profilo) return;
     const pr = ME.profilo;
-    if (!guida) guida = { passo: 1, obiettivo: pr.obiettivo || 'mezza', intensita: pr.intensita || 'equilibrata', giorni: new Set(pr.giorni_sedute || []), modo: pr.giorni_modo || 'preferiti', anteprima: null, req: 0 };
-    mostraSheet(T('Il piano con il coach', 'Plan with the coach'), htmlGuida());
-    if (guida.passo >= 3) caricaAnteprimaGuida();
+    guida = { passo: 1, obiettivo: pr.obiettivo || 'mezza', intensita: pr.intensita || 'equilibrata', giorni: new Set(pr.giorni_sedute || []), modo: pr.giorni_modo || 'preferiti', anteprima: null, req: 0 };
+    ridisegnaGuida();
+  }
+  function ridisegnaGuida() {
+    const box = $('#guida-box');
+    if (box) { box.outerHTML = renderGuidaCard(); const n = $('#guida-box'); if (n && guida) n.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); }
   }
   function htmlGuida() {
     const g = guida, P = 4;
@@ -2279,10 +2282,10 @@
           '<li>' + T('<b>Ogni 3 settimane</b> ritocco l’intensità in base a come rispondi.', '<b>Every 3 weeks</b> I fine-tune the intensity based on how you respond.') + '</li></ul></div>' +
         '<p id="gd-err" class="acc-err" hidden></p>';
     }
-    const nav = '<div class="gd-nav">' + (g.passo > 1 ? '<button type="button" class="pill-btn gd-ind" data-guida-vai="-1">' + T('Indietro', 'Back') + '</button>' : '<span></span>') +
+    const nav = '<div class="gd-nav">' + (g.passo > 1 ? '<button type="button" class="pill-btn gd-ind" data-guida-vai="-1">' + T('Indietro', 'Back') + '</button>' : '<button type="button" class="pill-btn gd-ind" data-guida-chiudi>' + T('Annulla', 'Cancel') + '</button>') +
       (g.passo < P ? '<button type="button" class="btn-primary" data-guida-vai="1">' + T('Avanti', 'Next') + '</button>'
         : '<button type="button" class="btn-primary" data-guida-conferma' + (ME.demo ? ' disabled' : '') + '>' + (ME.demo ? T('In demo non si salva', 'Not saved in the demo') : T('Conferma il piano', 'Confirm the plan')) + '</button>') + '</div>';
-    return '<div class="guida">' + passi + corpo + nav + '</div>';
+    return '<div class="gd-wiz">' + passi + corpo + nav + '</div>';
   }
   function consigliGuidaHtml() {
     const a = guida && guida.anteprima;
@@ -2302,8 +2305,8 @@
     if (box) box.innerHTML = a ? htmlAnteprima(a) : '<p class="sub">' + T('Anteprima non disponibile: il piano si ricalcola quando confermi.', 'Preview not available: the plan is recalculated when you confirm.') + '</p>';
     if (cons) cons.innerHTML = consigliGuidaHtml();
   }
-  $('#sheet-body').addEventListener('change', (e) => {
-    if (!guida || !e.target.closest('.guida')) return;
+  document.addEventListener('change', (e) => {
+    if (!guida || !e.target.closest('.gd-wiz')) return;
     const t = e.target;
     if (t.name === 'gd-ob') guida.obiettivo = t.value;
     else if (t.name === 'gd-int') guida.intensita = t.value;
@@ -2315,13 +2318,14 @@
     if (guida.passo === 3) caricaAnteprimaGuida();
   });
   document.addEventListener('click', async (e) => {
-    if (e.target.closest('[data-guida-apri]')) { guida = null; apriSheet('#piano-guida'); return; }
+    if (e.target.closest('[data-vai-piano]')) { vaiTab('piano'); return; }
+    if (e.target.closest('[data-guida-apri]')) { apriGuida(); return; }
     if (!guida) return;
+    if (e.target.closest('[data-guida-chiudi]')) { guida = null; ridisegnaGuida(); return; }
     const vai = e.target.closest('[data-guida-vai]'), salta = e.target.closest('[data-guida-passo]');
     if (vai || salta) {
       guida.passo = Math.max(1, Math.min(4, salta ? Number(salta.dataset.guidaPasso) : guida.passo + Number(vai.dataset.guidaVai)));
-      $('#sheet-body').innerHTML = htmlGuida();
-      $('#sheet').scrollTop = 0;
+      ridisegnaGuida();
       if (guida.passo >= 3 && !guida.anteprima) caricaAnteprimaGuida();
       return;
     }
@@ -2335,9 +2339,9 @@
       if (!ok) { const err = $('#gd-err'); if (err) { err.textContent = T('Salvataggio non riuscito: riprova.', 'Could not save: please try again.'); err.hidden = false; } b.disabled = false; return; }
       ME = out; guida = null;
       toast(T('Piano confermato: eccolo', 'Plan confirmed: here it is'), 'ok');
-      chiudiSheet();
       await caricaDati(true);
       vaiTab('piano');
+      const box = $('#guida-box'); if (box) box.scrollIntoView({ block: 'start' });
     } catch (_) { b.disabled = false; }
   });
 
