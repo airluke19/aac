@@ -2218,17 +2218,13 @@
   function riepilogoGuida(pr) {
     const ob = OBIETTIVI_UI.find((o) => o[0] === (pr.obiettivo || 'mezza')) || OBIETTIVI_UI[2];
     const it = INTENSITA_UI().find((o) => o[0] === (pr.intensita || 'equilibrata')) || INTENSITA_UI()[1];
-    return { ob: LANG === 'en' ? ob[2] : ob[1], it: LANG === 'en' ? it[2] : it[1], settimane: ob[3], giorni: new Set(pr.giorni_sedute || []), fissi: pr.giorni_modo === 'fissi' };
+    return { ob: LANG === 'en' ? ob[2] : ob[1], it: LANG === 'en' ? it[2] : it[1], settimane: ob[3] };
   }
   // riepilogo del piano senza emoji: obiettivo grande, intensita', settimana dei giorni
+  // riepilogo essenziale: obiettivo e intensita' (i giorni si vedono e si decidono dentro la guida)
   function htmlRiepilogoPiano(pr) {
     const r = riepilogoGuida(pr);
-    const nomi = LANG === 'en' ? ['M', 'T', 'W', 'T', 'F', 'S', 'S'] : ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
-    const lunghi = LANG === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
-    const modo = !r.giorni.size ? T('Decide il coach', 'Coach decides') : r.fissi ? T('Obbligatori', 'Fixed') : T('Proposti', 'Suggested');
-    return '<div class="gc-ob"><b>' + esc(r.ob) + '</b><span>' + esc(r.it) + ' · ' + r.settimane + T(' settimane', ' weeks') + '</span></div>' +
-      '<div class="gc-giorni"><div class="gc-lab"><span>' + T('Giorni', 'Days') + '</span><span class="gc-modo' + (r.fissi && r.giorni.size ? ' fissi' : '') + '">' + modo + '</span></div>' +
-      '<ol class="gc-week">' + [1, 2, 3, 4, 5, 6, 0].map((g, i) => '<li class="' + (r.giorni.has(g) ? 'on' : '') + '" title="' + lunghi[i] + '"><span>' + nomi[i] + '</span></li>').join('') + '</ol></div>';
+    return '<div class="gc-ob"><b>' + esc(r.ob) + '</b><span>' + esc(r.it) + ' · ' + r.settimane + T(' settimane', ' weeks') + '</span></div>';
   }
   const FRECCIA = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
   function renderGuidaCard() {
