@@ -1728,8 +1728,8 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .cond-seg { display: inline-flex; padding: 3px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
 .cond-seg button { font: inherit; font-size: .85rem; font-weight: 600; padding: 7px 14px; border: 0; border-radius: 9px; background: none; color: var(--muted); cursor: pointer; }
 .cond-seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,.18); }
-.cond-prev { width: 100%; max-width: 380px; }
-.cond-prev img { display: block; width: 100%; height: auto; border-radius: 18px; box-shadow: 0 10px 34px rgba(0,0,0,.28); background: #0b0c0f; min-height: 200px; }
+.cond-prev { width: 100%; display: flex; justify-content: center; }
+.cond-prev img { display: block; width: auto; max-width: min(100%, 380px); max-height: 52vh; height: auto; border-radius: 18px; box-shadow: 0 10px 34px rgba(0,0,0,.28); background: #0b0c0f; min-height: 200px; }
 .cond-az { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; align-items: center; }
 .cond-az .btn-primary { display: inline-flex; align-items: center; gap: 8px; }
 .cond-az .btn-primary svg { width: 18px; height: 18px; }

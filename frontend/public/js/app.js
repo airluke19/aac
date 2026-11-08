@@ -2887,7 +2887,10 @@
       c.dislivello ? [T('Dislivello', 'Elevation'), fmt0(c.dislivello), 'm'] : null,
     ].filter(Boolean);
     const colW = (W - 2 * pad) / valori.length;
-    const yVal = yFoot - 110;
+    // senza percorso il blocco dei numeri si centra nello spazio libero
+    const conForma = Boolean(conPercorso && s && s.lat && (yFoot - 280) - 250 - (sottoTitolo + 50) > 160);
+    const sposta = conForma ? 0 : Math.max(0, ((yFoot - 455) + (yFoot - 100)) / 2 - (sottoTitolo + 40 + yFoot - 60) / 2);
+    const yVal = yFoot - 110 - sposta;
     valori.forEach(([l, v, u], i) => {
       const X = pad + i * colW;
       testo(l.toUpperCase(), 24, 600, GRIGIO, FT, X, yVal - 62);
@@ -2904,7 +2907,7 @@
 
     // percorso: solo la forma, senza mappa
     const boxT = sottoTitolo + 50, boxB = yKm - 250;
-    if (conPercorso && s && s.lat && boxB - boxT > 160) {
+    if (conForma) {
       const pts = [];
       s.lat.forEach((la, i) => { if (la != null && s.lng[i] != null) pts.push([s.lng[i], la]); });
       if (pts.length > 2) {
