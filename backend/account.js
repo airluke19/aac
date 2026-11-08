@@ -448,6 +448,16 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       if (!ok) return { ok: false, errori: ['intervals'] };
     }
     let settFinale = settIn ?? null, inizioFinale = inizio || null;
+    // Intervals collegato ma nessuna data di inizio: il piano parte da solo dal primo giorno utile
+    // (oggi, oppure il primo dei giorni scelti), altrimenti il calendario resterebbe vuoto senza spiegazione
+    const chiaveC = nuovaChiave || u.intervals_key;
+    if (!inizioFinale && chiaveC && athlete) {
+      const oggiS = oggiLocale();
+      const g = giorniIn ? giorniIn.split(',').map(Number) : [];
+      let d = new Date(oggiS + 'T12:00:00Z');
+      for (let i = 0; i < 7 && g.length && !g.includes(d.getUTCDay()); i++) d = new Date(d.getTime() + 864e5);
+      inizioFinale = d.toISOString().slice(0, 10);
+    }
     let ripartiData = u.riparti_data || null, ripartiSett = u.riparti_settimana || null;
     const cambiaObiettivo = obiettivoIn && obiettivoIn !== (u.obiettivo || 'mezza');
     if (cambiaObiettivo && b.settimana_iniziale === undefined && cambioObiettivo) {
