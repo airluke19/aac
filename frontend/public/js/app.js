@@ -334,16 +334,21 @@
     const fasi = s.struttura.map((f) => '<li><span class="m">' + f.min + '′</span><span><b>' + esc(f.fase) + '</b> · ' + esc(f.testo) + '</span></li>').join('');
     const st = (v, l) => '<div><b class="num">' + v + '</b><span>' + l + '</span></div>';
     const notaPasso = pi ? '<p class="pi-nota">' + T('Passo ', 'Pace ') + '<b>' + pi.valore + '/km</b> · ' + esc(pi.nota) + '</p>' : '';
-    const tip = '<div class="tip">' + esc(s.nota) + (s.tipo === 'gara' ? '' : T(' Se senti dolore (non semplice fatica), fermati e cammina.', ' If you feel pain (not just fatigue), stop and walk.')) + '</div>';
+    const fcSicN = ultimiDati && ultimiDati.atleta ? ultimiDati.atleta.fc_max_stimata : null;
+    const tip = '<div class="tip">' + esc(s.nota) + (s.tipo === 'gara' ? '' : T(' Se senti dolore (non semplice fatica), fermati e cammina.', ' If you feel pain (not just fatigue), stop and walk.')) +
+      (fcSicN && !(s.tipo === 'qualita' || s.tipo === 'gara') ? ' ' + T('FC di sicurezza: non superare mai ' + fcSicN + ' bpm.', 'Safety HR: never exceed ' + fcSicN + ' bpm.') : '') + '</div>';
     // FC: il limite consigliato della seduta e il tetto di sicurezza (FC max personale) da non superare mai
     const fcSic = ultimiDati && ultimiDati.atleta ? ultimiDati.atleta.fc_max_stimata : null;
     // "< 130" = fino a 129 bpm: si mostra l'ultimo battito consentito
     const fcT = String(s.fc_target || '').trim();
+    const tetto = fcT.startsWith('<'); // un solo numero = limite da non superare; altrimenti intervallo
+    // il tetto di sicurezza conta dove si sale verso il limite (qualita' e gara); nelle sedute facili resta nella nota
+    const intensa = s.tipo === 'qualita' || s.tipo === 'gara';
     return '<div class="hero-main"><b class="hero-big num">' + s.durata_min + '<small>min</small></b>' +
       '<div class="hero-stats">' +
         st(s.corsa_min + '′', T('di corsa', 'running')) +
-        st(esc(fcT.startsWith('<') ? String(parseInt(fcT.replace(/[^\d]/g, ''), 10) - 1) : fcT), T('FC seduta', 'Session HR')) +
-        (fcSic ? '<div class="fc-sic"><b class="num">' + fcSic + '</b><span>' + T('FC sicurezza', 'Safety HR') + '</span></div>' : '') +
+        st(esc(tetto ? String(parseInt(fcT.replace(/[^\d]/g, ''), 10) - 1) : fcT), tetto ? T('FC max consigliata', 'Max suggested HR') : T('FC consigliata', 'Suggested HR')) +
+        (fcSic && intensa ? '<div class="fc-sic"><b class="num">' + fcSic + '</b><span>' + T('FC sicurezza', 'Safety HR') + '</span></div>' : '') +
         (pi ? st(pi.valore, T('passo /km', 'pace /km')) : '') +
       '</div></div>' +
       timelineSeduta(s) +
