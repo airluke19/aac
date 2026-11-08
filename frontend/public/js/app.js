@@ -3290,7 +3290,7 @@
             '</div></div>');
         }
         $w('#rv-pp').innerHTML = ICO.play; $w('#rv-pp').setAttribute('aria-label', T('Rivedi', 'Replay'));
-        map.fitBounds(bounds, { padding: 60, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
+        map.fitBounds(bounds, { padding: { top: 130, bottom: corsa ? 360 : 120, left: 40, right: 40 }, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
       };
       const passo = (ts) => {
         if (!wrap.classList.contains('rivivi')) return;
