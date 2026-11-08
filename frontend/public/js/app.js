@@ -2001,10 +2001,13 @@
         campo('acc-int', T('Intensità', 'Intensity'), '<select id="acc-int" name="intensita">' + INTENSITA_UI().map((o) => '<option value="' + o[0] + '"' + ((p.intensita || 'equilibrata') === o[0] ? ' selected' : '') + '>' + (LANG === 'en' ? o[2] : o[1]) + ' · ' + o[3] + '</option>').join('') + '</select>') +
       '</div>' +
       (ultimiDati && ultimiDati.programma && ultimiDati.programma.intensita ? (() => { const it = ultimiDati.programma.intensita; return '<p class="acc-int-stato">' + T('Adesso: ', 'Now: ') + '<b>' + esc(it.nome) + (it.percentuale ? ' · ' + (it.percentuale > 0 ? '+' : '') + it.percentuale + '%' : '') + '</b>' + (it.ultima_modifica ? ' · ' + esc(it.ultima_modifica.motivo) : T(' · il coach la ritocca da solo se serve', ' · the coach fine-tunes it when needed')) + '</p>'; })() : '') +
-      '<div class="acc-row acc-row2">' +
-        campo('acc-ini', T('Prima seduta', 'First session'), '<input id="acc-ini" name="programma_inizio" type="date" value="' + esc(p.programma_inizio || '') + '">') +
-        campo('acc-ora', T('Orario', 'Time'), '<input id="acc-ora" name="programma_ora" type="time" value="' + esc(p.programma_ora || '06:30') + '">') +
-      '</div>' +
+      // prima seduta e orario solo finche' il piano non e' iniziato (dopo restano quelli salvati)
+      (!p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10))
+        ? '<div class="acc-row acc-row2">' +
+            campo('acc-ini', T('Prima seduta', 'First session'), '<input id="acc-ini" name="programma_inizio" type="date" value="' + esc(p.programma_inizio || '') + '">') +
+            campo('acc-ora', T('Orario', 'Time'), '<input id="acc-ora" name="programma_ora" type="time" value="' + esc(p.programma_ora || '06:30') + '">') +
+          '</div>'
+        : '') +
       '<h3>' + T('Il tuo corpo', 'Your body') + '</h3>' +
       '<div class="acc-row acc-row3">' +
         campo('acc-eta', T('Età', 'Age'), '<input id="acc-eta" name="eta" type="number" inputmode="numeric" min="14" max="90" placeholder="33" value="' + esc(p.eta || '') + '">') +
