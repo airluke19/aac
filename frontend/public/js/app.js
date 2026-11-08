@@ -139,6 +139,8 @@
     dati: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>',
     spunta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
+    play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+    pausa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>',
     sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18M12 14v5M9.5 16.5 12 19l2.5-2.5"/></svg>',
@@ -3195,9 +3197,124 @@
       map.addSource('estremi', { type: 'geojson', data: { type: 'FeatureCollection', features: vicini ? [pt(ini, 'start')] : [pt(fin, 'end'), pt(ini, 'start')] } });
       map.addLayer({ id: 'estremi', type: 'circle', source: 'estremi', paint: { 'circle-radius': 7, 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff', 'circle-color': ['match', ['get', 'tipo'], 'start', accent, cssVar('--danger')] } });
       map.addSource('punto', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
-      map.addLayer({ id: 'punto', type: 'circle', source: 'punto', paint: { 'circle-radius': 8, 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff', 'circle-color': cssVar('--c-cuore') } });
+      map.addLayer({ id: 'punto', type: 'circle', source: 'punto', paint: { 'circle-radius': 8, 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff', 'circle-color': cssVar('--c-cuore'), 'circle-pitch-alignment': 'map' } });
+      // ---- Rivivi la corsa: replay 3D del percorso ----
+      map.addSource('linea', { type: 'geojson', lineMetrics: true, data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: tutti } } });
+      map.addLayer({ id: 'fatto', type: 'line', source: 'linea', layout: { 'line-cap': 'round', 'line-join': 'round', visibility: 'none' },
+        paint: { 'line-width': 7, 'line-gradient': ['step', ['line-progress'], accent, 0.000001, 'rgba(0,0,0,0)'] } }, 'estremi');
+      const wrap = el.parentNode;
+      wrap.insertAdjacentHTML('beforeend', '<button type="button" class="rv-play" aria-label="' + T('Rivivi la corsa in 3D', 'Relive the run in 3D') + '">' + ICO.play + '<span>' + T('Rivivi', 'Relive') + '</span></button>');
+      wrap.querySelector('.rv-play').addEventListener('click', () => rivivi());
       pronta = true;
     });
+    // Replay: la telecamera segue il percorso in 3D, la linea si disegna mentre avanza
+    function rivivi() {
+      const wrap = el.parentNode;
+      if (wrap.classList.contains('rivivi')) return;
+      const nf2 = new Intl.NumberFormat(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const lento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      // punti del percorso con distanza cumulativa (metri) e indice dello stream
+      const pts = [];
+      for (let i = 0; i < s.lat.length; i++) if (s.lat[i] != null && s.lng[i] != null) pts.push({ p: [s.lng[i], s.lat[i]], i });
+      const cum = [0];
+      const dist = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.hypot((b[0] - a[0]) * k, b[1] - a[1]) * 111320; };
+      for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + dist(pts[k - 1].p, pts[k].p));
+      const tot = cum[cum.length - 1] || 1;
+      const durata = Math.min(60, Math.max(20, 16 + tot / 1000 * 2.4)) * 1000;
+      const zoom = tot < 6000 ? 16.4 : tot < 15000 ? 15.9 : 15.4;
+      const avanti = Math.min(220, Math.max(70, tot * 0.02));
+      const trova = (d) => { let lo = 0, hi = cum.length - 1; while (lo < hi - 1) { const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; } const f = cum[hi] > cum[lo] ? (d - cum[lo]) / (cum[hi] - cum[lo]) : 0; return { k: lo, p: [pts[lo].p[0] + (pts[hi].p[0] - pts[lo].p[0]) * f, pts[lo].p[1] + (pts[hi].p[1] - pts[lo].p[1]) * f] }; };
+      const dirA = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.atan2((b[0] - a[0]) * k, b[1] - a[1]) * 180 / Math.PI; };
+      const passoA = (i) => {
+        if (!s.d || !s.t) return null;
+        const a = Math.max(0, i - 15), b = Math.min(s.t.length - 1, i + 15);
+        const dd = (s.d[b] || 0) - (s.d[a] || 0), dt = s.t[b] - s.t[a];
+        return dd > 0.01 ? dt / dd : null;
+      };
+
+      wrap.classList.add('rivivi');
+      document.body.classList.add('rivivi-on');
+      wrap.insertAdjacentHTML('beforeend',
+        '<div class="rv-hud" aria-live="off"><div><b id="rv-km">0,00</b><span>km</span></div><div><b id="rv-t">0:00</b><span>' + T('tempo', 'time') + '</span></div><div><b id="rv-p">–</b><span>/km</span></div>' + (s.hr ? '<div><b id="rv-fc">–</b><span>bpm</span></div>' : '') + '</div>' +
+        '<div class="rv-bar"><button type="button" class="rv-btn" id="rv-pp" aria-label="' + T('Pausa', 'Pause') + '">' + ICO.pausa + '</button>' +
+          '<div class="rv-prog" id="rv-prog" role="slider" aria-label="' + T('Avanzamento', 'Progress') + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><i id="rv-fill"></i></div>' +
+          '<button type="button" class="rv-btn rv-vel" id="rv-vel">1×</button>' +
+          '<button type="button" class="rv-btn" id="rv-x" aria-label="' + T('Chiudi', 'Close') + '">✕</button></div>');
+      const $w = (q) => wrap.querySelector(q);
+      ['dragPan', 'scrollZoom', 'touchZoomRotate', 'doubleClickZoom', 'keyboard', 'boxZoom'].forEach((h) => map[h] && map[h].disable());
+      map.resize();
+      if (!map.getSource('dem')) map.addSource('dem', { type: 'raster-dem', tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 14 });
+      try { map.setTerrain({ source: 'dem', exaggeration: 1.4 }); } catch (_) { /* senza rilievo */ }
+      ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 0.35));
+      map.setLayoutProperty('fatto', 'visibility', 'visible');
+
+      let u = 0, vel = 1, inPausa = false, ultimo = null, raf = null, bearing = dirA(pts[0].p, trova(Math.min(tot, avanti)).p), finito = false;
+      const disegna = () => {
+        const d = u * tot, { k, p } = trova(d);
+        map.setPaintProperty('fatto', 'line-gradient', ['step', ['line-progress'], accent, Math.max(0.000001, u), 'rgba(0,0,0,0)']);
+        map.getSource('punto').setData({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: p } }] });
+        if (!lento) {
+          const dietro = trova(Math.max(0, d - avanti * 0.3)).p, davanti = trova(Math.min(tot, d + avanti)).p;
+          let diff = ((dirA(dietro, davanti) - bearing + 540) % 360) - 180;
+          bearing += diff * 0.06;
+          map.jumpTo({ center: p, bearing, pitch: 62, zoom });
+        }
+        const i = pts[k].i;
+        $w('#rv-km').textContent = nf2.format(s.d ? s.d[i] : d / 1000);
+        $w('#rv-t').textContent = s.t ? fmtDurata(s.t[i]) : '–';
+        $w('#rv-p').textContent = fmtPasso(passoA(i));
+        if (s.hr && $w('#rv-fc')) $w('#rv-fc').textContent = s.hr[i] ? fmt0(s.hr[i]) : '–';
+        $w('#rv-fill').style.width = (u * 100).toFixed(1) + '%';
+        $w('#rv-prog').setAttribute('aria-valuenow', String(Math.round(u * 100)));
+      };
+      const fine = () => {
+        finito = true; inPausa = true;
+        $w('#rv-pp').innerHTML = ICO.play; $w('#rv-pp').setAttribute('aria-label', T('Rivedi', 'Replay'));
+        map.fitBounds(bounds, { padding: 60, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
+      };
+      const passo = (ts) => {
+        if (!wrap.classList.contains('rivivi')) return;
+        if (ultimo != null && !inPausa) { u = Math.min(1, u + (ts - ultimo) / durata * vel); disegna(); if (u >= 1) fine(); }
+        ultimo = ts;
+        raf = requestAnimationFrame(passo);
+      };
+      const parti = () => { ultimo = null; raf = requestAnimationFrame(passo); };
+      // inquadratura iniziale: dall'alto al punto di partenza
+      if (lento) { map.fitBounds(bounds, { padding: 60, duration: 0 }); disegna(); setTimeout(parti, 300); }
+      else { map.flyTo({ center: pts[0].p, zoom, pitch: 62, bearing, duration: 1800, essential: true }); map.once('moveend', () => { disegna(); parti(); }); }
+
+      const pp = () => {
+        if (finito) { finito = false; u = 0; inPausa = false; if (!lento) map.flyTo({ center: pts[0].p, zoom, pitch: 62, bearing, duration: 1200 }); }
+        else inPausa = !inPausa;
+        $w('#rv-pp').innerHTML = inPausa ? ICO.play : ICO.pausa;
+        $w('#rv-pp').setAttribute('aria-label', inPausa ? T('Riprendi', 'Resume') : T('Pausa', 'Pause'));
+      };
+      $w('#rv-pp').addEventListener('click', pp);
+      $w('#rv-vel').addEventListener('click', (e) => { vel = vel === 1 ? 2 : vel === 2 ? 4 : 1; e.currentTarget.textContent = vel + '×'; });
+      const cerca = (x) => { const r = $w('#rv-prog').getBoundingClientRect(); u = Math.min(0.999, Math.max(0, (x - r.left) / r.width)); finito = false; disegna(); };
+      $w('#rv-prog').addEventListener('click', (e) => cerca(e.clientX));
+      $w('#rv-prog').addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); u = Math.min(0.999, Math.max(0, u + (e.key === 'ArrowRight' ? 0.05 : -0.05))); finito = false; disegna(); } });
+      const chiudi = () => {
+        cancelAnimationFrame(raf);
+        wrap.classList.remove('rivivi'); document.body.classList.remove('rivivi-on');
+        wrap.querySelectorAll('.rv-hud, .rv-bar').forEach((x) => x.remove());
+        try { map.setTerrain(null); } catch (_) { /* ok */ }
+        map.setLayoutProperty('fatto', 'visibility', 'none');
+        ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 1));
+        map.getSource('punto').setData({ type: 'FeatureCollection', features: [] });
+        ['dragPan', 'scrollZoom', 'touchZoomRotate', 'doubleClickZoom', 'keyboard', 'boxZoom'].forEach((h) => map[h] && map[h].enable());
+        map.resize();
+        map.fitBounds(bounds, { padding: { top: 64, bottom: 36, left: 32, right: 32 }, maxZoom: 16, pitch: 0, bearing: 0, duration: 0 });
+        document.removeEventListener('keydown', esc, true);
+        wrap.querySelector('.rv-play').focus();
+      };
+      const esc = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); chiudi(); } else if (e.key === ' ' && e.target === document.body) { e.preventDefault(); pp(); } };
+      document.addEventListener('keydown', esc, true);
+      $w('#rv-x').addEventListener('click', chiudi);
+      sheetCharts.push({ destroy: () => { cancelAnimationFrame(raf); document.body.classList.remove('rivivi-on'); document.removeEventListener('keydown', esc, true); } });
+      $w('#rv-pp').focus();
+    }
+
     map.on('error', () => {});
     return (i) => {
       if (!pronta) return;
