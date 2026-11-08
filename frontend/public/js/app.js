@@ -139,6 +139,7 @@
     dati: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>',
     spunta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
+    indietro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
     play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
     pausa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>',
     sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
@@ -1706,7 +1707,9 @@
     $('#sheet-body').innerHTML = html;
     if (sh.hidden) { sh.hidden = false; sh.scrollTop = 0; document.body.classList.add('sheet-open'); }
   }
+  let chiudiRivivi = null; // replay aperto: "Indietro" lo chiude invece di uscire dal dettaglio corsa
   function rotta() {
+    if (chiudiRivivi) { const f = chiudiRivivi; chiudiRivivi = null; f(); return; }
     const sh = $('#sheet');
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
@@ -3186,6 +3189,15 @@
       map.fitBounds(bounds, { padding: { top: 64, bottom: 36, left: 32, right: 32 }, maxZoom: 16, duration: 0 });
       // mappa pulita: niente fermate dei bus e punti di interesse
       map.getStyle().layers.filter((l) => /poi|transit|bus|aeroway|airport/i.test(l.id) && l.type === 'symbol').forEach((l) => map.setLayoutProperty(l.id, 'visibility', 'none'));
+      // vista satellitare (Esri World Imagery) con i nomi di strade e luoghi della mappa vettoriale sopra
+      const stile = map.getStyle().layers;
+      const primoSimbolo = stile.find((l) => l.type === 'symbol');
+      map.addSource('satellite', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
+      map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-fade-duration': 150 } }, primoSimbolo && primoSimbolo.id);
+      stile.forEach((l) => {
+        if (['fill', 'line', 'fill-extrusion', 'background', 'hillshade'].includes(l.type)) map.setLayoutProperty(l.id, 'visibility', 'none');
+        else if (l.type === 'symbol') { try { map.setPaintProperty(l.id, 'text-color', '#ffffff'); map.setPaintProperty(l.id, 'text-halo-color', 'rgba(0,0,0,0.75)'); map.setPaintProperty(l.id, 'text-halo-width', 1.4); } catch (_) { /* livello senza testo */ } }
+      });
       // crediti compressi nell'icona "i"
       el.querySelectorAll('.maplibregl-compact-show').forEach((x) => x.classList.remove('maplibregl-compact-show'));
       map.addSource('percorso', { type: 'geojson', data: { type: 'FeatureCollection', features: pezzi.map((x) => ({ type: 'Feature', properties: { c: x.c }, geometry: { type: 'LineString', coordinates: x.pt } })) } });
@@ -3211,6 +3223,8 @@
     function rivivi() {
       const wrap = el.parentNode;
       if (wrap.classList.contains('rivivi')) return;
+      // "Indietro" (gesto o tasto del telefono) chiude il replay e resta sul dettaglio della corsa
+      history.pushState({ sheet: 1, rivivi: 1 }, '', location.hash);
       const nf2 = new Intl.NumberFormat(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const lento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       // punti del percorso con distanza cumulativa (metri) e indice dello stream
@@ -3236,16 +3250,17 @@
       document.body.classList.add('rivivi-on');
       wrap.insertAdjacentHTML('beforeend',
         '<div class="rv-hud" aria-live="off"><div><b id="rv-km">0,00</b><span>km</span></div><div><b id="rv-t">0:00</b><span>' + T('tempo', 'time') + '</span></div><div><b id="rv-p">–</b><span>/km</span></div>' + (s.hr ? '<div><b id="rv-fc">–</b><span>bpm</span></div>' : '') + '</div>' +
+        '<button type="button" class="rv-back" id="rv-x">' + ICO.indietro + '<span>' + T('Indietro', 'Back') + '</span></button>' +
         '<div class="rv-bar"><button type="button" class="rv-btn" id="rv-pp" aria-label="' + T('Pausa', 'Pause') + '">' + ICO.pausa + '</button>' +
-          '<div class="rv-prog" id="rv-prog" role="slider" aria-label="' + T('Avanzamento', 'Progress') + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><i id="rv-fill"></i></div>' +
-          '<button type="button" class="rv-btn rv-vel" id="rv-vel">1×</button>' +
-          '<button type="button" class="rv-btn" id="rv-x" aria-label="' + T('Chiudi', 'Close') + '">✕</button></div>');
+          '<div class="rv-prog" id="rv-prog" role="slider" aria-label="' + T('Avanzamento', 'Progress') + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><i><b id="rv-fill"></b></i></div>' +
+          '<button type="button" class="rv-btn rv-vel" id="rv-vel" aria-label="' + T('Velocità', 'Speed') + '">1×</button></div>');
       const $w = (q) => wrap.querySelector(q);
       ['dragPan', 'scrollZoom', 'touchZoomRotate', 'doubleClickZoom', 'keyboard', 'boxZoom'].forEach((h) => map[h] && map[h].disable());
       map.resize();
       if (!map.getSource('dem')) map.addSource('dem', { type: 'raster-dem', tiles: ['https://elevation-tiles-prod.s3.amazonaws.com/terrarium/{z}/{x}/{y}.png'], encoding: 'terrarium', tileSize: 256, maxzoom: 14 });
       try { map.setTerrain({ source: 'dem', exaggeration: 1.4 }); } catch (_) { /* senza rilievo */ }
       ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 0.35));
+      map.setPaintProperty('punto', 'circle-color', accent); map.setPaintProperty('punto', 'circle-radius', 9);
       map.setLayoutProperty('fatto', 'visibility', 'visible');
 
       let u = 0, vel = 1, inPausa = false, ultimo = null, raf = null, bearing = dirA(pts[0].p, trova(Math.min(tot, avanti)).p), finito = false;
@@ -3292,9 +3307,16 @@
       $w('#rv-pp').addEventListener('click', pp);
       $w('#rv-vel').addEventListener('click', (e) => { vel = vel === 1 ? 2 : vel === 2 ? 4 : 1; e.currentTarget.textContent = vel + '×'; });
       const cerca = (x) => { const r = $w('#rv-prog').getBoundingClientRect(); u = Math.min(0.999, Math.max(0, (x - r.left) / r.width)); finito = false; disegna(); };
-      $w('#rv-prog').addEventListener('click', (e) => cerca(e.clientX));
+      // trascinare la barra porta avanti o indietro (durante il trascinamento il replay è fermo)
+      let trascina = false, eraInPausa = false;
+      $w('#rv-prog').addEventListener('pointerdown', (e) => { trascina = true; eraInPausa = inPausa; inPausa = true; $w('#rv-prog').setPointerCapture(e.pointerId); cerca(e.clientX); });
+      $w('#rv-prog').addEventListener('pointermove', (e) => { if (trascina) cerca(e.clientX); });
+      const lascia = () => { if (!trascina) return; trascina = false; inPausa = eraInPausa; $w('#rv-pp').innerHTML = inPausa ? ICO.play : ICO.pausa; };
+      $w('#rv-prog').addEventListener('pointerup', lascia);
+      $w('#rv-prog').addEventListener('pointercancel', lascia);
       $w('#rv-prog').addEventListener('keydown', (e) => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); u = Math.min(0.999, Math.max(0, u + (e.key === 'ArrowRight' ? 0.05 : -0.05))); finito = false; disegna(); } });
       const chiudi = () => {
+        chiudiRivivi = null;
         cancelAnimationFrame(raf);
         wrap.classList.remove('rivivi'); document.body.classList.remove('rivivi-on');
         wrap.querySelectorAll('.rv-hud, .rv-bar').forEach((x) => x.remove());
@@ -3302,16 +3324,18 @@
         map.setLayoutProperty('fatto', 'visibility', 'none');
         ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 1));
         map.getSource('punto').setData({ type: 'FeatureCollection', features: [] });
+        map.setPaintProperty('punto', 'circle-color', cssVar('--c-cuore')); map.setPaintProperty('punto', 'circle-radius', 8);
         ['dragPan', 'scrollZoom', 'touchZoomRotate', 'doubleClickZoom', 'keyboard', 'boxZoom'].forEach((h) => map[h] && map[h].enable());
         map.resize();
         map.fitBounds(bounds, { padding: { top: 64, bottom: 36, left: 32, right: 32 }, maxZoom: 16, pitch: 0, bearing: 0, duration: 0 });
         document.removeEventListener('keydown', esc, true);
         wrap.querySelector('.rv-play').focus();
       };
-      const esc = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); chiudi(); } else if (e.key === ' ' && e.target === document.body) { e.preventDefault(); pp(); } };
+      chiudiRivivi = chiudi;
+      const esc = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); history.back(); } else if (e.key === ' ' && e.target === document.body) { e.preventDefault(); pp(); } };
       document.addEventListener('keydown', esc, true);
-      $w('#rv-x').addEventListener('click', chiudi);
-      sheetCharts.push({ destroy: () => { cancelAnimationFrame(raf); document.body.classList.remove('rivivi-on'); document.removeEventListener('keydown', esc, true); } });
+      $w('#rv-x').addEventListener('click', () => history.back());
+      sheetCharts.push({ destroy: () => { chiudiRivivi = null; cancelAnimationFrame(raf); document.body.classList.remove('rivivi-on'); document.removeEventListener('keydown', esc, true); } });
       $w('#rv-pp').focus();
     }
 
