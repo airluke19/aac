@@ -3181,10 +3181,10 @@
       map.fitBounds(bounds, { padding: { top: 64, bottom: 36, left: 32, right: 32 }, maxZoom: 16, duration: 0 });
       // mappa pulita: niente fermate dei bus e punti di interesse
       map.getStyle().layers.filter((l) => /poi|transit|bus|aeroway|airport/i.test(l.id) && l.type === 'symbol').forEach((l) => map.setLayoutProperty(l.id, 'visibility', 'none'));
-      // vista satellitare (Esri World Imagery) con i nomi di strade e luoghi della mappa vettoriale sopra
+      // vista satellitare (Esri World Imagery Clarity: le immagini più nitide di Esri) con i nomi di strade e luoghi della mappa vettoriale sopra
       const stile = map.getStyle().layers;
       const primoSimbolo = stile.find((l) => l.type === 'symbol');
-      map.addSource('satellite', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: window.devicePixelRatio > 1 ? 64 : 128, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
+      map.addSource('satellite', { type: 'raster', tiles: ['https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: window.devicePixelRatio > 1 ? 64 : 128, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
       map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-fade-duration': 150 } }, primoSimbolo && primoSimbolo.id);
       stile.forEach((l) => {
         if (['fill', 'line', 'fill-extrusion', 'background', 'hillshade'].includes(l.type)) map.setLayoutProperty(l.id, 'visibility', 'none');
@@ -3227,7 +3227,7 @@
       for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + dist(pts[k - 1].p, pts[k].p));
       const tot = cum[cum.length - 1] || 1;
       const durata = Math.min(60, Math.max(20, 16 + tot / 1000 * 2.4)) * 1000;
-      const zoom = tot < 6000 ? 16.4 : tot < 15000 ? 15.9 : 15.4;
+      const zoom = tot < 6000 ? 15.7 : tot < 15000 ? 15.2 : 14.7; // un po' più in alto: immagini più pulite
       const avanti = Math.min(220, Math.max(70, tot * 0.02));
       const trova = (d) => { let lo = 0, hi = cum.length - 1; while (lo < hi - 1) { const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; } const f = cum[hi] > cum[lo] ? (d - cum[lo]) / (cum[hi] - cum[lo]) : 0; return { k: lo, p: [pts[lo].p[0] + (pts[hi].p[0] - pts[lo].p[0]) * f, pts[lo].p[1] + (pts[hi].p[1] - pts[lo].p[1]) * f] }; };
       const dirA = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.atan2((b[0] - a[0]) * k, b[1] - a[1]) * 180 / Math.PI; };
@@ -3262,7 +3262,7 @@
           const dietro = trova(Math.max(0, d - avanti * 0.3)).p, davanti = trova(Math.min(tot, d + avanti)).p;
           let diff = ((dirA(dietro, davanti) - bearing + 540) % 360) - 180;
           bearing += diff * 0.06;
-          map.jumpTo({ center: p, bearing, pitch: 62, zoom });
+          map.jumpTo({ center: p, bearing, pitch: 55, zoom });
         }
         const i = pts[k].i;
         $w('#rv-km').textContent = nf2.format(s.d ? s.d[i] : d / 1000);
@@ -3280,7 +3280,7 @@
         if (corsa && !$w('.rv-fine')) {
           const r = (l, v, un) => (v == null || v === '–' ? '' : '<div><b>' + v + (un ? '<small>' + un + '</small>' : '') + '</b><span>' + l + '</span></div>');
           $w('.rv-hud').hidden = true;
-          $w('.rv-bar').insertAdjacentHTML('beforebegin', '<div class="rv-fine"><h3>' + esc(corsa.nome || T('Corsa', 'Run')) + '</h3><div class="rv-fine-g">' +
+          $w('.rv-bar').insertAdjacentHTML('beforebegin', '<div class="rv-fine"><h3>' + esc(corsa.nome || fmtDataLunga(corsa.data).replace(/^./, (x) => x.toUpperCase())) + '</h3><div class="rv-fine-g">' +
             r(T('Distanza', 'Distance'), fmt1(corsa.distanza), 'km') +
             r(T('Tempo', 'Time'), fmtDurata(corsa.tempo)) +
             r(corsa.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo medio', 'Avg pace'), fmtPasso(corsa.passo_corsa || corsa.passo_medio), '/km') +
@@ -3301,10 +3301,10 @@
       const parti = () => { ultimo = null; raf = requestAnimationFrame(passo); };
       // inquadratura iniziale: dall'alto al punto di partenza
       if (lento) { map.fitBounds(bounds, { padding: 60, duration: 0 }); disegna(); setTimeout(parti, 300); }
-      else { map.flyTo({ center: pts[0].p, zoom, pitch: 62, bearing, duration: 1800, essential: true }); map.once('moveend', () => { disegna(); parti(); }); }
+      else { map.flyTo({ center: pts[0].p, zoom, pitch: 55, bearing, duration: 1800, essential: true }); map.once('moveend', () => { disegna(); parti(); }); }
 
       const pp = () => {
-        if (finito) { finito = false; u = 0; inPausa = false; if (!lento) map.flyTo({ center: pts[0].p, zoom, pitch: 62, bearing, duration: 1200 }); }
+        if (finito) { finito = false; u = 0; inPausa = false; if (!lento) map.flyTo({ center: pts[0].p, zoom, pitch: 55, bearing, duration: 1200 }); }
         else inPausa = !inPausa;
         $w('#rv-pp').innerHTML = inPausa ? ICO.play : ICO.pausa;
         $w('#rv-pp').setAttribute('aria-label', inPausa ? T('Riprendi', 'Resume') : T('Pausa', 'Pause'));
@@ -3332,14 +3332,14 @@
         ['dragPan', 'scrollZoom', 'touchZoomRotate', 'doubleClickZoom', 'keyboard', 'boxZoom'].forEach((h) => map[h] && map[h].enable());
         map.resize();
         map.fitBounds(bounds, { padding: { top: 64, bottom: 36, left: 32, right: 32 }, maxZoom: 16, pitch: 0, bearing: 0, duration: 0 });
-        document.removeEventListener('keydown', esc, true);
+        document.removeEventListener('keydown', tasto, true);
         wrap.querySelector('.rv-play').focus();
       };
       chiudiRivivi = chiudi;
-      const esc = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); history.back(); } else if (e.key === ' ' && e.target === document.body) { e.preventDefault(); pp(); } };
-      document.addEventListener('keydown', esc, true);
+      const tasto = (e) => { if (e.key === 'Escape') { e.stopImmediatePropagation(); e.preventDefault(); history.back(); } else if (e.key === ' ' && e.target === document.body) { e.preventDefault(); pp(); } };
+      document.addEventListener('keydown', tasto, true);
       $w('#rv-x').addEventListener('click', () => history.back());
-      sheetCharts.push({ destroy: () => { chiudiRivivi = null; cancelAnimationFrame(raf); document.body.classList.remove('rivivi-on'); document.removeEventListener('keydown', esc, true); } });
+      sheetCharts.push({ destroy: () => { chiudiRivivi = null; cancelAnimationFrame(raf); document.body.classList.remove('rivivi-on'); document.removeEventListener('keydown', tasto, true); } });
       $w('#rv-pp').focus();
     }
 
