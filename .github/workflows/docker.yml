@@ -8,6 +8,12 @@ name: Docker images
 # Si costruiscono sempre tutte (backend, frontend, backup), cosi' uno stesso AAC_TAG vale per tutti i servizi.
 # Ogni lunedì ricostruisce :latest per prendere le patch dell'immagine base
 # e ricontrolla le CVE uscite nel frattempo.
+# SBOM (elenco dei componenti di ogni immagine) archiviato nel registry insieme all'immagine:
+#   - SPDX di BuildKit (attestazione OCI):
+#       docker buildx imagetools inspect ghcr.io/<owner>/aac-backend:latest --format '{{ json .SBOM }}'
+#   - CycloneDX firmato (Sigstore, attestazione GitHub) + provenienza SLSA firmata:
+#       gh attestation verify oci://ghcr.io/<owner>/aac-backend:latest --owner <owner>
+#   - copia scaricabile come artifact della run (90 giorni).
 on:
   push:
     branches: [staging, main]
@@ -90,6 +96,8 @@ jobs:
       contents: read
       packages: write
       security-events: write
+      id-token: write # firma Sigstore delle attestazioni (SBOM e provenienza)
+      attestations: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -154,6 +162,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - if: github.event_name != 'pull_request'
+        id: push
         name: Push
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -162,7 +171,44 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          # Attestazioni firmate da GitHub: provenienza della build (SLSA) e SBOM dei pacchetti
+          # Attestazioni BuildKit (non firmate): provenienza della build (SLSA) e SBOM SPDX dei pacchetti
           provenance: mode=max
           sbom: true
           cache-from: type=gha,scope=${{ matrix.service }}
+
+      # 5. SBOM CycloneDX dell'immagine (stesso contenuto di quella pubblicata), firmato e archiviato nel registry.
+      - if: github.event_name != 'pull_request'
+        name: SBOM CycloneDX
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          version: ${{ env.TRIVY_VERSION }}
+          skip-setup-trivy: true
+          image-ref: aac-${{ matrix.service }}:scan
+          scan-type: image
+          format: cyclonedx
+          output: sbom-${{ matrix.service }}.cdx.json
+
+      - if: github.event_name != 'pull_request'
+        name: Attestazione SBOM (firmata)
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          sbom-path: sbom-${{ matrix.service }}.cdx.json
+          push-to-registry: true
+
+      - if: github.event_name != 'pull_request'
+        name: Attestazione di provenienza (firmata)
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.IMAGE }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+
+      - if: github.event_name != 'pull_request'
+        name: SBOM come artifact
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sbom-${{ matrix.service }}
+          path: sbom-${{ matrix.service }}.cdx.json
+          retention-days: 90

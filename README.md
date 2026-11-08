@@ -233,7 +233,7 @@ AAC is designed to be exposed on the internet and follows the OWASP Top 10:
 - **Data:** Intervals.icu keys encrypted with AES‑256‑GCM; session tokens stored only as SHA‑256 hashes; parameterised SQL; all dynamic HTML escaped; input checked against allow‑lists.
 - **Browser:** strict Content‑Security‑Policy (no inline scripts, no `eval`, no CDN), HSTS, anti‑framing and the other security headers.
 - **Containers:** non‑root, read‑only filesystem, no capabilities, `no-new-privileges`, memory and process limits; only the frontend is published, on `127.0.0.1` by default.
-- **Supply chain:** `npm ci` with lockfiles, Actions pinned to commit SHAs, SBOM and provenance on images, Dependabot; Trivy blocks releases with fixable HIGH/CRITICAL vulnerabilities, leaked secrets or misconfigurations.
+- **Supply chain:** `npm ci` with lockfiles, Actions pinned to commit SHAs, Dependabot. Every image carries its **SBOM** in the registry: SPDX from BuildKit plus a **signed** CycloneDX SBOM and signed SLSA provenance (Sigstore, GitHub attestations). Check them with `gh attestation verify oci://ghcr.io/airluke19/aac-backend:latest --owner airluke19` or read the SPDX with `docker buildx imagetools inspect ghcr.io/airluke19/aac-backend:latest --format '{{ json .SBOM }}'`; each build run also keeps the CycloneDX files as artifacts for 90 days. Trivy blocks releases with fixable HIGH/CRITICAL vulnerabilities, leaked secrets or misconfigurations.
 - **Logging:** sign‑ins, blocked attempts and admin actions are logged; Docker logs are rotated.
 
 Never commit `.env` or databases (`.gitignore` excludes them) and never expose the app without Google sign‑in. To report a vulnerability see [SECURITY.md](SECURITY.md).
