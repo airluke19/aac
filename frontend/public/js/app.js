@@ -1681,10 +1681,9 @@
     try { ME = await caricaJson('/api/me'); } catch (_) { return; }
     segnaAmbiente(ME.ambiente);
     battito();
-    if (ME.profilo && ME.profilo.colore && ME.profilo.colore !== document.documentElement.getAttribute('data-accent')) {
-      applicaColore(ME.profilo.colore);
-      if (ultimiDati) render(ultimiDati);
-    }
+    if (ME.profilo && ME.profilo.colore && ME.profilo.colore !== document.documentElement.getAttribute('data-accent')) applicaColore(ME.profilo.colore);
+    // i dati arrivano prima del profilo: si ridisegna per mostrare cio' che dipende da ME (es. la card "Il tuo piano" sotto Adattamenti)
+    if (ultimiDati) render(ultimiDati);
     aggiornaAvatar();
     caricaValutazione();
     // nuovo utente: prima di tutto il collegamento con Intervals.icu e la data di inizio
