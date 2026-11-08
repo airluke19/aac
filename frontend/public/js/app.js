@@ -3207,7 +3207,7 @@
       map.addLayer({ id: 'fatto', type: 'line', source: 'linea', layout: { 'line-cap': 'round', 'line-join': 'round', visibility: 'none' },
         paint: { 'line-width': 7, 'line-gradient': ['step', ['line-progress'], accent, 0.000001, 'rgba(0,0,0,0)'] } }, 'estremi');
       const wrap = el.parentNode;
-      wrap.insertAdjacentHTML('beforeend', '<button type="button" class="rv-play" aria-label="' + T('Rivivi la corsa in 3D', 'Relive the run in 3D') + '">' + ICO.play + '<span>' + T('Rivivi', 'Relive') + '</span></button>');
+      wrap.insertAdjacentHTML('beforeend', '<button type="button" class="rv-play" aria-label="' + T('Riproduci il percorso in 3D', 'Play the route in 3D') + '">' + ICO.play + '</button>');
       wrap.querySelector('.rv-play').addEventListener('click', () => rivivi());
       pronta = true;
     });
@@ -3226,7 +3226,7 @@
       const dist = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.hypot((b[0] - a[0]) * k, b[1] - a[1]) * 111320; };
       for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + dist(pts[k - 1].p, pts[k].p));
       const tot = cum[cum.length - 1] || 1;
-      const durata = Math.min(60, Math.max(20, 16 + tot / 1000 * 2.4)) * 1000;
+      const durata = Math.min(30, Math.max(10, 8 + tot / 1000 * 1.2)) * 1000; // "1×" è già il doppio del primo ritmo provato: più godibile
       const zoom = tot < 6000 ? 14.9 : tot < 15000 ? 14.4 : 13.9; // vista alta: si vede il percorso intorno, niente giramenti di testa
       const avanti = Math.min(900, Math.max(300, tot * 0.08)); // la direzione guarda lontano: ignora le curve brevi
       const trova = (d) => { let lo = 0, hi = cum.length - 1; while (lo < hi - 1) { const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; } const f = cum[hi] > cum[lo] ? (d - cum[lo]) / (cum[hi] - cum[lo]) : 0; return { k: lo, p: [pts[lo].p[0] + (pts[hi].p[0] - pts[lo].p[0]) * f, pts[lo].p[1] + (pts[hi].p[1] - pts[lo].p[1]) * f] }; };
