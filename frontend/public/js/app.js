@@ -3086,7 +3086,7 @@
     const gruppo = [];
     let suMappa = null;
     const sync = syncHover(gruppo, (i) => suMappa && suMappa(i));
-    if (s.lat) disegnaMappa(s).then((f) => { suMappa = f; });
+    if (s.lat) disegnaMappa(s, a.corsa).then((f) => { suMappa = f; });
     const base = (fmtY, opz = {}) => {
       const o = opzioniBase((ctx) => ' ' + fmtY(ctx.parsed.y), (it) => mmss(s.t[it[0].dataIndex]) + (s.d ? ' · ' + fmt1(s.d[it[0].dataIndex]) + ' km' : ''));
       o.animation = false;
@@ -3149,7 +3149,7 @@
   // Disegna il percorso (verde = corsa, grigio = camminata) su una mappa stile "Google Maps"
   // (OpenFreeMap, stile Liberty, vettoriale e senza chiave). Restituisce una funzione che
   // sposta il segnaposto sul punto i della serie, sincronizzata con i grafici.
-  async function disegnaMappa(s) {
+  async function disegnaMappa(s, corsa) {
     const el = document.getElementById('dd-map');
     if (!el) return null;
     const errore = () => { el.innerHTML = '<div class="empty" style="padding:40px 16px">' + T('Mappa non disponibile (serve la connessione a internet)', 'Map unavailable (internet connection needed)') + '</div>'; };
@@ -3192,7 +3192,7 @@
       // vista satellitare (Esri World Imagery) con i nomi di strade e luoghi della mappa vettoriale sopra
       const stile = map.getStyle().layers;
       const primoSimbolo = stile.find((l) => l.type === 'symbol');
-      map.addSource('satellite', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: 256, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
+      map.addSource('satellite', { type: 'raster', tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: window.devicePixelRatio > 1 ? 128 : 256, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
       map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-fade-duration': 150 } }, primoSimbolo && primoSimbolo.id);
       stile.forEach((l) => {
         if (['fill', 'line', 'fill-extrusion', 'background', 'hillshade'].includes(l.type)) map.setLayoutProperty(l.id, 'visibility', 'none');
@@ -3249,7 +3249,7 @@
       wrap.classList.add('rivivi');
       document.body.classList.add('rivivi-on');
       wrap.insertAdjacentHTML('beforeend',
-        '<div class="rv-hud" aria-live="off"><div><b id="rv-km">0,00</b><span>km</span></div><div><b id="rv-t">0:00</b><span>' + T('tempo', 'time') + '</span></div><div><b id="rv-p">–</b><span>/km</span></div>' + (s.hr ? '<div><b id="rv-fc">–</b><span>bpm</span></div>' : '') + '</div>' +
+        '<div class="rv-hud" aria-live="off"><div><b id="rv-km">0,00</b><span>km</span></div><div><b id="rv-t">0:00</b><span>' + T('tempo', 'time') + '</span></div><div><b id="rv-p">–</b><span>/km</span></div>' + (s.hr ? '<div><b id="rv-fc">–</b><span>bpm</span></div>' : '') + (s.alt ? '<div><b id="rv-alt">–</b><span>' + T('m alt.', 'm elev.') + '</span></div>' : '') + '</div>' +
         '<button type="button" class="rv-back" id="rv-x">' + ICO.indietro + '<span>' + T('Indietro', 'Back') + '</span></button>' +
         '<div class="rv-bar"><button type="button" class="rv-btn" id="rv-pp" aria-label="' + T('Pausa', 'Pause') + '">' + ICO.pausa + '</button>' +
           '<div class="rv-prog" id="rv-prog" role="slider" aria-label="' + T('Avanzamento', 'Progress') + '" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0"><i><b id="rv-fill"></b></i></div>' +
@@ -3279,11 +3279,26 @@
         $w('#rv-t').textContent = s.t ? fmtDurata(s.t[i]) : '–';
         $w('#rv-p').textContent = fmtPasso(passoA(i));
         if (s.hr && $w('#rv-fc')) $w('#rv-fc').textContent = s.hr[i] ? fmt0(s.hr[i]) : '–';
+        if (s.alt && $w('#rv-alt')) $w('#rv-alt').textContent = s.alt[i] != null ? fmt0(s.alt[i]) : '–';
+        if (u < 1 && $w('.rv-fine')) { $w('.rv-fine').remove(); $w('.rv-hud').hidden = false; }
         $w('#rv-fill').style.width = (u * 100).toFixed(1) + '%';
         $w('#rv-prog').setAttribute('aria-valuenow', String(Math.round(u * 100)));
       };
       const fine = () => {
         finito = true; inPausa = true;
+        // a fine percorso: i dati veri della corsa (gli stessi del dettaglio), non l'ultimo istante
+        if (corsa && !$w('.rv-fine')) {
+          const r = (l, v, un) => (v == null || v === '–' ? '' : '<div><b>' + v + (un ? '<small>' + un + '</small>' : '') + '</b><span>' + l + '</span></div>');
+          $w('.rv-hud').hidden = true;
+          $w('.rv-bar').insertAdjacentHTML('beforebegin', '<div class="rv-fine"><h3>' + esc(corsa.nome || T('Corsa', 'Run')) + '</h3><div class="rv-fine-g">' +
+            r(T('Distanza', 'Distance'), fmt1(corsa.distanza), 'km') +
+            r(T('Tempo', 'Time'), fmtDurata(corsa.tempo)) +
+            r(corsa.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo medio', 'Avg pace'), fmtPasso(corsa.passo_corsa || corsa.passo_medio), '/km') +
+            r(T('FC media', 'Avg HR'), corsa.fc_media ? fmt0(corsa.fc_media) : null, 'bpm') +
+            r(T('FC max', 'Max HR'), corsa.fc_max ? fmt0(corsa.fc_max) : null, 'bpm') +
+            r(T('Dislivello', 'Elevation gain'), corsa.dislivello != null ? fmt0(corsa.dislivello) : null, 'm') +
+            '</div></div>');
+        }
         $w('#rv-pp').innerHTML = ICO.play; $w('#rv-pp').setAttribute('aria-label', T('Rivedi', 'Replay'));
         map.fitBounds(bounds, { padding: 60, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
       };
@@ -3319,7 +3334,7 @@
         chiudiRivivi = null;
         cancelAnimationFrame(raf);
         wrap.classList.remove('rivivi'); document.body.classList.remove('rivivi-on');
-        wrap.querySelectorAll('.rv-hud, .rv-bar').forEach((x) => x.remove());
+        wrap.querySelectorAll('.rv-hud, .rv-bar, .rv-back, .rv-fine').forEach((x) => x.remove());
         try { map.setTerrain(null); } catch (_) { /* ok */ }
         map.setLayoutProperty('fatto', 'visibility', 'none');
         ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 1));
