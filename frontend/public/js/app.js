@@ -1586,6 +1586,7 @@
     const sh = $('#sheet');
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
+    if (location.hash === '#piano-guida') { apriGuida(); return; }
     const mu = location.hash.match(/^#uso\/(\d+)$/);
     if (mu) { apriUso(mu[1]); return; }
     const m = location.hash.match(/^#(seduta|salute)\/(.+)$/);
@@ -2029,26 +2030,9 @@
       campo('acc-ath', 'Athlete ID', '<input id="acc-ath" name="athlete_id" inputmode="text" placeholder="i123456" value="' + esc(p.athlete_id) + '">') +
       campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
       '<h3>' + T('Programma', 'Plan') + '</h3>' +
-      campo('acc-ob', T('Obiettivo', 'Goal'), '<select id="acc-ob" name="obiettivo">' + OBIETTIVI_UI.map((o) => '<option value="' + o[0] + '"' + ((p.obiettivo || 'mezza') === o[0] ? ' selected' : '') + '>' + (LANG === 'en' ? o[2] : o[1]) + T(' · ' + o[3] + ' settimane', ' · ' + o[3] + ' weeks') + '</option>').join('') + '</select>',
-        T('Cambiandolo a piano iniziato prosegui dalla stessa fase del nuovo piano, dalla settimana in corso; le corse fatte restano. La maratona è consigliata a chi corre già da almeno 6 mesi.', 'Changing it mid-plan continues at the same phase of the new plan from the current week; your runs stay. The marathon is recommended if you have been running for at least 6 months.')) +
-      '<div class="acc-row2b">' +
-        campo('acc-int', T('Intensità', 'Intensity'), '<select id="acc-int" name="intensita">' + INTENSITA_UI().map((o) => '<option value="' + o[0] + '"' + ((p.intensita || 'equilibrata') === o[0] ? ' selected' : '') + '>' + (LANG === 'en' ? o[2] : o[1]) + ' · ' + o[3] + '</option>').join('') + '</select>') +
-      '</div>' +
-      (ultimiDati && ultimiDati.programma && ultimiDati.programma.intensita ? (() => { const it = ultimiDati.programma.intensita; return '<p class="acc-int-stato">' + T('Adesso: ', 'Now: ') + '<b>' + esc(it.nome) + (it.percentuale ? ' · ' + (it.percentuale > 0 ? '+' : '') + it.percentuale + '%' : '') + '</b>' + (it.ultima_modifica ? ' · ' + esc(it.ultima_modifica.motivo) : T(' · il coach la ritocca da solo se serve', ' · the coach fine-tunes it when needed')) + '</p>'; })() : '') +
-      // giorni per correre: proposti (il coach li usa quando puo') oppure obbligatori (solo quelli, il piano si adatta)
-      (() => {
-        const scelti = new Set(p.giorni_sedute || []);
-        const fissi = p.giorni_modo === 'fissi';
-        const nomi = LANG === 'en' ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
-        const lunghi = LANG === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
-        const modo = (v, it, en, on) => '<label><input type="radio" name="giorni_modo" value="' + v + '"' + (on ? ' checked' : '') + '><span>' + T(it, en) + '</span></label>';
-        return '<fieldset class="acc-f acc-giorni"><legend>' + T('Giorni per correre', 'Running days') + '</legend>' +
-          '<div class="giorni-modo" role="radiogroup" aria-label="' + T('Come usare i giorni', 'How to use the days') + '">' + modo('preferiti', 'Proposti', 'Suggested', !fissi) + modo('fissi', 'Obbligatori', 'Fixed', fissi) + '</div>' +
-          '<div class="giorni-pick">' +
-          [1, 2, 3, 4, 5, 6, 0].map((g, i) => '<label title="' + lunghi[i] + '"><input type="checkbox" name="giorni_sedute" value="' + g + '"' + (scelti.has(g) ? ' checked' : '') + ' aria-label="' + lunghi[i] + '"><span>' + nomi[i] + '</span></label>').join('') +
-          '</div><small>' + T('<b>Proposti</b>: il coach li usa quando può e ne sceglie altri se servono, dicendoti perché. <b>Obbligatori</b>: corri solo in quei giorni; con 1 giorno il piano si allunga, con 2 salta una corsa facile. Nessun giorno = decide il coach.', '<b>Suggested</b>: the coach uses them when it can and picks others if needed, telling you why. <b>Fixed</b>: you only run on those days; with 1 day the plan gets longer, with 2 it skips an easy run. No days = the coach decides.') + '</small></fieldset>' +
-          '<div id="acc-anteprima" class="acc-anteprima" aria-live="polite" hidden></div>';
-      })() +
+      // obiettivo, intensita' e giorni si scelgono con la guida passo passo (tab Piano)
+      (() => { const r = riepilogoGuida(p); return '<div class="acc-piano"><p class="gc-kv"><span>🎯 ' + esc(r.ob) + '</span><span>⚡ ' + esc(r.it) + '</span><span>📅 ' + esc(r.giorni) + '</span></p>' +
+        '<button type="button" class="pill-btn" data-guida-apri>' + T('Rivedi con il coach', 'Review with the coach') + '</button></div>'; })() +
       // prima seduta e orario solo finche' il piano non e' iniziato (dopo restano quelli salvati)
       (!p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10))
         ? '<div class="acc-row acc-row2">' +
@@ -2198,31 +2182,13 @@
   // dopo un'azione si ricarica il pannello aperto (amministrazione o profilo)
   const riapri = () => (location.hash === '#admin' ? apriAdmin() : apriAccount());
 
-  // Cambio di obiettivo, intensità o giorni nel profilo: anteprima del nuovo piano prima di salvare
-  let anteprimaReq = 0;
+  // Anteprima del piano (guida passo passo nel tab Piano)
   const NOMI_TIPO_UI = () => ({ 'corsa-cammino': 'CC', facile: 'F', lungo: 'L', qualita: 'Q', recupero: 'R', gara: '🏁' });
-  document.addEventListener('change', async (e) => {
-    if (!['acc-ob', 'acc-int'].includes(e.target.id) && !['giorni_sedute', 'giorni_modo'].includes(e.target.name)) return;
-    const box = $('#acc-anteprima');
-    if (!box || !ME || !ME.profilo) return;
-    const pr = ME.profilo;
-    const ob = $('#acc-ob').value, it = $('#acc-int').value;
-    const giorni = [...document.querySelectorAll('#acc-form input[name=giorni_sedute]:checked')].map((x) => x.value).sort().join(',');
-    const modoEl = document.querySelector('#acc-form input[name=giorni_modo]:checked');
-    const modo = modoEl ? modoEl.value : 'preferiti';
-    const prima = (pr.giorni_sedute || []).map(String).sort().join(',');
-    if (ob === (pr.obiettivo || 'mezza') && it === (pr.intensita || 'equilibrata') && giorni === prima && (modo === (pr.giorni_modo || 'preferiti') || !giorni)) { box.hidden = true; return; }
-    const n = ++anteprimaReq;
-    box.hidden = false;
-    box.innerHTML = '<div class="skeleton" style="height:90px"></div>';
-    let a;
-    try { a = await caricaJson('/api/piano/anteprima?obiettivo=' + encodeURIComponent(ob) + '&intensita=' + encodeURIComponent(it) + '&giorni=' + encodeURIComponent(giorni) + '&modo=' + encodeURIComponent(modo)); } catch (_) { a = null; }
-    if (n !== anteprimaReq) return;
-    if (!a) { box.innerHTML = '<p class="sub">' + T('Anteprima non disponibile: il piano si ricalcola al salvataggio.', 'Preview not available: the plan is recalculated when you save.') + '</p>'; return; }
+  function htmlAnteprima(a, nota) {
     const fr = a.frequenza || {};
     const sigle = NOMI_TIPO_UI();
     const sett = a.prossime && a.prossime[0] ? a.prossime[0].settimana : a.settimana_piano;
-    box.innerHTML = '<h4>' + T('Il tuo piano diventa', 'Your plan becomes') + '</h4>' +
+    return '<h4>' + T('Il tuo piano diventa', 'Your plan becomes') + '</h4>' +
       '<div class="ap-kv">' +
         '<div><b>' + a.settimana_piano + '<small>/' + a.settimane_totali + '</small></b><span>' + T('settimana', 'week') + ' · ' + esc(a.fase) + '</span></div>' +
         '<div><b>' + (fr.attuale || 3) + (fr.massima > (fr.attuale || 3) && fr.modo !== 'fissi' ? '<small>→' + fr.massima + '</small>' : '') + '</b><span>' + T('sedute a settimana', 'sessions a week') + '</span></div>' +
@@ -2231,7 +2197,142 @@
       (a.prossime && a.prossime.length ? '<p class="ap-sett">' + T('Settimana ' + sett + ' del piano', 'Plan week ' + sett) + '</p><ul class="ap-sed">' + a.prossime.map((x) =>
         '<li><b>S' + x.seduta + '</b><span class="sig">' + (sigle[x.tipo] || '') + '</span><span class="ap-nome">' + esc(x.nome) + (x.extra ? T(' · in più', ' · extra') : '') + '</span><span class="ap-d">' + esc(fmtData(x.data)) + '</span></li>').join('') + '</ul>' : '') +
       (fr.consigli && fr.consigli.length ? '<ul class="ap-cons">' + fr.consigli.map((c) => '<li>' + esc(c) + '</li>').join('') + '</ul>' : '') +
-      '<p class="sub">' + (a.riparte_da_oggi ? T('Stessa fase, dalla settimana in corso: le corse fatte restano. ', 'Same phase, from the current week: your runs stay. ') : '') + T('Salva per confermare: poi ti mostro il piano.', 'Save to confirm: then I will show you the plan.') + '</p>';
+      (nota ? '<p class="sub">' + nota + '</p>' : '');
+  }
+
+  /* ---- Guida passo passo nel tab Piano: obiettivo, intensita', giorni, poi il coach propone ---- */
+  let guida = null;
+  const DESC_OB = () => ({
+    '5k': T('Il primo traguardo: ideale se parti da zero o torni a correre.', 'The first milestone: ideal if you start from zero or are getting back into running.'),
+    '10k': T('Il passo dopo i 5 km: più resistenza, una seduta di ritmo a settimana.', 'The step after 5K: more endurance, one tempo session a week.'),
+    mezza: T('21 km: serve costanza, il lungo cresce piano ogni settimana.', '21 km: it takes consistency, the long run grows slowly every week.'),
+    maratona: T('42 km: consigliata se corri già da almeno 6 mesi con regolarità.', '42 km: recommended if you have been running regularly for at least 6 months.'),
+  });
+  const DESC_INT = () => ({
+    tranquilla: T('Volumi un po’ più bassi. Per chi inizia, ha poco tempo o rientra da uno stop.', 'Slightly lower volume. For beginners, busy weeks or a comeback.'),
+    equilibrata: T('Il piano così com’è. La scelta giusta per la maggior parte delle persone.', 'The plan as designed. The right choice for most people.'),
+    ambiziosa: T('Volumi più alti e prima la 4ª seduta. Per chi corre già e recupera bene.', 'Higher volume and the 4th session sooner. For runners who already train and recover well.'),
+  });
+  function riepilogoGuida(pr) {
+    const ob = OBIETTIVI_UI.find((o) => o[0] === (pr.obiettivo || 'mezza')) || OBIETTIVI_UI[2];
+    const it = INTENSITA_UI().find((o) => o[0] === (pr.intensita || 'equilibrata')) || INTENSITA_UI()[1];
+    const brevi = LANG === 'en' ? ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] : ['dom', 'lun', 'mar', 'mer', 'gio', 'ven', 'sab'];
+    const gg = (pr.giorni_sedute || []).slice().sort((x, y) => ((x + 6) % 7) - ((y + 6) % 7)).map((g) => brevi[g]).join(' ');
+    const giorni = gg ? gg + ' · ' + (pr.giorni_modo === 'fissi' ? T('obbligatori', 'fixed') : T('proposti', 'suggested')) : T('decide il coach', 'coach decides');
+    return { ob: LANG === 'en' ? ob[2] : ob[1], it: LANG === 'en' ? it[2] : it[1], giorni };
+  }
+  function renderGuidaCard() {
+    if (!ME || !ME.profilo) return '';
+    const r = riepilogoGuida(ME.profilo);
+    return '<section class="card guida-card"><div class="gc-top"><div><h3>' + T('Il tuo piano con il coach', 'Your plan with the coach') + '</h3>' +
+      '<p class="gc-kv"><span>🎯 ' + esc(r.ob) + '</span><span>⚡ ' + esc(r.it) + '</span><span>📅 ' + esc(r.giorni) + '</span></p></div></div>' +
+      '<button type="button" class="btn-primary gc-btn" data-guida-apri>' + T('Rivedi il piano passo passo', 'Review the plan step by step') + '</button>' +
+      '<p class="gc-nota">' + T('Scegli obiettivo, intensità e giorni: il coach ti propone il piano e ti dice cosa ne pensa. Poi lo adatta da solo ogni settimana.', 'Pick goal, intensity and days: the coach proposes the plan and tells you what it thinks. Then it adapts it by itself every week.') + '</p></section>';
+  }
+  function apriGuida() {
+    if (!ME || !ME.profilo) return;
+    const pr = ME.profilo;
+    if (!guida) guida = { passo: 1, obiettivo: pr.obiettivo || 'mezza', intensita: pr.intensita || 'equilibrata', giorni: new Set(pr.giorni_sedute || []), modo: pr.giorni_modo || 'preferiti', anteprima: null, req: 0 };
+    mostraSheet(T('Il piano con il coach', 'Plan with the coach'), htmlGuida());
+    if (guida.passo >= 3) caricaAnteprimaGuida();
+  }
+  function htmlGuida() {
+    const g = guida, P = 4;
+    const bolla = (t) => '<div class="gd-coach"><span class="gd-av" aria-hidden="true">🧑‍🏫</span><p>' + t + '</p></div>';
+    const passi = '<ol class="gd-passi" aria-label="' + T('Passi', 'Steps') + '">' + [T('Obiettivo', 'Goal'), T('Intensità', 'Intensity'), T('Giorni', 'Days'), T('Piano', 'Plan')].map((x, i) =>
+      '<li class="' + (i + 1 < g.passo ? 'fatto' : i + 1 === g.passo ? 'ora' : '') + '"' + (i + 1 === g.passo ? ' aria-current="step"' : '') + '><button type="button" data-guida-passo="' + (i + 1) + '"' + (i + 1 > g.passo ? ' disabled' : '') + '><i>' + (i + 1) + '</i>' + x + '</button></li>').join('') + '</ol>';
+    const scelta = (nome, v, on, tit, sotto, extra) => '<label class="gd-opz' + (on ? ' on' : '') + '"><input type="radio" name="' + nome + '" value="' + v + '"' + (on ? ' checked' : '') + '><span><b>' + tit + (extra ? '<small>' + extra + '</small>' : '') + '</b><small>' + sotto + '</small></span></label>';
+    let corpo = '';
+    if (g.passo === 1) {
+      const d = DESC_OB();
+      corpo = bolla(T('Partiamo dalla meta. <b>Dove vuoi arrivare?</b> Se cambi obiettivo a piano iniziato, riparti dalla stessa fase del nuovo piano: le corse fatte restano.', 'Let’s start with the destination. <b>Where do you want to get to?</b> If you change goal mid-plan you continue at the same phase of the new plan: your runs stay.')) +
+        '<div class="gd-opzioni" role="radiogroup">' + OBIETTIVI_UI.map((o) => scelta('gd-ob', o[0], g.obiettivo === o[0], LANG === 'en' ? o[2] : o[1], d[o[0]], o[3] + T(' sett.', ' wks'))).join('') + '</div>';
+    } else if (g.passo === 2) {
+      const d = DESC_INT();
+      const it = ultimiDati && ultimiDati.programma && ultimiDati.programma.intensita;
+      corpo = bolla(T('<b>Quanto vuoi spingere?</b> Non preoccuparti di sbagliare: ogni 3 settimane guardo come rispondi e ritocco io l’intensità di ±10%.', '<b>How hard do you want to push?</b> Don’t worry about getting it wrong: every 3 weeks I look at how you respond and adjust the intensity by ±10% myself.')) +
+        '<div class="gd-opzioni" role="radiogroup">' + INTENSITA_UI().map((o) => scelta('gd-int', o[0], g.intensita === o[0], LANG === 'en' ? o[2] : o[1], d[o[0]], o[3])).join('') + '</div>' +
+        (it ? '<p class="gd-nota">' + T('Adesso: ', 'Now: ') + '<b>' + esc(it.nome) + (it.percentuale ? ' · ' + (it.percentuale > 0 ? '+' : '') + it.percentuale + '%' : '') + '</b>' + (it.ultima_modifica ? ' · ' + esc(it.ultima_modifica.motivo) : '') + '</p>' : '');
+    } else if (g.passo === 3) {
+      const nomi = LANG === 'en' ? ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'] : ['L', 'M', 'M', 'G', 'V', 'S', 'D'];
+      const lunghi = LANG === 'en' ? ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] : ['lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato', 'domenica'];
+      corpo = bolla(T('<b>Quando puoi correre?</b> Scegli i giorni e dimmi se sono una preferenza o un vincolo. Se un giorno non va bene te lo dico, ma ci proviamo comunque.', '<b>When can you run?</b> Pick the days and tell me whether they are a preference or a must. If something isn’t ideal I’ll tell you, but we’ll give it a go anyway.')) +
+        '<div class="gd-opzioni gd-due" role="radiogroup">' +
+          scelta('gd-modo', 'preferiti', g.modo !== 'fissi', T('Proposti', 'Suggested'), T('Li uso quando posso; se serve ne scelgo altri e ti dico perché.', 'I use them when I can; if needed I pick others and tell you why.')) +
+          scelta('gd-modo', 'fissi', g.modo === 'fissi', T('Obbligatori', 'Fixed'), T('Solo questi giorni. Con 1 giorno il piano si allunga, con 2 salto una corsa facile.', 'Only these days. With 1 day the plan gets longer, with 2 I skip an easy run.')) +
+        '</div>' +
+        '<div class="giorni-pick gd-giorni">' + [1, 2, 3, 4, 5, 6, 0].map((x, i) => '<label title="' + lunghi[i] + '"><input type="checkbox" name="gd-giorno" value="' + x + '"' + (g.giorni.has(x) ? ' checked' : '') + ' aria-label="' + lunghi[i] + '"><span>' + nomi[i] + '</span></label>').join('') + '</div>' +
+        '<p class="gd-nota">' + T('Nessun giorno = decido io, con il lungo di preferenza nel weekend.', 'No days = I decide, with the long run preferably at the weekend.') + '</p>' +
+        '<div id="gd-consigli" aria-live="polite">' + consigliGuidaHtml() + '</div>';
+    } else {
+      corpo = bolla(T('<b>Ecco cosa ti propongo.</b> Se ti convince confermalo; altrimenti torna indietro e cambia quello che vuoi.', '<b>Here is what I propose.</b> If you like it, confirm it; otherwise go back and change anything you want.')) +
+        '<div id="gd-anteprima" class="acc-anteprima" aria-live="polite">' + (g.anteprima ? htmlAnteprima(g.anteprima) : '<div class="skeleton" style="height:120px"></div>') + '</div>' +
+        '<div class="gd-poi"><h4>' + T('Poi ci penso io', 'Then I take care of it') + '</h4><ul>' +
+          '<li>' + T('<b>Ogni giorno</b> guardo FC a riposo, HRV e sonno: se sei stanco la seduta si alleggerisce.', '<b>Every day</b> I check resting HR, HRV and sleep: if you are tired the session gets lighter.') + '</li>' +
+          '<li>' + T('<b>Ogni settimana</b> decido se avanzare, ripetere o tornare indietro, e se aggiungere una seduta.', '<b>Every week</b> I decide whether to move on, repeat or step back, and whether to add a session.') + '</li>' +
+          '<li>' + T('<b>Ogni 3 settimane</b> ritocco l’intensità in base a come rispondi.', '<b>Every 3 weeks</b> I fine-tune the intensity based on how you respond.') + '</li></ul></div>' +
+        '<p id="gd-err" class="acc-err" hidden></p>';
+    }
+    const nav = '<div class="gd-nav">' + (g.passo > 1 ? '<button type="button" class="pill-btn gd-ind" data-guida-vai="-1">' + T('Indietro', 'Back') + '</button>' : '<span></span>') +
+      (g.passo < P ? '<button type="button" class="btn-primary" data-guida-vai="1">' + T('Avanti', 'Next') + '</button>'
+        : '<button type="button" class="btn-primary" data-guida-conferma' + (ME.demo ? ' disabled' : '') + '>' + (ME.demo ? T('In demo non si salva', 'Not saved in the demo') : T('Conferma il piano', 'Confirm the plan')) + '</button>') + '</div>';
+    return '<div class="guida">' + passi + corpo + nav + '</div>';
+  }
+  function consigliGuidaHtml() {
+    const a = guida && guida.anteprima;
+    const c = a && a.frequenza && a.frequenza.consigli;
+    if (!c || !c.length) return guida && guida.giorni.size ? '<p class="gd-ok">' + T('👍 Va bene così: con questi giorni il piano resta quello ideale.', '👍 All good: with these days the plan stays the ideal one.') + '</p>' : '';
+    return '<ul class="ap-cons">' + c.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>';
+  }
+  async function caricaAnteprimaGuida() {
+    const g = guida; if (!g) return;
+    const n = ++g.req;
+    const giorni = [...g.giorni].sort().join(',');
+    let a;
+    try { a = await caricaJson('/api/piano/anteprima?obiettivo=' + encodeURIComponent(g.obiettivo) + '&intensita=' + encodeURIComponent(g.intensita) + '&giorni=' + encodeURIComponent(giorni) + '&modo=' + encodeURIComponent(g.modo)); } catch (_) { a = null; }
+    if (guida !== g || n !== g.req) return;
+    g.anteprima = a;
+    const box = $('#gd-anteprima'), cons = $('#gd-consigli');
+    if (box) box.innerHTML = a ? htmlAnteprima(a) : '<p class="sub">' + T('Anteprima non disponibile: il piano si ricalcola quando confermi.', 'Preview not available: the plan is recalculated when you confirm.') + '</p>';
+    if (cons) cons.innerHTML = consigliGuidaHtml();
+  }
+  $('#sheet-body').addEventListener('change', (e) => {
+    if (!guida || !e.target.closest('.guida')) return;
+    const t = e.target;
+    if (t.name === 'gd-ob') guida.obiettivo = t.value;
+    else if (t.name === 'gd-int') guida.intensita = t.value;
+    else if (t.name === 'gd-modo') guida.modo = t.value;
+    else if (t.name === 'gd-giorno') { const v = Number(t.value); if (t.checked) guida.giorni.add(v); else guida.giorni.delete(v); }
+    else return;
+    if (t.type === 'radio') t.closest('.gd-opzioni').querySelectorAll('.gd-opz').forEach((l) => l.classList.toggle('on', l.contains(t)));
+    guida.anteprima = null;
+    if (guida.passo === 3) caricaAnteprimaGuida();
+  });
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('[data-guida-apri]')) { guida = null; apriSheet('#piano-guida'); return; }
+    if (!guida) return;
+    const vai = e.target.closest('[data-guida-vai]'), salta = e.target.closest('[data-guida-passo]');
+    if (vai || salta) {
+      guida.passo = Math.max(1, Math.min(4, salta ? Number(salta.dataset.guidaPasso) : guida.passo + Number(vai.dataset.guidaVai)));
+      $('#sheet-body').innerHTML = htmlGuida();
+      $('#sheet').scrollTop = 0;
+      if (guida.passo >= 3 && !guida.anteprima) caricaAnteprimaGuida();
+      return;
+    }
+    const b = e.target.closest('[data-guida-conferma]');
+    if (!b || ME.demo) return;
+    b.disabled = true;
+    const g = guida;
+    const corpo = { obiettivo: g.obiettivo, intensita: g.intensita, giorni_sedute: [...g.giorni].sort().join(','), giorni_modo: g.giorni.size ? g.modo : 'preferiti' };
+    try {
+      const { ok, out } = await inviaJson('PUT', '/api/profilo', corpo);
+      if (!ok) { const err = $('#gd-err'); if (err) { err.textContent = T('Salvataggio non riuscito: riprova.', 'Could not save: please try again.'); err.hidden = false; } b.disabled = false; return; }
+      ME = out; guida = null;
+      toast(T('Piano confermato: eccolo', 'Plan confirmed: here it is'), 'ok');
+      chiudiSheet();
+      await caricaDati(true);
+      vaiTab('piano');
+    } catch (_) { b.disabled = false; }
   });
 
   async function apriAccount() {
@@ -2265,8 +2366,6 @@
       e.preventDefault();
       const f = new FormData(e.target), corpo = {};
       for (const [k, v] of f.entries()) if (k !== 'giorni_sedute' && (String(v).trim() !== '' || ['athlete_id', 'eta', 'fc_max', 'altezza', 'peso', 'data_nascita'].includes(k))) corpo[k] = String(v).trim();
-      const giorni = f.getAll('giorni_sedute');
-      corpo.giorni_sedute = giorni.join(',');
       const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
       const err = $('#acc-err'); err.hidden = true;
       try {
@@ -2277,17 +2376,10 @@
           err.hidden = false;
           return;
         }
-        const cambiato = corpo.obiettivo && ME && ME.profilo && corpo.obiettivo !== (ME.profilo.obiettivo || 'mezza');
-        const cambiataInt = corpo.intensita && ME && ME.profilo && corpo.intensita !== (ME.profilo.intensita || 'equilibrata');
-        const giorniPrima = ((ME && ME.profilo && ME.profilo.giorni_sedute) || []).slice().sort().join(',');
-        const giorniCambiati = giorni.map(Number).sort().join(',') !== giorniPrima;
-        const modoCambiato = giorni.length > 0 && (corpo.giorni_modo || 'preferiti') !== ((ME && ME.profilo && ME.profilo.giorni_modo) || 'preferiti');
         ME = out;
-        toast(cambiato ? T('Obiettivo aggiornato: ecco il nuovo piano', 'Goal updated: here is your new plan') : cambiataInt ? T('Intensità aggiornata: ecco il piano', 'Intensity updated: here is your plan') : (giorniCambiati || modoCambiato) ? T('Giorni salvati: ecco il calendario rifatto', 'Days saved: here is the redone calendar') : T('Profilo salvato', 'Profile saved'), 'ok');
+        toast(T('Profilo salvato', 'Profile saved'), 'ok');
         await caricaDati(true);
         if (ME.completo && ME.profilo.ha_chiave) sincronizza();
-        // nuovo obiettivo o intensità: si mostra subito il piano ricalcolato
-        if (cambiato || cambiataInt || giorniCambiati || modoCambiato) { vaiTab('piano'); return; }
         apriAccount();
       } catch (_) { /* gestito */ } finally { btn.disabled = false; }
     } else if (e.target.id === 'acc-livello-form') {
@@ -2870,7 +2962,7 @@
         renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
-        renderProgramma(d)) +
+        renderGuidaCard() + renderProgramma(d)) +
       pane('corse', T('Corse', 'Runs'), T('tocca una corsa per grafici e mappa', 'tap a run for charts and map'), '<div id="corse-wrap"></div>') +
       pane('progressi', T('Progressi', 'Progress'), '',
         renderObiettivo(d) + renderSblocchi(d) + renderPasso(d) + renderPrevisioni(d) + renderCorsa(d) + '<div id="storico-wrap" class="wrap"></div>') +

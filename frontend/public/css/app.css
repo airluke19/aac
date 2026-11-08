@@ -1663,3 +1663,44 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .ap-sed .ap-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ap-sed .ap-d { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
 .ap-cons { margin: 12px 0 0; padding: 10px 12px 10px 28px; border-radius: 12px; background: color-mix(in srgb, var(--warn) 12%, transparent); font-size: .8rem; line-height: 1.45; display: grid; gap: 6px; }
+
+/* ---- Guida passo passo del piano (tab Piano) ---- */
+.guida-card h3 { margin: 0 0 8px; }
+.gc-kv { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.gc-kv span { padding: 5px 10px; border-radius: 999px; background: var(--surface-2); font-size: .8rem; font-weight: 600; }
+.gc-btn { width: 100%; margin-top: 14px; }
+.gc-nota { margin: 10px 0 0; font-size: .78rem; color: var(--muted); line-height: 1.45; }
+.acc-piano { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.guida { display: flex; flex-direction: column; gap: 16px; }
+.gd-passi { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.gd-passi button { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 0; border: 0; background: none; color: var(--muted); font: inherit; font-size: .72rem; font-weight: 600; cursor: pointer; }
+.gd-passi button:disabled { cursor: default; opacity: .6; }
+.gd-passi i { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: var(--surface-2); border: 1px solid var(--line); }
+.gd-passi .fatto i { background: color-mix(in srgb, var(--accent) 25%, var(--surface-2)); border-color: var(--accent); }
+.gd-passi .ora i { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.gd-passi .ora button { color: var(--text); }
+.gd-coach { display: flex; gap: 10px; align-items: flex-start; }
+.gd-av { flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 18%, var(--surface-2)); font-size: 1.1rem; }
+.gd-coach p { margin: 0; padding: 10px 14px; border-radius: 4px 16px 16px 16px; background: var(--surface-2); font-size: .9rem; line-height: 1.45; }
+.gd-opzioni { display: grid; gap: 8px; }
+.gd-opzioni.gd-due { grid-template-columns: 1fr 1fr; }
+.gd-opz { position: relative; cursor: pointer; }
+.gd-opz input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.gd-opz > span { display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 12px 14px; border-radius: 14px; border: 1.5px solid var(--line); background: var(--surface-2); transition: border-color .15s, background .15s; }
+.gd-opz b { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .95rem; }
+.gd-opz b small { font-size: .74rem; color: var(--muted); font-weight: 600; }
+.gd-opz > span > small { font-size: .78rem; color: var(--muted); line-height: 1.4; }
+.gd-opz.on > span { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
+.gd-opz input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.gd-giorni { margin-top: -4px; }
+.gd-giorni input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+.gd-giorni span { display: flex; align-items: center; justify-content: center; height: 42px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font-size: .9rem; font-weight: 600; }
+.gd-nota { margin: -6px 0 0; font-size: .78rem; color: var(--muted); }
+.gd-ok { margin: 0; font-size: .84rem; }
+.gd-poi h4 { margin: 0 0 6px; font-size: .85rem; }
+.gd-poi ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: .82rem; line-height: 1.45; color: var(--muted); }
+.gd-poi b { color: var(--text); }
+.gd-nav { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-top: 4px; }
+.gd-nav .btn-primary { min-width: 140px; }
+.gd-ind { height: 40px; padding: 0 16px; font-size: .88rem; }
+@media (prefers-reduced-motion: reduce) { .gd-opz > span { transition: none; } }
