@@ -1404,7 +1404,6 @@ function scegliGiorni(sedute, c) {
   const n = sedute.length;
   const dure = sedute.map((d, i) => (sedutaDura(d) ? i : -1)).filter((i) => i >= 0);
   const facili = sedute.map((d, i) => (sedutaDura(d) ? -1 : i)).filter((i) => i >= 0);
-  const ordinata = sedute.some((d) => d[0] === 'gara'); // settimana della gara: l'ordine del piano non si tocca
   const dataDi = (off) => addDays(c.da, off);
   const dowDi = (off) => new Date(dayMs(dataDi(off))).getUTCDay();
   let migliore = null;
@@ -1420,11 +1419,18 @@ function scegliGiorni(sedute, c) {
       if (ieri) p -= 1;
       if (ieri && altroieri) { if (c.maxFila2) return null; p -= 2; }
     }
+    // settimana della gara: meglio la corsa facile prima e la camminata di recupero dopo
+    const kGara = giorni.findIndex((_, k) => sedute[mappa[k]][0] === 'gara');
+    if (kGara >= 0) giorni.forEach((_, k) => {
+      const t = sedute[mappa[k]][0];
+      if (t === 'recupero' && k > kGara) p += 3;
+      if (t === 'facile' && k < kGara) p += 2;
+    });
     giorni.forEach((g, k) => {
       const d = dataDi(g), dow = dowDi(g), sed = sedute[mappa[k]];
-      if (c.preferiti.has(dow)) p += 4;
+      if (c.preferiti.has(dow) && sed[0] !== 'gara') p += 4; // la gara non segue le preferenze: e' quasi sempre nel weekend
       if (sed[0] === 'lungo' && (dow === 0 || dow === 6)) p += 2;
-      if (sed[0] === 'gara' && (dow === 0 || dow === 6)) p += 6; // le gare si corrono quasi sempre nel weekend
+      if (sed[0] === 'gara' && (dow === 0 || dow === 6)) p += 8;
       if (c.precDow.has(dow)) p += 0.5;
       if (d < c.oggi) p += c.giorniCorsa.has(d) ? 5 : -6;
       else if (d === c.oggi && c.giorniCorsa.has(d)) p += 5;
@@ -1433,12 +1439,6 @@ function scegliGiorni(sedute, c) {
   };
   const combina = (da, scelti) => {
     if (scelti.length === n) {
-      if (ordinata) {
-        const mappa = scelti.map((_, k) => k);
-        const p = valuta(scelti, mappa);
-        if (p != null && (!migliore || p > migliore.p)) migliore = { p, giorni: scelti.slice(), mappa };
-        return;
-      }
       // posti delle sedute impegnative (in ogni ordine), le facili nei giorni rimasti nell'ordine del piano
       const posti = (rest, usati) => {
         if (!rest.length) {
@@ -1968,9 +1968,11 @@ function costruisciProgramma(oggiStr) {
       precDure: prec.dure, precCorsa: prec.corsa, precDow: prec.dow,
     }).sort((x, y) => x.off - y.off);
     prec = { dure: new Set(), corsa: new Set(), dow: new Set() };
+    const dataGara = (giorni.find(({ i }) => descs[i][0] === 'gara') || {}).off;
     giorni.forEach(({ off, i }, pos) => {
       const data = addDays(da, off);
-      const desc = descs[i];
+      // dopo la gara niente allunghi: resta una corsa facile di scarico
+      const desc = dataGara != null && off > dataGara && descs[i][0] === 'facile' ? ['facile', descs[i][1], false] : descs[i];
       const extra = i >= 3;
       const sed = sedutaDa(stepIdx, Math.min(i, 2), data, desc, null);
       const dow = new Date(dayMs(data)).getUTCDay();
@@ -1978,7 +1980,8 @@ function costruisciProgramma(oggiStr) {
       if (extra) perche = proiezione
         ? L(`Seduta in più prevista: il coach la aggiunge se reggi bene il carico (${n} a settimana).`, `Extra session planned: the coach adds it if you handle the load well (${n} a week).`)
         : L(`Seduta in più (${n} a settimana): la tua forma regge più volume, sempre a ritmo facile.`, `Extra session (${n} a week): your fitness can take more volume, always at an easy pace.`);
-      if (preferiti.size && !preferiti.has(dow) && !(data <= oggiStr && dati.giorniCorsa.has(data)))
+      if (desc[0] === 'gara') perche = L('Data indicativa: le gare si corrono quasi sempre nel weekend.', 'Indicative date: races are almost always at the weekend.');
+      else if (preferiti.size && !preferiti.has(dow) && !(data <= oggiStr && dati.giorniCorsa.has(data)))
         perche = (perche ? perche + ' ' : '') + L('Fuori dai tuoi giorni preferiti: lì non c’era posto senza due sedute impegnative di fila o senza recuperare quella saltata.', 'Outside your preferred days: there was no room there without two hard sessions back to back or without making up a missed one.');
       descPerData.set(data, desc);
       calendario.push({ ...sed, seduta: pos + 1, sedute_settimana: n, extra, perche_giorno: perche, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: data < oggiStr });
