@@ -1001,8 +1001,8 @@ body.sheet-open .imp-bar { display: none; } /* non copre il pulsante Indietro de
 footer { padding-bottom: 8px; }
 
 /* Obiettivo in una riga */
-.goal-mini { appearance: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; background: var(--surface); border-radius: 18px; padding: 13px 16px 14px; display: flex; flex-direction: column; gap: 10px; }
-.gm-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.goal-mini { min-width: 0; appearance: none; border: 0; font: inherit; color: inherit; text-align: left; cursor: pointer; width: 100%; background: var(--surface); border-radius: 18px; padding: 13px 16px 14px; display: flex; flex-direction: column; gap: 10px; }
+.gm-top { display: flex; align-items: baseline; gap: 8px; min-width: 0; width: 100%; } /* senza width il bottone flex allargava la pagina su telefono */
 .gm-top b { font-size: 1rem; font-weight: 700; white-space: nowrap; }
 .gm-top span { color: var(--muted); font-size: .82rem; flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .gm-top .chev, .ultima .chev { font-style: normal; color: var(--muted); font-size: 1.3rem; line-height: 1; }
