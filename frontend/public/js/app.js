@@ -2238,8 +2238,18 @@
   function apriGuida() {
     if (!ME || !ME.profilo) return;
     const pr = ME.profilo;
-    guida = { passo: 1, obiettivo: pr.obiettivo || 'mezza', intensita: pr.intensita || 'equilibrata', giorni: new Set(pr.giorni_sedute || []), modo: pr.giorni_modo || 'preferiti', anteprima: null, req: 0 };
+    const oggiS = (ultimiDati && ultimiDati.oggi) || new Date().toLocaleDateString('sv-SE');
+    const libero = !pr.programma_inizio || pr.programma_inizio > oggiS; // piano non ancora iniziato: si sceglie la prima seduta
+    guida = { passo: 1, obiettivo: pr.obiettivo || 'mezza', intensita: pr.intensita || 'equilibrata', giorni: new Set(pr.giorni_sedute || []), modo: pr.giorni_modo || 'preferiti', anteprima: null, req: 0,
+      oggi: oggiS, inizioLibero: libero, inizio: pr.programma_inizio || null, inizioManuale: Boolean(pr.programma_inizio) };
+    if (libero && !guida.inizio) guida.inizio = primoGiornoUtile(guida);
     ridisegnaGuida();
+  }
+  // primo giorno utile da oggi: oggi, oppure il primo dei giorni scelti
+  function primoGiornoUtile(g) {
+    let d = new Date(g.oggi + 'T12:00:00Z');
+    for (let i = 0; i < 7 && g.giorni.size && !g.giorni.has(d.getUTCDay()); i++) d = new Date(d.getTime() + 864e5);
+    return d.toISOString().slice(0, 10);
   }
   function ridisegnaGuida() {
     const box = $('#guida-box');
@@ -2272,6 +2282,8 @@
         '</div>' +
         '<div class="giorni-pick gd-giorni">' + [1, 2, 3, 4, 5, 6, 0].map((x, i) => '<label title="' + lunghi[i] + '"><input type="checkbox" name="gd-giorno" value="' + x + '"' + (g.giorni.has(x) ? ' checked' : '') + ' aria-label="' + lunghi[i] + '"><span>' + nomi[i] + '</span></label>').join('') + '</div>' +
         '<p class="gd-nota">' + T('Nessun giorno = decido io, con il lungo di preferenza nel weekend.', 'No days = I decide, with the long run preferably at the weekend.') + '</p>' +
+        (g.inizioLibero ? '<label class="acc-f gd-inizio" for="gd-inizio"><span>' + T('Quando inizi?', 'When do you start?') + '</span><input id="gd-inizio" name="gd-inizio" type="date" min="' + esc(g.oggi) + '" value="' + esc(g.inizio || '') + '">' +
+          '<small>' + T('Ti propongo il primo giorno utile; scegline un altro se preferisci.', 'I suggest the first suitable day; pick another if you prefer.') + '</small></label>' : '') +
         '<div id="gd-consigli" aria-live="polite">' + consigliGuidaHtml() + '</div>';
     } else {
       corpo = bolla(T('<b>Ecco cosa ti propongo.</b> Se ti convince confermalo; altrimenti torna indietro e cambia quello che vuoi.', '<b>Here is what I propose.</b> If you like it, confirm it; otherwise go back and change anything you want.')) +
@@ -2298,7 +2310,7 @@
     const n = ++g.req;
     const giorni = [...g.giorni].sort().join(',');
     let a;
-    try { a = await caricaJson('/api/piano/anteprima?obiettivo=' + encodeURIComponent(g.obiettivo) + '&intensita=' + encodeURIComponent(g.intensita) + '&giorni=' + encodeURIComponent(giorni) + '&modo=' + encodeURIComponent(g.modo)); } catch (_) { a = null; }
+    try { a = await caricaJson('/api/piano/anteprima?obiettivo=' + encodeURIComponent(g.obiettivo) + '&intensita=' + encodeURIComponent(g.intensita) + '&giorni=' + encodeURIComponent(giorni) + '&modo=' + encodeURIComponent(g.modo) + (g.inizioLibero && g.inizio ? '&inizio=' + encodeURIComponent(g.inizio) : '')); } catch (_) { a = null; }
     if (guida !== g || n !== g.req) return;
     g.anteprima = a;
     const box = $('#gd-anteprima'), cons = $('#gd-consigli');
@@ -2311,7 +2323,11 @@
     if (t.name === 'gd-ob') guida.obiettivo = t.value;
     else if (t.name === 'gd-int') guida.intensita = t.value;
     else if (t.name === 'gd-modo') guida.modo = t.value;
-    else if (t.name === 'gd-giorno') { const v = Number(t.value); if (t.checked) guida.giorni.add(v); else guida.giorni.delete(v); }
+    else if (t.name === 'gd-giorno') {
+      const v = Number(t.value); if (t.checked) guida.giorni.add(v); else guida.giorni.delete(v);
+      if (guida.inizioLibero && !guida.inizioManuale) { guida.inizio = primoGiornoUtile(guida); const i = $('#gd-inizio'); if (i) i.value = guida.inizio; }
+    }
+    else if (t.name === 'gd-inizio') { if (!/^\d{4}-\d{2}-\d{2}$/.test(t.value)) return; guida.inizio = t.value; guida.inizioManuale = true; }
     else return;
     if (t.type === 'radio') t.closest('.gd-opzioni').querySelectorAll('.gd-opz').forEach((l) => l.classList.toggle('on', l.contains(t)));
     guida.anteprima = null;
@@ -2333,7 +2349,7 @@
     if (!b || ME.demo) return;
     b.disabled = true;
     const g = guida;
-    const corpo = { obiettivo: g.obiettivo, intensita: g.intensita, giorni_sedute: [...g.giorni].sort().join(','), giorni_modo: g.giorni.size ? g.modo : 'preferiti' };
+    const corpo = { obiettivo: g.obiettivo, intensita: g.intensita, giorni_sedute: [...g.giorni].sort().join(','), giorni_modo: g.giorni.size ? g.modo : 'preferiti', ...(g.inizioLibero && g.inizio ? { programma_inizio: g.inizio } : {}) };
     try {
       const { ok, out } = await inviaJson('PUT', '/api/profilo', corpo);
       if (!ok) { const err = $('#gd-err'); if (err) { err.textContent = T('Salvataggio non riuscito: riprova.', 'Could not save: please try again.'); err.hidden = false; } b.disabled = false; return; }

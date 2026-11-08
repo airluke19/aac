@@ -3677,13 +3677,17 @@ function creaApp() {
       const int = String(req.query.intensita || '');
       const gq = req.query.giorni != null ? String(req.query.giorni) : null; // "1,3,5" oppure "" = nessuno
       const modo = req.query.modo != null ? String(req.query.modo) : null;
+      const inizioQ = req.query.inizio != null ? String(req.query.inizio) : null; // prima seduta scelta nella guida (piano non ancora iniziato)
+      if (inizioQ && !(/^\d{4}-\d{2}-\d{2}$/.test(inizioQ) && !isNaN(Date.parse(inizioQ + 'T00:00:00Z')))) return res.status(400).json({ errore: L('Parametri non validi', 'Invalid parameters') });
+      const nonIniziato = !c || !c.cfg.programmaInizio || c.cfg.programmaInizio > oggi();
       const giorniOk = gq === null || gq === '' || (/^[0-6](,[0-6]){0,6}$/.test(gq) && new Set(gq.split(',')).size === gq.split(',').length);
       if (!c || !OBIETTIVI[ob] || (int && !INTENSITA[int]) || !giorniOk || (modo && !['preferiti', 'fissi'].includes(modo))) return res.status(400).json({ errore: L('Parametri non validi', 'Invalid parameters') });
-      if (!c.cfg.programmaInizio) return res.status(404).json({ errore: L('Piano non ancora impostato', 'Plan not set up yet') });
+      if (!c.cfg.programmaInizio && !inizioQ) return res.status(404).json({ errore: L('Piano non ancora impostato', 'Plan not set up yet') });
       const cambio = ob !== (c.cfg.obiettivo || 'mezza') ? mappaCambioObiettivo(c, ob) : null;
       const cfg = { ...c.cfg, obiettivo: ob, intensita: int || c.cfg.intensita, ...(cambio ? { ripartiData: cambio.riparti_data, ripartiSett: cambio.riparti_settimana } : {}) };
       if (gq !== null) cfg.giorniSedute = gq === '' ? null : gq.split(',').map(Number);
       if (modo) cfg.giorniModo = modo;
+      if (inizioQ && nonIniziato) { cfg.programmaInizio = inizioQ; cfg.ripartiData = null; cfg.ripartiSett = null; }
       const out = contesto.run({ ...c, cfg }, () => {
         const p = costruisciProgramma(oggi());
         if (!p) return null;

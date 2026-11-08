@@ -1720,3 +1720,4 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .gd-nav .btn-primary { min-width: 140px; }
 .gd-ind { height: 40px; padding: 0 16px; font-size: .88rem; }
 @media (prefers-reduced-motion: reduce) { .gd-opz > span { transition: none; } }
+.gd-inizio { margin: 0; }
