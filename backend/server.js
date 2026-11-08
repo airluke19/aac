@@ -1329,9 +1329,11 @@ const conRitmi = (it, en) => [`${it} ${NOTA_RITMI[0]}`, `${en} ${NOTA_RITMI[1]}`
 
 // Descrittori: ['cc', ripetute, corsa, cammino] | ['facile', min, allunghi] | ['lungo', min]
 //              ['fartlek', ripetute, veloce, lento] | ['ritmo', ripetute, min, recupero, 'medio'|'mezza'] | ['gara'] | ['recupero', min]
+//              ['4x4', ripetute, min, recupero]: 4×4 norvegese (Helgerud et al. 2007), blocchi all'85–95% della FC max con corsetta di recupero
 const cc = (r, c, w) => ['cc', r, c, w];
 const fa = (m, allunghi) => ['facile', m, Boolean(allunghi)];
 const lu = (m) => ['lungo', m];
+const nv = (r) => ['4x4', r, 4, 3]; // 4×4 norvegese: solo dalla fase 2 (si corrono gia' 30' di fila), al posto di un fartlek o di un ritmo
 
 const PIANO_MEZZA = [
   // ---- Fase 1 · Ripartenza ----
@@ -1350,11 +1352,11 @@ const PIANO_MEZZA = [
   { sedute: [fa(25), lu(30), fa(25)], scarico: true, nota: ['Settimana di scarico: meno volume per consolidare.', 'Recovery week: less volume to consolidate.'] },
   { sedute: [fa(30), lu(40), fa(30, true)], nota: ['40 minuti di lungo: a questo punto corri già più di molti principianti.', '40-minute long run: by now you already run more than many beginners.'] },
   { sedute: [fa(32), lu(45), ['fartlek', 6, 1, 2]], nota: ['Primo fartlek: 1 minuto brillante (sforzo 7/10) e 2 facili. Divertiti, non è una gara.', 'First fartlek: 1 minute lively (effort 7/10) and 2 easy. Have fun, it is not a race.'] },
-  { sedute: [fa(35), lu(50), ['fartlek', 8, 1, 2]], nota: ['Il lungo arriva a 50 minuti: parti piano, deve sembrare facile fino alla fine.', 'The long run reaches 50 minutes: start slow, it should feel easy until the end.'] },
+  { sedute: [fa(35), lu(50), nv(3)], nota: ['Primo 4×4 norvegese (qui 3 blocchi): sforzo forte ma controllato, l’ultimo blocco deve riuscire come il primo. Il lungo arriva a 50 minuti: parti piano.', 'First Norwegian 4×4 (3 blocks here): hard but controlled, the last block should go as well as the first. The long run reaches 50 minutes: start slow.'] },
   { sedute: [fa(30), lu(40), fa(30, true)], scarico: true, nota: ['Scarico prima della fase di costruzione.', 'Recovery week before the build phase.'] },
   // ---- Fase 3 · Costruzione ----
   { sedute: [fa(35), lu(60), ['ritmo', 3, 5, 2, 'medio']], nota: conRitmi('Primo lungo da 1 ora.', 'First 1-hour long run.') },
-  { sedute: [fa(40), lu(65), ['ritmo', 4, 5, 2, 'medio']], nota: ['Lungo: porta acqua se fa caldo. Nella seduta a ritmo, l’ultima ripetuta deve essere come la prima.', 'Long run: bring water if it is warm. In the pace session, the last rep should feel like the first.'] },
+  { sedute: [fa(40), lu(65), nv(4)], nota: ['Lungo: porta acqua se fa caldo. Il 4×4 norvegese alza il motore aerobico (VO₂max): 4 blocchi forti, recupero corricchiando.', 'Long run: bring water if it is warm. The Norwegian 4×4 raises your aerobic engine (VO₂max): 4 hard blocks, jog to recover.'] },
   { sedute: [fa(40), lu(75), ['ritmo', 2, 10, 3, 'medio']], nota: ['Lungo di 75 minuti: prova a bere qualche sorso ogni 20 minuti.', '75-minute long run: try to take a few sips every 20 minutes.'] },
   { sedute: [fa(35), lu(55), fa(30, true)], scarico: true, nota: ['Scarico: il corpo si adatta nei giorni leggeri, non in quelli duri.', 'Recovery: your body adapts on easy days, not hard ones.'] },
   { sedute: [fa(40), lu(85), ['ritmo', 3, 8, 2, 'mezza']], nota: conRitmi('Prime frazioni a ritmo mezza maratona.', 'First reps at half-marathon pace.') },
@@ -1385,7 +1387,7 @@ const PIANO_MEZZA = [
 const FREQUENZA = { '5k': [3, 3, 3, 3], '10k': [3, 3, 4, 4], mezza: [3, 3, 4, 4], maratona: [3, 4, 4, 5, 4] };
 const FREQ_MAX = { '5k': 4, '10k': 4, mezza: 5, maratona: 5 };
 const ACWR_MAX = 1.3;
-const ruoloSeduta = (d) => (d[0] === 'lungo' ? 'L' : d[0] === 'gara' ? 'G' : d[0] === 'ritmo' || d[0] === 'fartlek' ? 'Q' : 'E');
+const ruoloSeduta = (d) => (d[0] === 'lungo' ? 'L' : d[0] === 'gara' ? 'G' : d[0] === 'ritmo' || d[0] === 'fartlek' || d[0] === '4x4' ? 'Q' : 'E');
 const sedutaDura = (d) => ruoloSeduta(d) !== 'E';
 
 // sedute a settimana previste dall'obiettivo per questa settimana-piano (il tetto: va comunque guadagnato)
@@ -1526,7 +1528,7 @@ const PIANO_5K = [
   { sedute: [fa(25), lu(30), fa(25, true)], scarico: true, nota: ['Settimana di scarico prima dei lavori di velocità.', 'Recovery week before the speed work.'] },
   // ---- Velocità ----
   { sedute: [fa(30), lu(38), ['ritmo', 6, 2, 2, 'gara']], nota: ['Prime frazioni a ritmo 5 km: il passo che pensi di tenere per tutta la gara, sforzo 8/10. Recupera trotterellando.', 'First reps at 5K pace: the pace you think you could hold for the whole race, effort 8/10. Jog to recover.'] },
-  { sedute: [fa(30), lu(42), ['ritmo', 5, 3, 2, 'gara']], nota: ['Frazioni più lunghe: tieni lo stesso passo dalla prima all’ultima.', 'Longer reps: hold the same pace from the first to the last.'] },
+  { sedute: [fa(30), lu(42), nv(4)], nota: ['4×4 norvegese: 4 blocchi da 4′ forti (sforzo 8–9/10) con 3′ di corsetta. Per il 5 km è oro: alza il VO₂max.', 'Norwegian 4×4: four 4′ hard blocks (effort 8–9/10) with 3′ jogging. Gold for the 5K: it raises VO₂max.'] },
   { sedute: [fa(28), lu(35), ['ritmo', 3, 4, 2, 'gara']], scarico: true, nota: ['Meno volume, un po’ di ritmo: arrivi fresco alla gara.', 'Less volume, a little pace work: you arrive fresh on race day.'] },
   settGara(['Settimana della gara: 5 km. Riscaldati bene, parti controllato e accelera nell’ultimo chilometro.', 'Race week: 5K. Warm up well, start controlled and speed up in the last kilometre.']),
 ];
@@ -1535,7 +1537,7 @@ const PIANO_10K = [
   ...RIPARTENZA,
   ...BASE_AEROBICA,
   // ---- Costruzione ----
-  { sedute: [fa(35), lu(55), ['ritmo', 3, 5, 2, 'medio']], nota: ['Prime frazioni a ritmo medio: sforzo 6/10, riesci a dire frasi brevi.', 'First reps at steady pace: effort 6/10, you can speak short sentences.'] },
+  { sedute: [fa(35), lu(55), nv(4)], nota: ['4×4 norvegese: 4 blocchi da 4′ forti (sforzo 8–9/10) con 3′ di corsetta. È il lavoro che più alza il VO₂max.', 'Norwegian 4×4: four 4′ hard blocks (effort 8–9/10) with 3′ jogging. It is the workout that raises VO₂max the most.'] },
   { sedute: [fa(40), lu(60), ['ritmo', 4, 5, 2, 'gara']], nota: ['Ritmo 10 km = il passo che pensi di tenere per tutta la gara, sforzo 7–8/10.', '10K pace = the pace you think you could hold for the whole race, effort 7–8/10.'] },
   { sedute: [fa(40), lu(65), ['ritmo', 3, 8, 2, 'gara']], nota: ['Frazioni più lunghe a ritmo 10 km: l’ultima deve essere come la prima.', 'Longer reps at 10K pace: the last should feel like the first.'] },
   { sedute: [fa(40), lu(70), ['ritmo', 2, 12, 3, 'gara']], nota: ['Lungo di 70 minuti e due blocchi da 12′ a ritmo gara: sei pronto per i 10 km.', '70-minute long run and two 12′ blocks at race pace: you are ready for the 10K.'] },
@@ -1627,6 +1629,7 @@ function conIntensita(d, it) {
   if (t === 'facile') return ['facile', r5(a), d[2]];
   if (t === 'lungo') return ['lungo', r5(a)];
   if ((t === 'fartlek' || t === 'ritmo') && it.rep) return [t, Math.max(2, a + it.rep), ...d.slice(2)];
+  if (t === '4x4' && it.rep) return [t, Math.min(4, Math.max(3, a + it.rep)), ...d.slice(2)]; // il protocollo resta 3–4 blocchi
   return d;
 }
 
@@ -1656,6 +1659,14 @@ function specSeduta(d) {
         blocchi: L(`10' facile + ${a} × (${b}' brillante + ${c}' facile) + 5' facile`, `10' easy + ${a} × (${b}' lively + ${c}' easy) + 5' easy`),
         lavoro, corsa: lavoro,
         segmenti: [{ tipo: 'run', min: 10 }, ...ripeti(a, () => [{ tipo: 'fast', min: b }, { tipo: 'run', min: c }]), { tipo: 'run', min: 5 }] };
+    }
+    case '4x4': {
+      const lavoro = 10 + a * b + (a - 1) * c + 5;
+      return { ...base, tipo: 'qualita', titolo: L('4×4 norvegese', 'Norwegian 4×4'), fc: `${Math.round(CONFIG.fcMax * 0.85)}–${Math.round(CONFIG.fcMax * 0.95)}`,
+        blocchi: L(`10' facile + ${a} × ${b}' forte (85–95% FC max) con ${c}' di corsetta + 5' facile`, `10' easy + ${a} × ${b}' hard (85–95% max HR) with ${c}' jog + 5' easy`),
+        lavoro, corsa: lavoro,
+        segmenti: [{ tipo: 'run', min: 10 }, ...ripeti(a, (_, k) => (k < a - 1 ? [{ tipo: 'fast', min: b }, { tipo: 'run', min: c }] : [{ tipo: 'fast', min: b }])), { tipo: 'run', min: 5 }],
+        nota: L('Forte = sforzo 8–9/10: respiro pesante, poche parole. Nei 3′ di recupero continua a corricchiare piano. Se all’ultimo blocco non riesci più a tenere lo sforzo, fermati lì: conta la qualità, non il numero.', 'Hard = effort 8–9/10: heavy breathing, few words. Keep jogging slowly in the 3′ recoveries. If you can no longer hold the effort in the last block, stop there: quality counts, not the number.') };
     }
     case 'ritmo': {
       const lavoro = 10 + a * (b + c) + 5;
@@ -1689,7 +1700,7 @@ function riduci(d) {
   const [tipo, a, b, c] = d;
   if (tipo === 'cc') return cc(Math.max(2, Math.ceil(a * 0.6)), b, c);
   if (tipo === 'facile' || tipo === 'lungo') return fa(Math.max(15, Math.round((a * 0.6) / 5) * 5));
-  if (tipo === 'fartlek' || tipo === 'ritmo') return fa(25);
+  if (tipo === 'fartlek' || tipo === 'ritmo' || tipo === '4x4') return fa(25);
   return d;
 }
 
@@ -3293,7 +3304,7 @@ const NOMI_TIPO_SEDUTA = {
   'corsa-cammino': ['Corsa e cammino', 'Run-walk'],
   facile: ['Corsa facile', 'Easy run'],
   lungo: ['Lungo', 'Long run'],
-  qualita: ['Qualità (fartlek / ritmo)', 'Quality (fartlek / pace work)'],
+  qualita: ['Qualità (fartlek / ritmo / 4×4)', 'Quality (fartlek / pace work / 4×4)'],
   gara: ['Gara', 'Race'],
   recupero: ['Recupero', 'Recovery'],
 };

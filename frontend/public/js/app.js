@@ -181,7 +181,7 @@
     { tipo: 'corsa-cammino', sigla: ['CC', 'RW'], nome: ['Corsa e cammino', 'Run-walk'], testo: ['Brevi frazioni di corsa lenta alternate a camminata. Abitua cuore, muscoli e tendini a correre senza sovraccaricarli: è la base della ripartenza.', 'Short bouts of slow running alternated with walking. It gets heart, muscles and tendons used to running without overloading them: the foundation of your comeback.'] },
     { tipo: 'facile', sigla: ['F', 'E'], nome: ['Corsa facile', 'Easy run'], testo: ['Corsa continua a ritmo da conversazione (Z2). È l’80% del lavoro: costruisce la resistenza aerobica. Con “allunghi” chiudi con 4 accelerazioni da 20″ per la tecnica.', 'Continuous running at conversational pace (Z2). It is 80% of the work: it builds aerobic endurance. With “strides” you finish with 4 × 20″ accelerations for technique.'] },
     { tipo: 'lungo', sigla: ['L', 'L'], nome: ['Lungo', 'Long run'], testo: ['La seduta chiave, di preferenza nel weekend: corsa lenta e costante che cresce di settimana in settimana fino a quasi 2 ore. Prepara il corpo a durare 21 km.', 'The key session, preferably at the weekend: slow, steady running that grows week by week up to almost 2 hours. It prepares your body to last 21 km.'] },
-    { tipo: 'qualita', sigla: ['Q', 'Q'], nome: ['Qualità', 'Quality'], testo: ['Fartlek (tratti brillanti liberi) o frazioni a ritmo medio / ritmo gara. Insegnano a tenere un passo più sostenuto senza andare in crisi. Solo dalla fase 2.', 'Fartlek (free lively bursts) or reps at steady / race pace. They teach you to hold a faster pace without blowing up. Only from phase 2.'] },
+    { tipo: 'qualita', sigla: ['Q', 'Q'], nome: ['Qualità', 'Quality'], testo: ['Fartlek (tratti brillanti liberi), 4×4 norvegese (4 blocchi da 4′ all’85–95% della FC max con 3′ di corsetta: alza il VO₂max) o frazioni a ritmo medio / ritmo gara. Insegnano a tenere un passo più sostenuto senza andare in crisi. Solo dalla fase 2.', 'Fartlek (free lively bursts), Norwegian 4×4 (four 4′ blocks at 85–95% of max HR with 3′ jogging: raises VO₂max) or reps at steady / race pace. They teach you to hold a faster pace without blowing up. Only from phase 2.'] },
     { tipo: 'recupero', sigla: ['R', 'R'], nome: ['Recupero', 'Recovery'], testo: ['Camminata tranquilla: aiuta a smaltire la fatica senza aggiungere carico.', 'Easy walk: helps clear fatigue without adding load.'] },
     { tipo: 'gara', sigla: ['🏁', '🏁'], nome: ['Gara', 'Race'], testo: ['La gara del tuo obiettivo, a ritmo costante: 5 km, 10 km, mezza o maratona.', 'The race of your goal, at a steady pace: 5K, 10K, half or marathon.'] },
   ];
@@ -3227,8 +3227,8 @@
       for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + dist(pts[k - 1].p, pts[k].p));
       const tot = cum[cum.length - 1] || 1;
       const durata = Math.min(60, Math.max(20, 16 + tot / 1000 * 2.4)) * 1000;
-      const zoom = tot < 6000 ? 15.7 : tot < 15000 ? 15.2 : 14.7; // un po' più in alto: immagini più pulite
-      const avanti = Math.min(220, Math.max(70, tot * 0.02));
+      const zoom = tot < 6000 ? 14.9 : tot < 15000 ? 14.4 : 13.9; // vista alta: si vede il percorso intorno, niente giramenti di testa
+      const avanti = Math.min(900, Math.max(300, tot * 0.08)); // la direzione guarda lontano: ignora le curve brevi
       const trova = (d) => { let lo = 0, hi = cum.length - 1; while (lo < hi - 1) { const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; } const f = cum[hi] > cum[lo] ? (d - cum[lo]) / (cum[hi] - cum[lo]) : 0; return { k: lo, p: [pts[lo].p[0] + (pts[hi].p[0] - pts[lo].p[0]) * f, pts[lo].p[1] + (pts[hi].p[1] - pts[lo].p[1]) * f] }; };
       const dirA = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.atan2((b[0] - a[0]) * k, b[1] - a[1]) * 180 / Math.PI; };
       const passoA = (i) => {
@@ -3259,10 +3259,10 @@
         map.setPaintProperty('fatto', 'line-gradient', ['step', ['line-progress'], accent, Math.max(0.000001, u), 'rgba(0,0,0,0)']);
         map.getSource('punto').setData({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: p } }] });
         if (!lento) {
-          const dietro = trova(Math.max(0, d - avanti * 0.3)).p, davanti = trova(Math.min(tot, d + avanti)).p;
+          const dietro = trova(Math.max(0, d - avanti * 0.5)).p, davanti = trova(Math.min(tot, d + avanti)).p;
           let diff = ((dirA(dietro, davanti) - bearing + 540) % 360) - 180;
-          bearing += diff * 0.06;
-          map.jumpTo({ center: p, bearing, pitch: 55, zoom });
+          bearing += diff * 0.012; // rotazione lenta e morbida
+          map.jumpTo({ center: p, bearing, pitch: 48, zoom });
         }
         const i = pts[k].i;
         $w('#rv-km').textContent = nf2.format(s.d ? s.d[i] : d / 1000);
@@ -3301,10 +3301,10 @@
       const parti = () => { ultimo = null; raf = requestAnimationFrame(passo); };
       // inquadratura iniziale: dall'alto al punto di partenza
       if (lento) { map.fitBounds(bounds, { padding: 60, duration: 0 }); disegna(); setTimeout(parti, 300); }
-      else { map.flyTo({ center: pts[0].p, zoom, pitch: 55, bearing, duration: 1800, essential: true }); map.once('moveend', () => { disegna(); parti(); }); }
+      else { map.flyTo({ center: pts[0].p, zoom, pitch: 48, bearing, duration: 1800, essential: true }); map.once('moveend', () => { disegna(); parti(); }); }
 
       const pp = () => {
-        if (finito) { finito = false; u = 0; inPausa = false; if (!lento) map.flyTo({ center: pts[0].p, zoom, pitch: 55, bearing, duration: 1200 }); }
+        if (finito) { finito = false; u = 0; inPausa = false; if (!lento) map.flyTo({ center: pts[0].p, zoom, pitch: 48, bearing, duration: 1200 }); }
         else inPausa = !inPausa;
         $w('#rv-pp').innerHTML = inPausa ? ICO.play : ICO.pausa;
         $w('#rv-pp').setAttribute('aria-label', inPausa ? T('Riprendi', 'Resume') : T('Pausa', 'Pause'));
