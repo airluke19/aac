@@ -2472,7 +2472,7 @@
     if (a) {
       const id = a.dataset.id, az = a.dataset.acc;
       if (az === 'impersona') { await inviaJson('POST', '/api/admin/impersona/' + id); location.href = '/'; return; }
-      if (az === 'rimuovi' && !confirm(T('Rimuovere questo utente? Non potrà più accedere (i suoi dati restano sul server).', 'Remove this user? They will no longer be able to sign in (their data stays on the server).'))) return;
+      if (az === 'rimuovi' && !confirm(T('Rimuovere questo utente e tutti i suoi dati (corse, salute, impostazioni)? Non si può annullare.', 'Remove this user and all their data (runs, health, settings)? This cannot be undone.'))) return;
       await (az === 'rimuovi' ? inviaJson('DELETE', '/api/admin/utenti/' + id) : inviaJson('POST', '/api/admin/utenti/' + id + '/stato', { stato: az }));
       riapri();
       return;

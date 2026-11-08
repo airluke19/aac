@@ -36,7 +36,7 @@ const etaDa = (nascita, al = oggiLocale()) => {
 const giorniDa = (v) => (/^[0-6](,[0-6]){0,6}$/.test(v || '') ? String(v).split(',').map(Number) : null);
 const MAX_IN_ATTESA = 50; // richieste di accesso non ancora approvate
 
-function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
+function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
   const sis = new Database(path.join(BASE.dataDir, 'sistema.db'));
   sis.pragma('journal_mode = WAL');
   sis.pragma('busy_timeout = 5000');
@@ -490,13 +490,22 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     return true;
   }
   function rimuovi(id) {
-    // rimuove l'account (accesso e impostazioni); il suo database delle corse resta su disco
+    // rimuove tutto: accesso, impostazioni, statistiche d'uso e il suo database delle corse (con -wal/-shm)
     const u = perId(id);
     if (!u || u.ruolo === 'admin') return false;
     sis.prepare('DELETE FROM sessioni WHERE utente_id = ?').run(id);
     sis.prepare('DELETE FROM uso WHERE utente_id = ?').run(id);
     sis.prepare('DELETE FROM utenti WHERE id = ?').run(id);
     dimentica(id);
+    // solo il file di quell'utente: dentro <data>/utenti e con il nome u<id>-<hex>.db (mai corse.db o altro)
+    const f = u.db_file ? path.resolve(u.db_file) : null;
+    if (f && path.dirname(f) === path.resolve(BASE.dataDir, 'utenti') && new RegExp(`^u${id}(-[0-9a-f]{12})?\\.db$`).test(path.basename(f))) {
+      if (chiudiDb) chiudiDb(u.db_file);
+      for (const x of [f, f + '-wal', f + '-shm']) {
+        try { fs.unlinkSync(x); } catch (e) { if (e.code !== 'ENOENT') console.error(`[account] rimozione ${path.basename(x)}:`, e.message); }
+      }
+      console.log(`[account] utente ${id} rimosso con i suoi dati`);
+    }
     return true;
   }
 

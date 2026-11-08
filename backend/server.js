@@ -309,7 +309,7 @@ function dbPer(file) {
   return dbAperti.get(file);
 }
 const { creaAccount, etaDa } = require('./account');
-const account = creaAccount({ BASE, dbPer, contesto, cambioObiettivo: (ctx, nuovo) => mappaCambioObiettivo(ctx, nuovo) });
+const account = creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo: (ctx, nuovo) => mappaCambioObiettivo(ctx, nuovo) });
 function chiudiDb(file) {
   const d = dbAperti.get(file);
   if (d) {
