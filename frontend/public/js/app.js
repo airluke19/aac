@@ -139,6 +139,7 @@
     dati: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>',
     spunta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
+    sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18M12 14v5M9.5 16.5 12 19l2.5-2.5"/></svg>',
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
@@ -487,7 +488,17 @@
       kv('Apple Watch', T('app Intervals.icu Companion', 'Intervals.icu Companion app')) +
       kv('Garmin, Coros, Polar, Suunto', T('collegamento diretto in Intervals.icu', 'direct link in Intervals.icu')) +
       kv(T('Nel profilo', 'In your profile'), T('API key e Athlete ID', 'API key and Athlete ID')) +
-      kv(T('Sincronizzazione', 'Sync'), T('ogni 30′, all’apertura e a richiesta', 'every 30′, on open and on demand'));
+      kv(T('Sincronizzazione', 'Sync'), T('ogni 30′, all’apertura e a richiesta', 'every 30′, on open and on demand')) +
+      kv('Strava', T('le attività importate da Strava non arrivano ad AAC', 'activities imported from Strava do not reach AAC')) +
+      '<button type="button" class="gc-cta" data-apri-sheet="#collega"><span>' + T('Guida: collega l’orologio', 'Guide: connect your watch') + '</span>' + FRECCIA + '</button>';
+
+    const carico = kv(T('Carico recente', 'Recent load'), T('ultimi 7 giorni ÷ ultime 6 settimane (ACWR): sicuro 0,8–1,3', 'last 7 days ÷ last 6 weeks (ACWR): safe 0.8–1.3')) +
+      kv(T('Oltre 1,5', 'Above 1.5'), T('la prossima seduta viene alleggerita', 'your next session is lightened')) +
+      kv(T('Km settimanali', 'Weekly km'), T('avviso oltre +30% sulla media delle 4 settimane prima', 'warning above +30% over the previous 4 weeks’ average')) +
+      kv(T('Corsa più lunga', 'Longest run'), T('avviso oltre +10% sulla più lunga dei 30 giorni prima', 'warning above +10% over the longest of the previous 30 days')) +
+      kv(T('Prossimo lungo', 'Next long run'), T('al massimo +10% sulla corsa più lunga del mese', 'at most +10% over the month’s longest run')) +
+      '<p class="in-p">' + T('La maggior parte degli infortuni da corsa nasce da aumenti troppo rapidi di volume o di una singola uscita. Uno studio su oltre 5.000 runner (Frandsen e colleghi, BJSM 2025) ha visto che il rischio sale quando una corsa supera di oltre il 10% la più lunga del mese precedente. Sono indicazioni, non una diagnosi: se senti dolore, fermati.',
+        'Most running injuries come from increasing volume, or a single run, too quickly. A study of over 5,000 runners (Frandsen et al., BJSM 2025) found risk rises when one run exceeds the longest of the previous month by more than 10%. These are guidelines, not a diagnosis: if you feel pain, stop.') + '</p>';
 
     const strumenti = kv(T('Calendario', 'Calendar'), T('tocca un giorno per la seduta', 'tap a day for the session')) +
       kv(T('Esporta', 'Export'), T('.ics per il tuo calendario', '.ics for your calendar')) +
@@ -516,6 +527,7 @@
       voce('sedute', G.list, '#007aff', T('Le sedute', 'Sessions'), T('Cosa significano le sigle', 'What the codes mean'), '<div class="in-tipi">' + tipiSeduta().map((t) => '<div class="in-tipo"><span class="sig">' + esc(t.sigla) + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('') + '</div>') +
       voce('zone', G.heart, '#ff3b30', T('Zone e passo', 'Zones and pace'), T('Dalla tua FC massima', 'From your max HR'), zone) +
       voce('bmi', G.heart, '#ff2d55', 'BMI', T('Peso e altezza, in Salute', 'Weight and height, in Health'), bmi) +
+      voce('carico', G.shield, '#ff9500', T('Carico e infortuni', 'Load and injuries'), T('Crescere senza farsi male', 'Build up without getting hurt'), carico) +
       voce('previsioni', G.trend, '#30b0c7', T('Previsioni', 'Forecasts'), T('Data, tempo e forma per la gara', 'Race date, time and form'), previsioni) +
       voce('dati', G.sync, '#8e8e93', T('I tuoi dati', 'Your data'), T('Orologio, Intervals.icu, AAC', 'Watch, Intervals.icu, AAC'), dati) +
       voce('strumenti', G.grid, '#af52de', T('Strumenti', 'Tools'), T('Calendario, export, Copia per AI', 'Calendar, export, Copy for AI'), strumenti) +
@@ -694,6 +706,105 @@
       bannerAdattata(s) + corpoSeduta(s, true) +
     '</section>';
   }
+
+  /* ---- Avvisi in Oggi: corse da Strava e carico in crescita troppo rapida ---- */
+  function renderAvvisi(d) {
+    let h = '';
+    if (d.collegamento && d.collegamento.avviso && !(ME && ME.demo)) {
+      h += '<section class="avviso warn"><div class="av-h">' + ICO.sync + '<h3>' + T('Le tue corse arrivano da Strava', 'Your runs come from Strava') + '</h3></div>' +
+        '<p>' + T('Intervals.icu non può passare ad AAC le attività importate da Strava: lo vietano i termini di Strava. Collega l’orologio <b>direttamente</b> a Intervals.icu, bastano due minuti.', 'Intervals.icu cannot pass activities imported from Strava to AAC: Strava’s terms forbid it. Connect your watch <b>directly</b> to Intervals.icu, it takes two minutes.') + '</p>' +
+        '<button type="button" class="gc-cta" data-apri-sheet="#collega"><span>' + T('Collega l’orologio', 'Connect your watch') + '</span>' + FRECCIA + '</button></section>';
+    }
+    const c = d.programma && d.programma.carico;
+    if (c && c.livello !== 'ok') {
+      const alto = c.livello === 'alto';
+      h += '<section class="avviso ' + (alto ? 'bad' : 'warn') + '"><div class="av-h">' + ICO.flame + '<h3>' + (alto ? T('Carico troppo alto', 'Load too high') : T('Carico in crescita rapida', 'Load rising fast')) + '</h3></div>' +
+        '<ul>' + c.segnali.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
+        '<p class="g-note">' + (alto && d.programma.prossime[0] && d.programma.prossime[0].adattata
+          ? T('Ho già alleggerito la prossima seduta. ', 'I have already lightened your next session. ') : '') +
+          T('Gli infortuni da corsa arrivano quasi sempre da aumenti troppo rapidi. Se senti dolore, fermati.', 'Running injuries almost always come from building up too fast. If you feel pain, stop.') + '</p></section>';
+    }
+    return h;
+  }
+
+  /* ---- Progressi: carico e infortuni ---- */
+  function renderCarico(d) {
+    const c = d.programma && d.programma.carico;
+    if (!c || (c.acwr == null && !c.km_7 && c.lungo_max_30 == null)) return '';
+    const t = (l, v, n) => '<div class="tile"><div class="l">' + l + '</div><div class="v">' + v + '</div><div class="n">' + n + '</div></div>';
+    const stato = { ok: ['ok', T('Crescita sicura', 'Safe build-up')], attenzione: ['warn', T('Attenzione', 'Caution')], alto: ['bad', T('Troppo in fretta', 'Too fast')] }[c.livello];
+    // barra ACWR: 0–2, zona sicura 0,8–1,3, attenzione fino a 1,5
+    const pos = c.acwr != null ? Math.max(0, Math.min(100, c.acwr / 2 * 100)) : null;
+    const barra = pos != null ? '<div class="acwr" role="img" aria-label="ACWR ' + fmt1(c.acwr) + '"><div class="acwr-bar"><i class="z-basso"></i><i class="z-ok"></i><i class="z-att"></i><i class="z-alto"></i></div>' +
+      '<b style="left:' + pos.toFixed(1) + '%"></b><div class="acwr-lab"><span style="left:40%">0,8</span><span style="left:65%">1,3</span><span style="left:75%">1,5</span></div></div>' : '';
+    return '<div class="sec-title" id="carico"><h2>' + T('Carico e infortuni', 'Load and injuries') + '</h2><span class="pill ' + stato[0] + '">' + esc(stato[1]) + '</span></div>' +
+      (c.acwr != null ? '<section class="card"><h3>' + T('Carico recente su carico abituale', 'Recent vs usual load') + '</h3><p class="sub">' + T('ACWR: ultimi 7 giorni rispetto alle ultime 6 settimane · sicuro tra 0,8 e 1,3', 'ACWR: last 7 days vs last 6 weeks · safe between 0.8 and 1.3') + '</p>' +
+        '<div class="acwr-v"><b class="num">' + fmt1(c.acwr) + '</b></div>' + barra + '</section>' : '') +
+      '<section class="tiles">' +
+        t(T('Km in 7 giorni', 'Km in 7 days'), fmt1(c.km_7) + '<small>km</small>', c.media_settimanale ? (c.aumento_pct != null ? (c.aumento_pct > 0 ? '+' : '') + c.aumento_pct + T('% sulla media di ', '% vs average of ') : T('media ', 'average ')) + fmt1(c.media_settimanale) + ' km' : T('media non ancora disponibile', 'average not available yet')) +
+        t(T('Corsa più lunga · 30 gg', 'Longest run · 30 days'), c.lungo_max_30 != null ? fmt1(c.lungo_max_30) + '<small>km</small>' : '–', T('il riferimento per il prossimo lungo', 'the reference for your next long run')) +
+        t(T('Prossimo lungo, al massimo', 'Next long run, at most'), c.limite_lungo_km != null ? fmt1(c.limite_lungo_km) + '<small>km</small>' : '–', T('+10% sulla corsa più lunga', '+10% over your longest run')) +
+      '</section>' +
+      (c.segnali.length ? '<div class="chips">' + c.segnali.map((x) => '<span class="chip">' + esc(x) + '</span>').join('') + '</div>' : '');
+  }
+
+  /* ---- Guida: collegare l'orologio a Intervals.icu (non tramite Strava) ---- */
+  let collegaDisp = 'garmin';
+  const DISPOSITIVI = [
+    { id: 'garmin', nome: 'Garmin', passi: () => [
+      T('Apri <b>intervals.icu</b> e accedi.', 'Open <b>intervals.icu</b> and sign in.'),
+      T('Vai in <b>Settings</b> (in basso a sinistra) e cerca la sezione <b>Garmin</b>.', 'Go to <b>Settings</b> (bottom left) and find the <b>Garmin</b> section.'),
+      T('Tocca <b>Connect</b>, accedi con il tuo account Garmin Connect e autorizza tutte le voci (attività e dati di salute).', 'Tap <b>Connect</b>, sign in with your Garmin Connect account and allow everything (activities and health data).'),
+      T('Lascia attivo lo scaricamento dei dati <b>wellness</b>: servono FC a riposo, HRV e sonno.', 'Keep <b>wellness</b> download on: resting HR, HRV and sleep come from there.'),
+    ] },
+    { id: 'apple', nome: 'Apple Watch', passi: () => [
+      T('Su iPhone installa dall’App Store l’app <b>Intervals.icu Companion</b>.', 'On your iPhone install the <b>Intervals.icu Companion</b> app from the App Store.'),
+      T('Aprila, accedi con il tuo account Intervals.icu e concedi l’accesso a <b>Salute</b> (allenamenti, frequenza cardiaca, HRV, sonno).', 'Open it, sign in with your Intervals.icu account and allow access to <b>Health</b> (workouts, heart rate, HRV, sleep).'),
+      T('Le corse registrate con l’app Allenamento arrivano da sole. FC a riposo e HRV possono arrivare qualche ora dopo: è normale.', 'Runs recorded with the Workout app arrive on their own. Resting HR and HRV may arrive a few hours later: that is normal.'),
+    ] },
+    { id: 'coros', nome: 'Coros', passi: () => [
+      T('Apri <b>intervals.icu</b> → <b>Settings</b> e cerca <b>Coros</b>.', 'Open <b>intervals.icu</b> → <b>Settings</b> and find <b>Coros</b>.'),
+      T('Tocca <b>Connect</b>, accedi con l’account Coros e autorizza.', 'Tap <b>Connect</b>, sign in with your Coros account and allow access.'),
+    ] },
+    { id: 'polar', nome: 'Polar', passi: () => [
+      T('Apri <b>intervals.icu</b> → <b>Settings</b> e cerca <b>Polar</b>.', 'Open <b>intervals.icu</b> → <b>Settings</b> and find <b>Polar</b>.'),
+      T('Tocca <b>Connect</b>, accedi con l’account Polar Flow e autorizza (anche sonno e ricarica notturna).', 'Tap <b>Connect</b>, sign in with your Polar Flow account and allow access (including sleep and Nightly Recharge).'),
+    ] },
+    { id: 'suunto', nome: 'Suunto', passi: () => [
+      T('Apri <b>intervals.icu</b> → <b>Settings</b> e cerca <b>Suunto</b>.', 'Open <b>intervals.icu</b> → <b>Settings</b> and find <b>Suunto</b>.'),
+      T('Tocca <b>Connect</b>, accedi con l’account Suunto e autorizza.', 'Tap <b>Connect</b>, sign in with your Suunto account and allow access.'),
+    ] },
+    { id: 'altro', nome: T('Altro', 'Other'), passi: () => [
+      T('In <b>intervals.icu</b> → <b>Settings</b> guarda l’elenco dei collegamenti diretti: se c’è il tuo orologio, collegalo da lì.', 'In <b>intervals.icu</b> → <b>Settings</b> check the list of direct connections: if your watch is there, connect it from there.'),
+      T('Se non c’è, cerca nell’app del tuo orologio l’esportazione verso Intervals.icu o il caricamento automatico dei file <b>.FIT</b>.', 'If it is not, look in your watch app for an export to Intervals.icu or automatic upload of <b>.FIT</b> files.'),
+      T('In alternativa puoi caricare a mano il file .FIT di ogni corsa su intervals.icu.', 'Otherwise you can upload each run’s .FIT file to intervals.icu by hand.'),
+    ] },
+  ];
+  function apriCollega() {
+    const disp = DISPOSITIVI.find((x) => x.id === collegaDisp) || DISPOSITIVI[0];
+    const c = ultimiDati && ultimiDati.collegamento;
+    mostraSheet(T('Collega l’orologio', 'Connect your watch'),
+      '<section class="collega">' +
+        '<div class="in-flow"><span>⌚ ' + T('Orologio', 'Watch') + '</span><i></i><span>☁️ Intervals.icu</span><i></i><span>🏃 AAC</span></div>' +
+        '<p class="cl-intro">' + T('AAC legge i dati da Intervals.icu. Le attività devono arrivare a Intervals <b>direttamente dall’orologio</b>: quelle importate da Strava restano invisibili ad AAC.', 'AAC reads your data from Intervals.icu. Activities must reach Intervals <b>directly from your watch</b>: those imported from Strava stay invisible to AAC.') + '</p>' +
+        (c && c.avviso ? '<p class="cl-alert">' + T('Dal tuo account vediamo attività arrivate solo da Strava (l’ultima il ', 'We see activities arriving only from Strava on your account (the latest on ') + esc(fmtData(c.strava_ultima)) + ').</p>' : '') +
+        '<div class="cl-disp" role="group" aria-label="' + T('Il tuo orologio', 'Your watch') + '">' + DISPOSITIVI.map((x) => '<button type="button" data-collega="' + x.id + '" aria-pressed="' + (x.id === disp.id) + '">' + esc(x.nome) + '</button>').join('') + '</div>' +
+        '<ol class="cl-passi">' + disp.passi().map((p) => '<li>' + p + '</li>').join('') + '</ol>' +
+        '<div class="cl-note"><h4>' + T('Da sapere', 'Good to know') + '</h4><ul>' +
+          '<li>' + T('Strava può restare collegato: Intervals unisce i doppioni, ma per AAC contano solo le attività arrivate direttamente.', 'Strava can stay connected: Intervals merges duplicates, but AAC only uses activities that arrive directly.') + '</li>' +
+          '<li>' + T('Le corse vecchie arrivate solo da Strava non si recuperano da lì: se Intervals.icu te lo propone, importa lo storico direttamente dall’orologio.', 'Old runs that came only from Strava cannot be recovered that way: if Intervals.icu offers it, import your history directly from the watch.') + '</li>' +
+          '<li>' + T('Dopo il collegamento tocca <b>Sincronizza</b> in alto: le nuove corse compaiono in pochi minuti.', 'After connecting, tap <b>Sync</b> at the top: new runs show up within minutes.') + '</li>' +
+          '<li>' + T('API key e Athlete ID restano quelli del tuo profilo AAC: non cambiano.', 'The API key and Athlete ID in your AAC profile stay the same.') + '</li>' +
+        '</ul></div>' +
+        '<a class="btn-primary cl-go" href="https://intervals.icu/settings" target="_blank" rel="noopener">' + T('Apri le impostazioni di Intervals.icu', 'Open Intervals.icu settings') + '</a>' +
+      '</section>');
+  }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-collega]');
+    if (b) { collegaDisp = b.dataset.collega; apriCollega(); return; }
+    const s = e.target.closest('[data-apri-sheet]');
+    if (s) apriSheet(s.dataset.apriSheet);
+  });
 
   /* ---- Schede (Oggi / Piano / Progressi / Salute) ---- */
   let tabAttiva = (() => { try { const t = localStorage.getItem('coach-tab'); if (['oggi', 'salute', 'piano', 'corse', 'progressi', 'info'].includes(t)) return t; } catch (_) {} return 'oggi'; })();
@@ -1598,6 +1709,7 @@
     const sh = $('#sheet');
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
+    if (location.hash === '#collega') { apriCollega(); return; }
     const mu = location.hash.match(/^#uso\/(\d+)$/);
     if (mu) { apriUso(mu[1]); return; }
     const mc = location.hash.match(/^#condividi\/(.+)$/);
@@ -2076,6 +2188,7 @@
     if (!u.completo) {
       html += '<section class="card acc-welcome"><h3>' + T('Benvenuto! Tre passi per iniziare', 'Welcome! Three steps to get started') + '</h3><ol>' +
         '<li>' + T('Porta i dati del tuo orologio su <b>Intervals.icu</b> (account gratuito). <b>Apple Watch</b>: installa l’app <b>Intervals.icu Companion</b> sull’iPhone e consenti allenamenti, FC a riposo, HRV e sonno. <b>Garmin, Coros, Polar, Suunto, Wahoo</b>: collega l’account in Intervals.icu → Settings → Connections.', 'Get your watch data onto <b>Intervals.icu</b> (free account). <b>Apple Watch</b>: install the <b>Intervals.icu Companion</b> app on iPhone and allow workouts, resting HR, HRV and sleep. <b>Garmin, Coros, Polar, Suunto, Wahoo</b>: link the account in Intervals.icu → Settings → Connections.') + '</li>' +
+        '<li>' + T('Collega il tuo orologio direttamente a Intervals.icu (non tramite Strava): <button type="button" class="link-btn" data-apri-sheet="#collega">guida</button>.', 'Connect your watch directly to Intervals.icu (not via Strava): <button type="button" class="link-btn" data-apri-sheet="#collega">guide</button>.') + '</li>' +
         '<li>' + T('Su intervals.icu apri <b>Settings → Developer Settings</b>: copia l’<b>Athlete ID</b> e genera una <b>API key</b>.', 'On intervals.icu open <b>Settings → Developer Settings</b>: copy the <b>Athlete ID</b> and generate an <b>API key</b>.') + '</li>' +
         '<li>' + T('Incollali qui sotto e scegli il giorno della prima seduta.', 'Paste them below and pick the day of your first session.') + '</li></ol></section>';
     }
@@ -3263,13 +3376,13 @@
       '<div class="pane-head"><h1>' + titolo + '</h1>' + (sotto ? '<span>' + sotto + '</span>' : '') + '</div>' + html + '</div>';
     $('#main').innerHTML =
       pane('oggi', T('Oggi', 'Today'), esc(fmtDataLunga(d.oggi)).replace(/^./, (x) => x.toUpperCase()),
-        renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
+        renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
         renderProgramma(d) + renderGuidaCard()) +
       pane('corse', T('Corse', 'Runs'), T('tocca una corsa per grafici e mappa', 'tap a run for charts and map'), '<div id="corse-wrap"></div>') +
       pane('progressi', T('Progressi', 'Progress'), '',
-        renderObiettivo(d) + renderSblocchi(d) + renderPasso(d) + renderPrevisioni(d) + renderCorsa(d) + '<div id="storico-wrap" class="wrap"></div>') +
+        renderObiettivo(d) + renderSblocchi(d) + renderPasso(d) + renderPrevisioni(d) + renderCarico(d) + renderCorsa(d) + '<div id="storico-wrap" class="wrap"></div>') +
       pane('info', T('Come funziona', 'How it works'), '', renderInfo(d));
     if (ultimoStorico) { const r = renderStorico(ultimoStorico); $('#storico-wrap').innerHTML = r.stats; $('#corse-wrap').innerHTML = riepilogoCorse(ultimoStorico) + r.elenco + cardScarpe(); renderUltimaCorsa(); }
     aggiornaTabbar();

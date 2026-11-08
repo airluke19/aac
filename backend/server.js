@@ -1001,6 +1001,14 @@ async function eseguiSync(origine) {
     const grezze = await intervalsGet('/activities', { oldest, newest: addDays(oggiStr, 1) });
     if (!Array.isArray(grezze)) throw new ErroreSync('Risposta inattesa da Intervals.icu (attività).');
 
+    // Le attivita' importate da Strava arrivano vuote dall'API di Intervals (termini di Strava): le contiamo
+    // per avvisare l'utente di collegare l'orologio direttamente a Intervals.icu
+    const daStrava = grezze.filter((g) => g && String(g.source || '').toUpperCase() === 'STRAVA' && !(num(g.distance) > 0));
+    let stravaPrec = null;
+    try { stravaPrec = JSON.parse(getMeta('strava_bloccate') || 'null'); } catch (_) { stravaPrec = null; }
+    const ultimaStrava = daStrava.reduce((m, g) => { const d = String(g.start_date_local || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(d) && d > m ? d : m; }, (stravaPrec && stravaPrec.ultima) || '');
+    setMeta('strava_bloccate', JSON.stringify({ ultima: ultimaStrava || null, nella_finestra: daStrava.length, controllo: oggiStr }));
+
     let benessereGrezzo = [];
     try {
       benessereGrezzo = await intervalsGet('/wellness', { oldest, newest: oggiStr });
@@ -1749,6 +1757,77 @@ function datiAdattamento(inizio, oggiStr) {
   };
 }
 
+// Collegamento: avviso se le ultime attivita' arrivano solo da Strava (Intervals non le passa ad altre app)
+function statoCollegamento(oggiStr) {
+  let s = null;
+  try { s = JSON.parse(getMeta('strava_bloccate') || 'null'); } catch (_) { s = null; }
+  const diretta = db.prepare("SELECT MAX(data) AS m FROM attivita WHERE origine = 'intervals'").get().m || null;
+  if (!s || !s.ultima) return { strava_ultima: null, ultima_diretta: diretta, avviso: false };
+  return { strava_ultima: s.ultima, ultima_diretta: diretta, avviso: diffDays(oggiStr, s.ultima) <= 30 && (!diretta || s.ultima > diretta) };
+}
+
+/**
+ * Carico e infortuni: tre segnali con soglie dichiarate.
+ *  - ACWR (ATL/CTL): 0,8–1,3 zona sicura; > 1,3 attenzione; > 1,5 alto (la prossima seduta viene alleggerita).
+ *  - km degli ultimi 7 giorni oltre +30% sulla media delle 4 settimane prima (e almeno +5 km).
+ *  - corsa singola oltre il 110% della piu' lunga dei 30 giorni prima (Frandsen et al., BJSM 2025); oltre il 130% = alto.
+ * Il limite consigliato per il prossimo lungo e' il 110% della corsa piu' lunga degli ultimi 30 giorni.
+ */
+const CARICO = { acwrAttenzione: 1.3, acwrAlto: 1.5, aumentoKm: 0.3, aumentoKmMin: 5, salto: 1.1, saltoAlto: 1.3 };
+function valutaCarico(oggiStr, acwrMappa) {
+  const corse = db
+    .prepare("SELECT data, distanza FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ? AND distanza > 0 ORDER BY data ASC")
+    .all(addDays(oggiStr, -64), oggiStr);
+  const km = (da, a) => corse.filter((c) => c.data >= da && c.data <= a).reduce((t, c) => t + c.distanza, 0);
+  const segnali = [];
+  let livello = 'ok';
+  const alza = (l) => { if (l === 'alto' || (l === 'attenzione' && livello === 'ok')) livello = l; };
+
+  let acwr = null;
+  for (let d = oggiStr, i = 0; i < 3 && acwr == null; i++, d = addDays(d, -1)) acwr = acwrMappa && acwrMappa.has(d) ? acwrMappa.get(d) : null;
+  if (acwr != null) {
+    if (acwr > CARICO.acwrAlto) { alza('alto'); segnali.push(L(`carico degli ultimi 7 giorni ${it1(acwr)} volte quello abituale (sicuro fino a 1,3)`, `last 7 days load ${round(acwr, 1)}× your usual (safe up to 1.3)`)); }
+    else if (acwr > CARICO.acwrAttenzione) { alza('attenzione'); segnali.push(L(`carico in crescita rapida: ${it1(acwr)} volte quello abituale (sicuro fino a 1,3)`, `load rising fast: ${round(acwr, 1)}× your usual (safe up to 1.3)`)); }
+  }
+
+  const km7 = km(addDays(oggiStr, -6), oggiStr);
+  const media = km(addDays(oggiStr, -34), addDays(oggiStr, -7)) / 4;
+  const aumento = media >= 5 ? km7 / media - 1 : null;
+  if (aumento != null && aumento > CARICO.aumentoKm && km7 - media >= CARICO.aumentoKmMin) {
+    alza('attenzione');
+    segnali.push(L(`${it1(km7)} km negli ultimi 7 giorni: +${Math.round(aumento * 100)}% sulla tua media (${it1(media)} km a settimana)`, `${round(km7, 1)} km in the last 7 days: +${Math.round(aumento * 100)}% over your average (${round(media, 1)} km a week)`));
+  }
+
+  // salto della corsa piu' lunga: ogni corsa degli ultimi 7 giorni contro la piu' lunga dei 30 giorni prima
+  let salto = null;
+  for (const c of corse.filter((x) => x.data >= addDays(oggiStr, -6))) {
+    const prima = corse.filter((x) => x.data >= addDays(c.data, -30) && x.data < c.data);
+    if (prima.length < 2) continue;
+    const max = Math.max(...prima.map((x) => x.distanza));
+    const r = c.distanza / max;
+    if (r > CARICO.salto && c.distanza - max >= 1 && (!salto || r > salto.rapporto)) salto = { data: c.data, km: round(c.distanza, 1), precedente: round(max, 1), rapporto: round(r, 2) };
+  }
+  if (salto) {
+    alza(salto.rapporto > CARICO.saltoAlto ? 'alto' : 'attenzione');
+    segnali.push(L(`corsa del ${salto.data.slice(8)}/${salto.data.slice(5, 7)} di ${it1(salto.km)} km: +${Math.round((salto.rapporto - 1) * 100)}% sulla più lunga del mese prima (${it1(salto.precedente)} km)`, `run on ${salto.data.slice(5, 7)}/${salto.data.slice(8)} of ${round(salto.km, 1)} km: +${Math.round((salto.rapporto - 1) * 100)}% over the longest of the month before (${round(salto.precedente, 1)} km)`));
+  }
+
+  const ult30 = corse.filter((x) => x.data >= addDays(oggiStr, -29));
+  const lungoMax = ult30.length ? Math.max(...ult30.map((x) => x.distanza)) : null;
+  return {
+    livello,
+    segnali,
+    acwr: acwr != null ? round(acwr, 2) : null,
+    km_7: round(km7, 1),
+    media_settimanale: media > 0 ? round(media, 1) : null,
+    aumento_pct: aumento != null ? Math.round(aumento * 100) : null,
+    salto,
+    lungo_max_30: lungoMax != null ? round(lungoMax, 1) : null,
+    limite_lungo_km: lungoMax != null && lungoMax >= 3 ? round(lungoMax * CARICO.salto, 1) : null,
+    soglie: CARICO,
+  };
+}
+
 function mediaBase(benessere, campo, data) {
   const vals = [];
   for (let d = addDays(data, -28); d < data; d = addDays(d, 1)) {
@@ -2095,6 +2174,9 @@ function costruisciProgramma(oggiStr) {
   }
   const fine = calendario[calendario.length - 1].data;
 
+  // ---- Carico e infortuni (serve anche all'adattamento giornaliero) ----
+  const carico = valutaCarico(oggiStr, dati.acwr);
+
   // ---- Adattamento giornaliero della prossima seduta ----
   const prossime = calendario.filter((s) => s.data > oggiStr || (s.data === oggiStr && !s.fatta)).slice(0, 3);
   let prontezza = { valutata: false, motivi: [] };
@@ -2112,6 +2194,7 @@ function costruisciProgramma(oggiStr) {
     }
     const tsbOggi = dati.tsb.get(oggiStr);
     if (tsbOggi != null && tsbOggi < SOGLIE.rossaMax) motivi.push(L(`TSB a ${it1(tsbOggi)}`, `TSB at ${round(tsbOggi, 1)}`));
+    if (carico.acwr != null && carico.acwr > CARICO.acwrAlto) motivi.push(L(`carico salito troppo in fretta (${it1(carico.acwr)} volte quello abituale)`, `load rose too fast (${round(carico.acwr, 1)}× your usual)`));
     prontezza.motivi = motivi;
     const p0 = prossime[0];
     if (motivi.length && p0.tipo !== 'gara' && p0.tipo !== 'recupero') {
@@ -2171,6 +2254,9 @@ function costruisciProgramma(oggiStr) {
   if (ultimaFreqInfo && settCorrente - ultimaFreqInfo.settimana <= 1) consigli.push(L(`Frequenza: ${ultimaFreqInfo.motivo}.`, `Frequency: ${ultimaFreqInfo.motivo}.`));
   if (ultimaModificaInfo && settCorrente - ultimaModificaInfo.settimana <= 2) consigli.push(L(`Ho regolato il piano: ${ultimaModificaInfo.motivo}.`, `I adjusted the plan: ${ultimaModificaInfo.motivo}.`));
   if (suggerimentoInt) consigli.push(suggerimentoInt);
+  if (carico.livello !== 'ok') consigli.push(L(`Attenzione al carico: ${carico.segnali.join('; ')}. Aumenta gradualmente: è così che si evitano gli infortuni.`, `Watch your load: ${carico.segnali.join('; ')}. Build up gradually: that is how injuries are avoided.`));
+  const prossimoLungo = calendario.find((c) => c.tipo === 'lungo' && c.data >= oggiStr && !c.fatta && diffDays(c.data, oggiStr) <= 7);
+  if (prossimoLungo && carico.limite_lungo_km) consigli.push(L(`Lungo di ${giornoSettimana(prossimoLungo.data)}: resta entro ${it1(carico.limite_lungo_km)} km (+10% sulla corsa più lunga degli ultimi 30 giorni).`, `Long run on ${giornoSettimana(prossimoLungo.data)}: stay within ${round(carico.limite_lungo_km, 1)} km (+10% over your longest run of the last 30 days).`));
   if (prossime[0] && prossime[0].adattata) {
     consigli.push(L(`Prossima seduta alleggerita: ${prossime[0].adattata.motivi.join(', ')}.`, `Next session lightened: ${prossime[0].adattata.motivi.join(', ')}.`));
   } else if (prontezza.valutata) {
@@ -2190,6 +2276,7 @@ function costruisciProgramma(oggiStr) {
 
   return {
     attivo: oggiStr <= fine,
+    carico,
     inizio,
     fine,
     offset_gara: offGara,
@@ -3475,6 +3562,7 @@ function costruisciCoachData() {
     atleta: { eta: CONFIG.eta, eta_impostata: CONFIG.etaImpostata || null, fc_max_stimata: CONFIG.fcMax, fc_max_info: infoFcMax(), soglie_piano: soglieFcPiano(), obiettivo: P(obiettivoCorrente().nome), codice_obiettivo: CONFIG.obiettivo || 'mezza' },
     soglie: SOGLIE,
     sincronizzazione: statoSync(),
+    collegamento: statoCollegamento(oggiStr),
     salute: costruisciSalute(oggiStr),
     altre_attivita: costruisciAltreAttivita(oggiStr),
     programma: costruisciProgramma(oggiStr),

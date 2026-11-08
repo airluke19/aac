@@ -1750,3 +1750,42 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .cond-sf .sf-tema { background: linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #000)); }
 .cond-sf button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); transform: scale(1.06); }
 @media (prefers-reduced-motion: reduce) { .cond-sf button { transition: none; } }
+
+/* ===================== Avvisi (Strava, carico) ===================== */
+.avviso { --c: var(--warn); margin-top: 14px; padding: 16px; border-radius: 20px; background: color-mix(in srgb, var(--c) 9%, var(--surface)); border: 1px solid color-mix(in srgb, var(--c) 35%, var(--line)); }
+.avviso.bad { --c: var(--danger); }
+.avviso .av-h { display: flex; align-items: center; gap: 10px; }
+.avviso .av-h svg { width: 22px; height: 22px; color: var(--c); flex: none; }
+.avviso h3 { font-size: 1.0625rem; font-weight: 700; }
+.avviso p { margin: 8px 0 0; font-size: .92rem; line-height: 1.45; }
+.avviso ul { margin: 8px 0 0; padding-left: 18px; font-size: .92rem; line-height: 1.45; }
+.avviso .gc-cta { margin-top: 12px; }
+
+/* Carico e infortuni (Progressi) */
+.sec-title .pill { margin-left: auto; }
+.acwr-v b { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.02em; }
+.acwr { position: relative; margin: 10px 0 26px; }
+.acwr-bar { display: flex; height: 10px; border-radius: 999px; overflow: hidden; }
+.acwr-bar i { display: block; height: 100%; }
+.acwr-bar .z-basso { width: 40%; background: color-mix(in srgb, var(--muted) 35%, transparent); }
+.acwr-bar .z-ok { width: 25%; background: var(--accent); }
+.acwr-bar .z-att { width: 10%; background: var(--warn); }
+.acwr-bar .z-alto { width: 25%; background: var(--danger); }
+.acwr > b { position: absolute; top: -4px; width: 4px; height: 18px; margin-left: -2px; border-radius: 2px; background: var(--text); box-shadow: 0 0 0 2px var(--surface); }
+.acwr-lab { position: relative; height: 16px; margin-top: 6px; font-size: .72rem; color: var(--muted); }
+.acwr-lab span { position: absolute; transform: translateX(-50%); }
+
+/* Guida: collega l'orologio */
+.collega { display: grid; gap: 14px; }
+.collega .in-flow { margin: 0; }
+.cl-intro { margin: 0; line-height: 1.5; }
+.cl-alert { margin: 0; padding: 12px 14px; border-radius: 14px; background: color-mix(in srgb, var(--warn) 12%, var(--surface)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); font-size: .9rem; }
+.cl-disp { display: flex; flex-wrap: wrap; gap: 8px; }
+.cl-disp button { font: inherit; font-size: .86rem; font-weight: 600; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); cursor: pointer; }
+.cl-disp button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.cl-passi { margin: 0; padding: 0; list-style: none; counter-reset: p; display: grid; gap: 10px; }
+.cl-passi li { counter-increment: p; position: relative; padding: 12px 14px 12px 52px; border-radius: 14px; background: var(--surface-2); line-height: 1.45; }
+.cl-passi li::before { content: counter(p); position: absolute; left: 14px; top: 11px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: .85rem; }
+.cl-note h4 { font-size: .95rem; margin: 0 0 6px; }
+.cl-note ul { margin: 0; padding-left: 18px; display: grid; gap: 6px; font-size: .9rem; line-height: 1.45; color: var(--muted); }
+.cl-go { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; justify-self: start; }
