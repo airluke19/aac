@@ -58,12 +58,18 @@ BASE.fcMax = fcMaxTanaka(BASE.eta);
 
 // Ogni richiesta (e ogni sincronizzazione) gira nel contesto di un utente: database e impostazioni sono i suoi.
 const contesto = new AsyncLocalStorage();
-const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto']);
+const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'dataNascita', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto']);
 const CONFIG = new Proxy(BASE, {
   get(t, k) {
     const c = contesto.getStore();
     // FC massima: quella indicata dall'utente (o vista nelle sue corse), altrimenti la formula di Tanaka dall'eta'
-    if (c && CAMPI_UTENTE.has(k)) return k === 'fcMax' ? c.cfg.fcMaxReale || fcMaxTanaka(c.cfg.eta) : c.cfg[k];
+    if (c && CAMPI_UTENTE.has(k)) {
+      // con la data di nascita l'eta' e' sempre quella di oggi (non quella del giorno in cui e' stata salvata)
+      const eta = c.cfg.dataNascita ? etaDa(c.cfg.dataNascita) : c.cfg.eta;
+      if (k === 'eta') return eta;
+      if (k === 'etaImpostata') return c.cfg.dataNascita ? eta : c.cfg.etaImpostata;
+      return k === 'fcMax' ? c.cfg.fcMaxReale || fcMaxTanaka(eta) : c.cfg[k];
+    }
     return t[k];
   },
 });
@@ -302,7 +308,7 @@ function dbPer(file) {
   }
   return dbAperti.get(file);
 }
-const { creaAccount } = require('./account');
+const { creaAccount, etaDa } = require('./account');
 const account = creaAccount({ BASE, dbPer, contesto, cambioObiettivo: (ctx, nuovo) => mappaCambioObiettivo(ctx, nuovo) });
 function chiudiDb(file) {
   const d = dbAperti.get(file);
@@ -2997,10 +3003,36 @@ function markdownSessione(data, perParere = false) {
   R.push(L('## Atleta e obiettivo', '## Athlete and goal'));
   const mese = CONFIG.programmaInizio ? Number(CONFIG.programmaInizio.slice(5, 7)) - 1 : null;
   const anno = CONFIG.programmaInizio ? CONFIG.programmaInizio.slice(0, 4) : '';
+  // eta' alla data della seduta se c'e' la data di nascita, altrimenti quella del profilo (o predefinita)
+  const nascita = CONFIG.dataNascita;
+  const etaSeduta = nascita ? etaDa(nascita, data) : CONFIG.eta;
+  const dataIt = (d) => `${Number(d.slice(8))}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+  const etaTxt = nascita
+    ? L(`${etaSeduta} anni (nato/a il ${dataIt(nascita)})`, `${etaSeduta} (born ${dataIt(nascita)})`)
+    : CONFIG.etaImpostata ? L(`${etaSeduta} anni`, `${etaSeduta}`) : L(`${etaSeduta} anni (valore predefinito, non indicato dall'atleta)`, `${etaSeduta} (default value, not entered by the athlete)`);
   R.push(L(
-    `- Età ${CONFIG.eta} anni;${mese != null ? ` ha ripreso a correre a ${MESI_IT[mese]} ${anno} dopo anni di inattività.` : ''}`,
-    `- Age ${CONFIG.eta};${mese != null ? ` started running again in ${MESI_EN[mese]} ${anno} after years of inactivity.` : ''}`
+    `- Età ${etaTxt};${mese != null ? ` ha ripreso a correre a ${MESI_IT[mese]} ${anno} dopo anni di inattività.` : ''}`,
+    `- Age ${etaTxt};${mese != null ? ` started running again in ${MESI_EN[mese]} ${anno} after years of inactivity.` : ''}`
   ));
+  // Corpo: altezza, peso (il piu' recente fino alla data della seduta) e BMI
+  const corpo = corpoEBmi(data);
+  if (corpo.altezza_cm || corpo.peso_kg != null) {
+    const parti = [];
+    if (corpo.altezza_cm) parti.push(L(`altezza ${corpo.altezza_cm} cm`, `height ${corpo.altezza_cm} cm`));
+    if (corpo.peso_kg != null) {
+      const fonte = corpo.fonte_peso === 'misurato' ? L('bilancia', 'scale') : L('profilo', 'profile');
+      parti.push(L(`peso ${String(corpo.peso_kg).replace('.', ',')} kg`, `weight ${corpo.peso_kg} kg`) + ` (${fonte}${corpo.data_peso ? `, ${dataIt(corpo.data_peso)}` : ''})`);
+    }
+    if (corpo.bmi != null) {
+      parti.push(L(`BMI ${String(corpo.bmi).replace('.', ',')} (${corpo.categoria.nome.toLowerCase()}; intervallo normopeso per questa altezza ${String(corpo.peso_normo[0]).replace('.', ',')}–${String(corpo.peso_normo[1]).replace('.', ',')} kg)`,
+        `BMI ${corpo.bmi} (${corpo.categoria.nome.toLowerCase()}; healthy range for this height ${corpo.peso_normo[0]}–${corpo.peso_normo[1]} kg)`));
+    }
+    R.push(L(`- Corpo: ${parti.join(', ')}.`, `- Body: ${parti.join(', ')}.`));
+    if (corpo.bmi != null) R.push(L(
+      '- Nota: il BMI non distingue massa muscolare e grasso; usalo come indicazione per carico e impatto sulle articolazioni, non come diagnosi.',
+      '- Note: BMI does not tell muscle from fat; use it as a guide to load and joint impact, not as a diagnosis.'
+    ));
+  }
   R.push(CONFIG.fcMaxReale
     ? L(`- FC massima **misurata** ${CONFIG.fcMax} bpm (inserita dall'atleta).`, `- **Measured** max HR ${CONFIG.fcMax} bpm (entered by the athlete).`)
     : L(`- FC massima **stimata** ${CONFIG.fcMax} bpm (formula di Tanaka 208 − 0,7 × età, non misurata).`, `- **Estimated** max HR ${CONFIG.fcMax} bpm (Tanaka formula 208 − 0.7 × age, not measured).`));
@@ -3131,12 +3163,18 @@ function markdownSessione(data, perParere = false) {
   R.push('');
 
   R.push(L('## Cosa vorrei da te', '## What I would like from you'));
+  const haCorpo = corpo.altezza_cm || corpo.peso_kg != null;
+  const notaCorpo = L(
+    `Nel valutare carico, ritmo e recupero tieni conto anche di età${haCorpo ? ', altezza, peso' : ''}${corpo.bmi != null ? ' e BMI' : ''} riportati sopra (es. impatto sulle articolazioni, FC attesa per l’età).`,
+    `When judging load, pace and recovery also take into account the age${haCorpo ? ', height, weight' : ''}${corpo.bmi != null ? ' and BMI' : ''} listed above (e.g. joint impact, expected HR for the age).`
+  );
   if (perParere) {
     // formato "parere del coach": breve, concreto, con i numeri
     R.push(L(
       'Sei AAC, un allenatore di corsa esperto e pratico. Dammi un parere su questa seduta basandoti solo sui dati qui sopra (se un dato manca, non inventarlo). Il piano si adatta già da solo: i consigli riguardano come eseguire le sedute, non cambiare il programma. La salute viene prima della prestazione; niente diagnosi mediche.',
       'You are AAC, an experienced, practical running coach. Give me feedback on this session based only on the data above (if something is missing, do not invent it). The plan already adapts by itself: tips are about how to run the sessions, not about changing the programme. Health comes before performance; no medical diagnoses.'
     ));
+    R.push(notaCorpo);
     R.push(L('Rispondi in italiano con questa struttura, frasi brevi e i numeri che motivano ogni giudizio:', 'Reply in English with this structure, short sentences and the numbers behind each judgement:'));
     R.push(L('1. **Verdetto** in massimo 8 parole, poi 2-3 frasi su com’è andata rispetto al piano e al recupero.', '1. **Verdict** in at most 8 words, then 2-3 sentences on how it went versus the plan and recovery.'));
     R.push(L('2. **Fatto bene**: 1-3 punti.', '2. **Done well**: 1-3 points.'));
@@ -3157,6 +3195,8 @@ function markdownSessione(data, perParere = false) {
     R.push('3. Cosa devo cambiare nella prossima seduta e nella settimana?');
     R.push(`4. Sono in linea con l’obiettivo (${p ? p.obiettivo.nome : 'gara'})? Cosa migliorare per primo?`);
   }
+  R.push('');
+  R.push(notaCorpo);
   return R.join('\n') + '\n';
 }
 

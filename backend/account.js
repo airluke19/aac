@@ -23,6 +23,12 @@ const COOKIE_OAUTH = 'aac_oauth';
 const DURATA_SESSIONE_GIORNI = 30;
 // Data di oggi nel fuso dell'app (AAAA-MM-GG)
 const oggiLocale = () => new Date().toLocaleDateString('sv-SE', { timeZone: process.env.TZ || 'Europe/Rome' });
+// Eta' compiuta a una data (AAAA-MM-GG) da una data di nascita (AAAA-MM-GG)
+const etaDa = (nascita, al = oggiLocale()) => {
+  if (!nascita) return null;
+  const [a, m, g] = nascita.split('-').map(Number), [a2, m2, g2] = al.split('-').map(Number);
+  return a2 - a - (m2 < m || (m2 === m && g2 < g) ? 1 : 0);
+};
 const MAX_IN_ATTESA = 50; // richieste di accesso non ancora approvate
 
 function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
@@ -65,6 +71,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     if (!col.has('colore')) sis.exec('ALTER TABLE utenti ADD COLUMN colore TEXT'); // colore principale scelto dall'utente
     if (!col.has('obiettivo')) sis.exec('ALTER TABLE utenti ADD COLUMN obiettivo TEXT'); // 5k | 10k | mezza | maratona (vuoto = mezza)
     if (!col.has('intensita')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita TEXT'); // tranquilla | equilibrata | ambiziosa (vuoto = equilibrata)
+    if (!col.has('data_nascita')) sis.exec('ALTER TABLE utenti ADD COLUMN data_nascita TEXT'); // AAAA-MM-GG: se presente l'eta' si calcola da qui
     if (!col.has('intensita_auto')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita_auto INTEGER'); // 0 = bloccata; vuoto/1 = regolata dal coach
   }
   // Utilizzo dell'app per le statistiche dell'amministratore: un record per utente e giorno (ora locale).
@@ -194,6 +201,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
           athleteId: u.athlete_id || '',
           eta: u.eta || 33,
           etaImpostata: u.eta || null,
+          dataNascita: u.data_nascita || null,
           altezza: u.altezza || null,
           peso: u.peso || null,
           pesoData: u.peso_data || null,
@@ -342,7 +350,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       profilo: {
         athlete_id: u.athlete_id || '',
         ha_chiave: Boolean(u.intervals_key),
-        eta: u.eta || null,
+        eta: u.data_nascita ? etaDa(u.data_nascita) : u.eta || null,
+        data_nascita: u.data_nascita || null,
         programma_inizio: u.programma_inizio || null,
         programma_ora: u.programma_ora || '06:30',
         settimana_iniziale: u.settimana_iniziale ?? null, // null = non ancora scelta (valutazione da proporre)
@@ -376,12 +385,16 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     const errori = [];
     const athlete = b.athlete_id != null ? String(b.athlete_id).trim() : u.athlete_id;
     const nuovaChiave = b.intervals_key ? String(b.intervals_key).trim() : null;
-    const eta = b.eta === '' || b.eta === null ? null : b.eta != null ? parseInt(b.eta, 10) : u.eta;
+    const nascitaIn = b.data_nascita !== undefined ? (b.data_nascita === null || String(b.data_nascita).trim() === '' ? null : String(b.data_nascita).trim()) : u.data_nascita || null;
+    const nascitaOk = nascitaIn == null || (/^\d{4}-\d{2}-\d{2}$/.test(nascitaIn) && !isNaN(Date.parse(nascitaIn + 'T00:00:00Z')));
+    // con la data di nascita l'eta' si ricava da li' (resta salvata anche come numero, per chi la legge cosi')
+    const eta = nascitaIn && nascitaOk ? etaDa(nascitaIn) : b.eta === '' || b.eta === null ? null : b.eta != null ? parseInt(b.eta, 10) : u.eta;
+    if (!nascitaOk) errori.push('data_nascita');
     const inizio = b.programma_inizio != null ? String(b.programma_inizio).trim() : u.programma_inizio;
     const oraP = b.programma_ora != null ? String(b.programma_ora).trim() : u.programma_ora;
     if (athlete && !/^i?\d{1,12}$/.test(athlete)) errori.push('athlete_id');
     if (nuovaChiave && !/^[A-Za-z0-9_-]{8,100}$/.test(nuovaChiave)) errori.push('intervals_key');
-    if (eta != null && !(eta >= 14 && eta <= 90)) errori.push('eta');
+    if (eta != null && !(eta >= 14 && eta <= 90)) errori.push(nascitaIn ? 'data_nascita' : 'eta');
     if (inizio && !/^\d{4}-\d{2}-\d{2}$/.test(inizio)) errori.push('programma_inizio');
     if (oraP && !/^\d{2}:\d{2}$/.test(oraP)) errori.push('programma_ora');
     const intONull = (v) => (v === null || v === '' ? null : parseInt(v, 10));
@@ -413,8 +426,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       const m = cambioObiettivo(contestoDi(u), obiettivoIn); // stessa fase nel nuovo piano, da oggi
       if (m) { settFinale = m.settimana_iniziale; inizioFinale = m.programma_inizio; }
     }
-    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ? WHERE id = ?')
-      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), u.id);
+    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ?, data_nascita = ? WHERE id = ?')
+      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), nascitaIn, u.id);
     dimentica(u.id);
     return { ok: true, utente: perId(u.id) };
   }
@@ -660,4 +673,4 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
   return { attivo, inizializza, admin, utentiAttivi, contestoDi, monta, sistema: sis };
 }
 
-module.exports = { creaAccount };
+module.exports = { creaAccount, etaDa };

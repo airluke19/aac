@@ -471,7 +471,7 @@
     const strumenti = kv(T('Calendario', 'Calendar'), T('tocca un giorno per la seduta', 'tap a day for the session')) +
       kv(T('Esporta', 'Export'), T('.ics per il tuo calendario', '.ics for your calendar')) +
       kv(T('Segna come fatta', 'Mark as done'), T('per le sedute senza orologio', 'for sessions without a watch')) +
-      kv(T('Copia per AI', 'Copy for AI'), T('i dati di una seduta fatta', 'data of a completed session'));
+      kv(T('Copia per AI', 'Copy for AI'), T('i dati di una seduta fatta, con età, altezza, peso e BMI se presenti', 'data of a completed session, with age, height, weight and BMI when available'));
 
     const limiti = li(T([
       '<b>Nessun modello di AI</b>: regole fisse, uguali per tutti.',
@@ -2009,8 +2009,12 @@
           '</div>'
         : '') +
       '<h3>' + T('Il tuo corpo', 'Your body') + '</h3>' +
-      '<div class="acc-row acc-row3">' +
-        campo('acc-eta', T('Età', 'Age'), '<input id="acc-eta" name="eta" type="number" inputmode="numeric" min="14" max="90" placeholder="33" value="' + esc(p.eta || '') + '">') +
+      '<div class="acc-row acc-row2">' +
+        campo('acc-nascita', T('Data di nascita', 'Date of birth'), '<input id="acc-nascita" name="data_nascita" type="date" min="1930-01-01" max="' + new Date().toISOString().slice(0, 10) + '" value="' + esc(p.data_nascita || '') + '">') +
+        // con la data di nascita l'eta' si calcola da sola
+        campo('acc-eta', T('Età', 'Age'), '<input id="acc-eta" name="eta" type="number" inputmode="numeric" min="14" max="90" placeholder="33" value="' + esc(p.eta || '') + '"' + (p.data_nascita ? ' disabled title="' + T('Calcolata dalla data di nascita', 'Worked out from the date of birth') + '"' : '') + '>') +
+      '</div>' +
+      '<div class="acc-row acc-row2">' +
         campo('acc-alt', T('Altezza (cm)', 'Height (cm)'), '<input id="acc-alt" name="altezza" type="number" inputmode="numeric" min="100" max="230" value="' + esc(p.altezza || '') + '">') +
         campo('acc-peso', T('Peso (kg)', 'Weight (kg)'), '<input id="acc-peso" name="peso" type="text" inputmode="decimal" pattern="[0-9]{2,3}([.,][0-9])?" maxlength="5" value="' + esc(p.peso != null ? String(p.peso).replace('.', LANG === 'en' ? '.' : ',') : '') + '">') +
       '</div>' +
@@ -2160,17 +2164,29 @@
     return { ok: r.ok, out };
   };
 
+  // Data di nascita nel profilo: l'eta' si aggiorna da sola e non si modifica a mano
+  $('#sheet-body').addEventListener('input', (e) => {
+    if (e.target.id !== 'acc-nascita') return;
+    const eta = $('#acc-eta'); if (!eta) return;
+    const v = e.target.value;
+    eta.disabled = Boolean(v);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(v)) {
+      const [a, m, g] = v.split('-').map(Number), d = new Date();
+      eta.value = d.getFullYear() - a - (d.getMonth() + 1 < m || (d.getMonth() + 1 === m && d.getDate() < g) ? 1 : 0);
+    }
+  });
+
   $('#sheet-body').addEventListener('submit', async (e) => {
     if (e.target.id === 'acc-form') {
       e.preventDefault();
       const f = new FormData(e.target), corpo = {};
-      for (const [k, v] of f.entries()) if (String(v).trim() !== '' || ['athlete_id', 'eta', 'fc_max', 'altezza', 'peso'].includes(k)) corpo[k] = String(v).trim();
+      for (const [k, v] of f.entries()) if (String(v).trim() !== '' || ['athlete_id', 'eta', 'fc_max', 'altezza', 'peso', 'data_nascita'].includes(k)) corpo[k] = String(v).trim();
       const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
       const err = $('#acc-err'); err.hidden = true;
       try {
         const { ok, out } = await inviaJson('PUT', '/api/profilo', corpo);
         if (!ok) {
-          const msg = { fc_max: T('FC max tra 140 e 220 bpm.', 'Max HR between 140 and 220 bpm.'), altezza: T('Altezza tra 100 e 230 cm.', 'Height between 100 and 230 cm.'), peso: T('Peso tra 30 e 250 kg.', 'Weight between 30 and 250 kg.'), intervals: T('Intervals.icu non accetta questa API key con questo Athlete ID: ricontrollali.', 'Intervals.icu rejects this API key with this Athlete ID: please check them.'), athlete_id: T('Athlete ID non valido (es. i123456).', 'Invalid Athlete ID (e.g. i123456).'), intervals_key: T('API key non valida.', 'Invalid API key.'), eta: T('Età non valida.', 'Invalid age.'), programma_inizio: T('Data non valida.', 'Invalid date.'), programma_ora: T('Orario non valido.', 'Invalid time.') };
+          const msg = { fc_max: T('FC max tra 140 e 220 bpm.', 'Max HR between 140 and 220 bpm.'), altezza: T('Altezza tra 100 e 230 cm.', 'Height between 100 and 230 cm.'), peso: T('Peso tra 30 e 250 kg.', 'Weight between 30 and 250 kg.'), intervals: T('Intervals.icu non accetta questa API key con questo Athlete ID: ricontrollali.', 'Intervals.icu rejects this API key with this Athlete ID: please check them.'), athlete_id: T('Athlete ID non valido (es. i123456).', 'Invalid Athlete ID (e.g. i123456).'), intervals_key: T('API key non valida.', 'Invalid API key.'), eta: T('Età non valida.', 'Invalid age.'), data_nascita: T('Data di nascita non valida (età tra 14 e 90 anni).', 'Invalid date of birth (age between 14 and 90).'), programma_inizio: T('Data non valida.', 'Invalid date.'), programma_ora: T('Orario non valido.', 'Invalid time.') };
           err.textContent = (out.errori || []).map((x) => msg[x] || x).join(' ') || T('Salvataggio non riuscito.', 'Could not save.');
           err.hidden = false;
           return;
