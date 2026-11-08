@@ -87,7 +87,7 @@ Goal, intensity and days are set with a **step-by-step guide that opens inside t
 - **Load and injuries:** three declared signals (recent vs usual load ACWR, weekly km jump, single-run jump over the month's longest); a warning on Today, a section in Progress, the next session lightened when ACWR goes above 1.5 and a cap for the next long run (+10%)
 - **Connecting your watch:** if your runs reach Intervals.icu only through Strava (which Intervals cannot pass on), the app warns you and a step-by-step guide shows how to connect Garmin, Apple Watch, Coros, Polar or Suunto directly
 - **Plan:** calendar with every change explained; copy a finished session as Markdown to discuss it with any AI assistant; download the calendar (.ics); share a finished session as an image for a post (4:5) or a story (9:16), drawn on your device in your accent colour on a background you pick (dark, theme colour, light and a few sporty tints), with the route shape (no map) or without it
-- **Runs:** history, filters, shoes; **Relive** your run as a full-screen 3D fly-over of the route (camera follows you, live km/time/pace/HR, terrain from the open AWS Terrain Tiles); run detail with GPS map, heart rate, pace, cadence, power, elevation, running dynamics, laps, effort (RPE) and weather
+- **Runs:** history, filters, shoes; **Relive** your run as a full-screen 3D fly-over of the route on satellite imagery (camera follows you, live km/time/pace/HR, pause, drag to seek, Back closes it; terrain from the open AWS Terrain Tiles); run detail with satellite GPS map (Esri World Imagery), heart rate, pace, cadence, power, elevation, running dynamics, laps, effort (RPE) and weather
 - **Progress:** goal, predictions, training load
 - **Info:** every rule explained in plain language
 
