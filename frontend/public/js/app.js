@@ -1950,7 +1950,7 @@
       '<div class="acc-famiglie" role="tablist">' + FAMIGLIE.map((f) => '<button type="button" role="tab" aria-selected="' + (f === fam) + '" data-famiglia="' + f[0] + '" class="' + (f === fam ? 'on' : '') + '"><i aria-hidden="true">' +
         f[3].slice(0, 3).map((x) => '<b style="--sw:' + sw(x) + '"></b>').join('') + '</i>' + (LANG === 'en' ? f[2] : f[1]) + '</button>').join('') + '</div>' +
       '<div class="acc-colori" role="radiogroup">' + fam[3].map((x) => '<button type="button" role="radio" aria-checked="' + (x[0] === att) + '" aria-label="' + (LANG === 'en' ? x[2] : x[1]) + '" title="' + (LANG === 'en' ? x[2] : x[1]) + '" data-colore="' + x[0] + '" class="' + (x[0] === att ? 'on' : '') + '" style="--sw:' + sw(x) + ';color:' + (x[0] === att ? 'var(--accent-ink)' : '#fff') + '">' + (x[0] === att ? '✓' : '') + '</button>').join('') + '</div>' +
-      '<p class="acc-colori-nomi">' + (LANG === 'en' ? nome[2] : nome[1]) + '</p></section>';
+      '<p class="acc-colori-nomi">' + T('Attuale: ', 'Current: ') + (LANG === 'en' ? nome[2] : nome[1]) + '</p></section>';
   }
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-famiglia]');
