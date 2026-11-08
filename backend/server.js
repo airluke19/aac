@@ -1565,7 +1565,7 @@ const F_BASE = fase(2, 9, 16, ['Base aerobica', 'Aerobic base'], ['Correre 45–
 const OBIETTIVI = {
   '5k': {
     km: 5, nome: ['5 km', '5K'], ritmo: ['ritmo 5 km', '5K pace'], titoloRitmo: ['Ritmo 5 km', '5K pace'], mesi: [4, 8],
-    fcGara: 0.9, zonaGara: [0.88, 0.93], deriva: 1, durataGara: 40, stimaGara: ['circa 30–40 minuti', 'about 30–40 minutes'],
+    fcGara: 0.9, zonaGara: [0.92, 0.97], deriva: 1, durataGara: 40, stimaGara: ['circa 30–40 minuti', 'about 30–40 minutes'],
     notaGara: ['Riscaldati bene: 10′ di corsetta e qualche allungo. Parti controllato, nel primo km è facile esagerare.', 'Warm up well: 10′ easy jog and a few strides. Start controlled: it is easy to overdo the first km.'],
     piano: PIANO_5K,
     fasi: [F_RIP, fase(2, 9, 12, ['Base aerobica', 'Aerobic base'], ['Correre 35–40 minuti senza fermarsi', 'Run 35–40 minutes without stopping']),
@@ -1573,7 +1573,7 @@ const OBIETTIVI = {
   },
   '10k': {
     km: 10, nome: ['10 km', '10K'], ritmo: ['ritmo 10 km', '10K pace'], titoloRitmo: ['Ritmo 10 km', '10K pace'], mesi: [6, 12],
-    fcGara: 0.86, zonaGara: [0.84, 0.89], deriva: 0.98, durataGara: 75, stimaGara: ['circa 60–75 minuti', 'about 60–75 minutes'],
+    fcGara: 0.86, zonaGara: [0.89, 0.94], deriva: 0.98, durataGara: 75, stimaGara: ['circa 60–75 minuti', 'about 60–75 minutes'],
     notaGara: ['Parti più piano di quanto ti venga naturale: la seconda metà è quella che conta.', 'Start slower than feels natural: the second half is what counts.'],
     piano: PIANO_10K,
     fasi: [F_RIP, F_BASE, fase(3, 17, 20, ['Costruzione', 'Build'], ['Lungo fino a 70 minuti e frazioni a ritmo 10 km', 'Long run up to 70 minutes and reps at 10K pace']),
@@ -1581,7 +1581,7 @@ const OBIETTIVI = {
   },
   mezza: {
     km: 21.0975, nome: ['Mezza maratona', 'Half marathon'], ritmo: ['ritmo mezza', 'half-marathon pace'], titoloRitmo: ['Ritmo mezza maratona', 'Half-marathon pace'], mesi: [6, 12],
-    fcGara: 0.8, zonaGara: [0.8, 0.85], deriva: 0.96, durataGara: 150, stimaGara: ['circa 2h20–2h35', 'about 2h20–2h35'],
+    fcGara: 0.8, zonaGara: [0.85, 0.9], deriva: 0.96, durataGara: 150, stimaGara: ['circa 2h20–2h35', 'about 2h20–2h35'],
     notaGara: ['Parti più lento di quanto ti venga naturale: i primi 5 km devono sembrare facilissimi. Bevi a ogni ristoro. Goditela.', 'Start slower than feels natural: the first 5 km should feel very easy. Drink at every aid station. Enjoy it.'],
     piano: PIANO_MEZZA,
     fasi: [F_RIP, F_BASE, fase(3, 17, 22, ['Costruzione', 'Build'], ['Lungo fino a 1h35 e primi lavori a ritmo gara', 'Long run up to 1h35 and first race-pace work']),
@@ -1589,7 +1589,7 @@ const OBIETTIVI = {
   },
   maratona: {
     km: 42.195, nome: ['Maratona', 'Marathon'], ritmo: ['ritmo maratona', 'marathon pace'], titoloRitmo: ['Ritmo maratona', 'Marathon pace'], mesi: [9, 15],
-    fcGara: 0.76, zonaGara: [0.74, 0.8], deriva: 0.93, durataGara: 300, stimaGara: ['circa 4h30–5h30', 'about 4h30–5h30'],
+    fcGara: 0.76, zonaGara: [0.8, 0.86], deriva: 0.93, durataGara: 300, stimaGara: ['circa 4h30–5h30', 'about 4h30–5h30'],
     notaGara: ['Parti piano: la maratona inizia al 30° km. Bevi e mangia a ogni ristoro, anche se non ne senti il bisogno.', 'Start slowly: the marathon starts at km 30. Drink and eat at every aid station, even if you do not feel the need.'],
     piano: PIANO_MARATONA,
     fasi: [F_RIP, F_BASE, fase(3, 17, 22, ['Costruzione', 'Build'], ['Lungo fino a 1h35 e lavori a ritmo medio', 'Long run up to 1h35 and steady-pace work']),
@@ -1655,7 +1655,8 @@ function specSeduta(d) {
       const veloce = e === 'mezza' || e === 'gara';
       const etichetta = e === 'mezza' ? L('ritmo mezza', 'half-marathon pace') : e === 'gara' ? P(og.ritmo) : L('ritmo medio', 'steady pace');
       const titoloR = e === 'mezza' ? L('Ritmo mezza maratona', 'Half-marathon pace') : e === 'gara' ? P(og.titoloRitmo) : L('Ritmo medio', 'Steady pace');
-      return { ...base, tipo: 'qualita', titolo: titoloR, fc: veloce ? `${Math.round(CONFIG.fcMax * og.zonaGara[0])}–${Math.round(CONFIG.fcMax * og.zonaGara[1])}` : fcQualita(),
+      const zg = e === 'mezza' ? OBIETTIVI.mezza.zonaGara : og.zonaGara;
+      return { ...base, tipo: 'qualita', titolo: titoloR, fc: veloce ? `${Math.round(CONFIG.fcMax * zg[0])}–${Math.round(CONFIG.fcMax * zg[1])}` : fcQualita(),
         blocchi: L(`10' ${facile} + ${a} × (${b}' a ${etichetta} + ${c}' ${facile}) + 5' ${facile}`, `10' easy + ${a} × (${b}' at ${etichetta} + ${c}' easy) + 5' easy`),
         lavoro, corsa: lavoro,
         segmenti: [{ tipo: 'run', min: 10 }, ...ripeti(a, () => [{ tipo: 'fast', min: b }, { tipo: 'run', min: c }]), { tipo: 'run', min: 5 }] };
@@ -1663,7 +1664,7 @@ function specSeduta(d) {
     case 'gara': {
       const og = obiettivoCorrente();
       const kmTxt = String(round(og.km, 1)).replace('.', LINGUA === 'en' ? '.' : ',');
-      return { ...base, riscaldamento: 10, defaticamento: 10, tipo: 'gara', titolo: '🏁 ' + P(og.nome), fc: `< ${Math.round(CONFIG.fcMax * Math.min(0.95, og.zonaGara[1]))}`,
+      return { ...base, riscaldamento: 10, defaticamento: 10, tipo: 'gara', titolo: '🏁 ' + P(og.nome), fc: `${Math.round(CONFIG.fcMax * og.zonaGara[0])}–${Math.round(CONFIG.fcMax * og.zonaGara[1])}`,
         blocchi: L(`${kmTxt} km a ritmo costante (${og.stimaGara[0]})`, `${kmTxt} km at a steady pace (${og.stimaGara[1]})`),
         lavoro: og.durataGara, corsa: og.durataGara, segmenti: [{ tipo: 'run', min: og.durataGara }],
         nota: P(og.notaGara) };

@@ -1688,8 +1688,46 @@
     aggiornaAvatar();
     caricaValutazione();
     // nuovo utente: prima di tutto il collegamento con Intervals.icu e la data di inizio
-    if (!ME.completo && !location.hash) apriSheet('#account');
-    else chiediCorpo();
+    const pr = ME.profilo || {};
+    if (!ME.completo && !(pr.ha_chiave && pr.athlete_id) && !location.hash) apriSheet('#account');
+    else if (!chiediInizio()) chiediCorpo();
+  }
+
+  // Popup obbligatorio: Intervals collegato ma nessuna data di inizio = niente piano. Si sceglie la prima seduta
+  // (proposta: oggi o il primo dei giorni scelti). Non si rimanda: senza data il calendario resta vuoto.
+  function chiediInizio() {
+    const pr = ME && ME.profilo;
+    if (!pr || ME.demo || ME.impersonato_da || !pr.ha_chiave || !pr.athlete_id || pr.programma_inizio) return false;
+    if ($('#inizio-dlg')) return true;
+    const oggiS = (ultimiDati && ultimiDati.oggi) || new Date().toLocaleDateString('sv-SE');
+    const proposta = primoGiornoUtile({ oggi: oggiS, giorni: new Set(pr.giorni_sedute || []) });
+    document.body.insertAdjacentHTML('beforeend',
+      '<dialog id="inizio-dlg" class="corpo-dlg" aria-labelledby="inizio-t"><form method="dialog" class="acc-form" id="inizio-form" novalidate>' +
+        '<h3 id="inizio-t">' + T('Quando inizi?', 'When do you start?') + '</h3>' +
+        '<p class="sub">' + T('Scegli il giorno della prima seduta: da lì il coach costruisce il tuo calendario. Ti propongo il primo giorno utile.', 'Pick the day of your first session: the coach builds your calendar from there. I suggest the first suitable day.') + '</p>' +
+        '<label class="acc-f"><span>' + T('Prima seduta', 'First session') + '</span><input name="programma_inizio" type="date" min="' + esc(oggiS) + '" value="' + esc(proposta) + '" required></label>' +
+        '<p id="inizio-err" class="acc-err" hidden></p>' +
+        '<div class="corpo-az"><span></span><button type="submit" class="btn-primary">' + T('Inizia il piano', 'Start the plan') + '</button></div>' +
+      '</form></dialog>');
+    const dlg = $('#inizio-dlg');
+    dlg.addEventListener('cancel', (e) => e.preventDefault()); // la data serve: Esc non chiude
+    $('#inizio-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const v = String(new FormData(e.target).get('programma_inizio') || '').trim(), err = $('#inizio-err');
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) { err.textContent = T('Scegli una data.', 'Pick a date.'); err.hidden = false; return; }
+      const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
+      try {
+        const { ok, out } = await inviaJson('PUT', '/api/profilo', { programma_inizio: v });
+        if (!ok) { err.textContent = T('Data non valida.', 'Invalid date.'); err.hidden = false; return; }
+        ME = out;
+        dlg.close(); dlg.remove();
+        toast(T('Piano pronto: ecco il calendario', 'Plan ready: here is your calendar'), 'ok');
+        await caricaDati(true);
+        vaiTab('piano');
+      } catch (_) { /* errore gia' segnalato */ } finally { btn.disabled = false; }
+    });
+    dlg.showModal();
+    return true;
   }
 
   // Popup: altezza e peso mancanti, servono per il BMI. Chiede solo cio' che manca
@@ -2037,7 +2075,7 @@
       // prima seduta e orario solo finche' il piano non e' iniziato (dopo restano quelli salvati)
       (!p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10))
         ? '<div class="acc-row acc-row2">' +
-            campo('acc-ini', T('Prima seduta', 'First session'), '<input id="acc-ini" name="programma_inizio" type="date" value="' + esc(p.programma_inizio || '') + '">', T('Vuoto = da oggi, o dal primo dei tuoi giorni.', 'Empty = from today, or your first chosen day.')) +
+            campo('acc-ini', T('Prima seduta', 'First session'), '<input id="acc-ini" name="programma_inizio" type="date" value="' + esc(p.programma_inizio || '') + '">') +
             campo('acc-ora', T('Orario', 'Time'), '<input id="acc-ora" name="programma_ora" type="time" value="' + esc(p.programma_ora || '06:30') + '">') +
           '</div>'
         : '') +
@@ -2406,6 +2444,7 @@
         toast(T('Profilo salvato', 'Profile saved'), 'ok');
         await caricaDati(true);
         if (ME.completo && ME.profilo.ha_chiave) sincronizza();
+        if (chiediInizio()) return;
         apriAccount();
       } catch (_) { /* gestito */ } finally { btn.disabled = false; }
     } else if (e.target.id === 'acc-livello-form') {
