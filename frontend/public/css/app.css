@@ -975,11 +975,22 @@ body.demo .account-wrap { display: none; }
 /* con le sfumature di arancio: gli avvisi passano al giallo e le conferme restano verdi, per non confonderli con il colore principale */
 [data-theme="dark"][data-accent]:not([data-accent="verde"]):is([data-accent="ambra"], [data-accent="arancio"], [data-accent="mandarino"]) { --warn: #ffd60a; --ok: #30d158; }
 [data-theme="light"][data-accent]:not([data-accent="verde"]):is([data-accent="ambra"], [data-accent="arancio"], [data-accent="mandarino"]) { --warn: #946200; --ok: #248a3d; }
+/* rossi, gialli e rosa: le conferme restano verdi, per non confonderle con avvisi ed errori */
+[data-theme="dark"][data-accent]:is([data-accent="rame"], [data-accent="cremisi"], [data-accent="segnale"], [data-accent="fucsia"], [data-accent="magenta"], [data-accent="volt"], [data-accent="elettrico"]) { --ok: #30d158; }
+[data-theme="light"][data-accent]:is([data-accent="rame"], [data-accent="cremisi"], [data-accent="segnale"], [data-accent="fucsia"], [data-accent="magenta"], [data-accent="volt"], [data-accent="elettrico"]) { --ok: #248a3d; }
+[data-theme="dark"][data-accent="rame"] { --warn: #ffd60a; }
+[data-theme="light"][data-accent="rame"] { --warn: #946200; }
 .acc-colori { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
 .acc-colori button { width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer; background: var(--sw); box-shadow: 0 0 0 2px var(--surface), 0 0 0 2px transparent; transition: box-shadow .15s, transform .1s; display: grid; place-items: center; color: #fff; font-weight: 800; }
 .acc-colori button:active { transform: scale(.94); }
 .acc-colori button.on { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--sw); }
 .acc-colori-nomi { margin-top: 8px; color: var(--muted); font-size: .8rem; }
+.acc-famiglie { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 14px; }
+.acc-famiglie button { display: inline-flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px 0 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; }
+.acc-famiglie button.on { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); }
+.acc-famiglie i { display: flex; }
+.acc-famiglie i b { width: 12px; height: 12px; border-radius: 50%; background: var(--sw); margin-left: -4px; box-shadow: 0 0 0 1.5px var(--surface-2); }
+.acc-famiglie i b:first-child { margin-left: 0; }
 /* ---- Schede e barra in basso ---- */
 .pane-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 4px 2px 2px; }
 .pane-head h1 { margin: 0; font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
@@ -1487,7 +1498,10 @@ details.more[open] > :not(summary), .pv-how[open] > div { animation: aprendo .22
 /* Safari iOS da' ai campi data/ora una larghezza minima propria che sborda sul campo accanto:
    senza aspetto nativo il campo rispetta la colonna della griglia */
 .acc-f input[type="date"], .acc-f input[type="time"] { -webkit-appearance: none; appearance: none; display: block; min-width: 0; max-width: 100%; text-align: left; }
-.acc-f input::-webkit-date-and-time-value { text-align: left; margin: 0; }
+/* senza aspetto nativo Safari iOS mette la data in alto: la riportiamo al centro in verticale come gli altri campi */
+.acc-f input[type="date"], .acc-f input[type="time"] { line-height: 42px; padding-top: 0; padding-bottom: 0; }
+.acc-f input::-webkit-date-and-time-value { text-align: left; margin: 0; line-height: 42px; min-height: 42px; }
+.acc-f input::-webkit-datetime-edit { padding: 0; line-height: 42px; }
 @media (max-width: 420px) {
   .acc-row.acc-row2 .acc-f:first-child, .acc-row.acc-row3 .acc-f:first-child { grid-column: auto; }
 }

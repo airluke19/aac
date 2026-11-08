@@ -17,3 +17,32 @@
 [data-theme="light"][data-accent="arancio"]  { --accent: #c24e00; --accent-ink: #ffffff; }
 [data-theme="dark"][data-accent="mandarino"] { --accent: #ff7a45; --accent-ink: #2b0d00; }
 [data-theme="light"][data-accent="mandarino"]{ --accent: #c2410c; --accent-ink: #ffffff; }
+/* Famiglia "Pista": colori vivaci da abbigliamento da corsa */
+[data-theme="dark"][data-accent="volt"]      { --accent: #d4ff1f; --accent-ink: #1c2400; }
+[data-theme="light"][data-accent="volt"]     { --accent: #5c7300; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="cremisi"]   { --accent: #ff3b4f; --accent-ink: #2e0007; }
+[data-theme="light"][data-accent="cremisi"]  { --accent: #c8102e; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="fucsia"]    { --accent: #ff4fa3; --accent-ink: #2e0016; }
+[data-theme="light"][data-accent="fucsia"]   { --accent: #c2185b; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="laser"]     { --accent: #4d7cff; --accent-ink: #000f33; }
+[data-theme="light"][data-accent="laser"]    { --accent: #1d4ed8; --accent-ink: #ffffff; }
+/* Famiglia "Outdoor": toni da orologio sportivo e montagna */
+[data-theme="dark"][data-accent="ghiacciaio"]{ --accent: #1fb2ec; --accent-ink: #00263a; }
+[data-theme="light"][data-accent="ghiacciaio"]{ --accent: #0072a3; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="salvia"]    { --accent: #9ccc9c; --accent-ink: #0d260d; }
+[data-theme="light"][data-accent="salvia"]   { --accent: #4a7a4a; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="rame"]      { --accent: #e8894a; --accent-ink: #2b1100; }
+[data-theme="light"][data-accent="rame"]     { --accent: #a8521a; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="segnale"]   { --accent: #ff5a4a; --accent-ink: #2e0500; }
+[data-theme="light"][data-accent="segnale"]  { --accent: #c41e1e; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="ardesia"]   { --accent: #a9bdd2; --accent-ink: #0f1a26; }
+[data-theme="light"][data-accent="ardesia"]  { --accent: #4a6178; --accent-ink: #ffffff; }
+/* Famiglia "Neon": per chi vuole farsi notare */
+[data-theme="dark"][data-accent="ciano"]     { --accent: #00ecff; --accent-ink: #00262b; }
+[data-theme="light"][data-accent="ciano"]    { --accent: #007a85; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="magenta"]   { --accent: #ff3ddc; --accent-ink: #2e0028; }
+[data-theme="light"][data-accent="magenta"]  { --accent: #b0119a; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="elettrico"] { --accent: #ffe600; --accent-ink: #2b2600; }
+[data-theme="light"][data-accent="elettrico"]{ --accent: #806b00; --accent-ink: #ffffff; }
+[data-theme="dark"][data-accent="ultravioletto"] { --accent: #a46bff; --accent-ink: #160033; }
+[data-theme="light"][data-accent="ultravioletto"]{ --accent: #6b21d8; --accent-ink: #ffffff; }

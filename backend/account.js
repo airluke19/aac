@@ -17,6 +17,9 @@ const crypto = require('crypto');
 const Database = require('better-sqlite3');
 
 // Ambiente dell'istanza: 'staging' mostra il badge BETA nell'app e nella pagina di login
+// colori d'accento ammessi (stessi id di FAMIGLIE in app.js e di css/accenti.css)
+const COLORI_AMMESSI = new Set(['verde', 'menta', 'azzurro', 'blu', 'indaco', 'viola', 'ambra', 'arancio', 'mandarino', 'volt', 'cremisi', 'fucsia', 'laser',
+  'ghiacciaio', 'salvia', 'rame', 'segnale', 'ardesia', 'ciano', 'magenta', 'elettrico', 'ultravioletto']);
 const AMBIENTE = String(process.env.AAC_AMBIENTE || 'production').trim().toLowerCase() === 'staging' ? 'staging' : 'production';
 const COOKIE_SESSIONE_VECCHIO = 'aac_sess'; // fino al 7 nov 2026; ora __Host-aac_sess in HTTPS
 const COOKIE_OAUTH = 'aac_oauth';
@@ -436,7 +439,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     }
     const modoIn = b.giorni_modo !== undefined ? String(b.giorni_modo) : u.giorni_modo || 'preferiti';
     if (!['preferiti', 'fissi'].includes(modoIn)) errori.push('giorni_modo');
-    if (coloreIn && !['verde', 'menta', 'azzurro', 'blu', 'indaco', 'viola', 'ambra', 'arancio', 'mandarino'].includes(coloreIn)) errori.push('colore');
+    if (coloreIn && !COLORI_AMMESSI.has(coloreIn)) errori.push('colore');
     if (errori.length) return { ok: false, errori };
     const chiaveFinale = nuovaChiave || decifra(u.intervals_key);
     if ((nuovaChiave || athlete !== u.athlete_id) && chiaveFinale && athlete) {

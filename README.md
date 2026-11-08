@@ -89,7 +89,7 @@ Changing goal, intensity or days in your profile shows a **preview of the new pl
 - **Progress:** goal, predictions, training load
 - **Info:** every rule explained in plain language
 
-Light and dark theme, Italian and English, 9 accent colours. Multi‑user with Google sign‑in, invitations and admin approval.
+Light and dark theme, Italian and English, 22 accent colours in four families (classic, track, outdoor, neon). Multi‑user with Google sign‑in, invitations and admin approval.
 
 ---
 

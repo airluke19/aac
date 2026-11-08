@@ -1921,9 +1921,19 @@
   }
 
   /* ---- Colore principale ---- */
-  const COLORI = [['verde', 'Verde', 'Green', '#30d158', '#248a3d'], ['menta', 'Menta', 'Mint', '#63e6e2', '#0c817b'], ['azzurro', 'Azzurro', 'Cyan', '#64d2ff', '#0071a4'],
-    ['blu', 'Blu', 'Blue', '#0a84ff', '#0066cc'], ['indaco', 'Indaco', 'Indigo', '#7d7aff', '#3634a3'], ['viola', 'Viola', 'Purple', '#bf5af2', '#8944ab'],
-    ['ambra', 'Ambra', 'Amber', '#ffb340', '#a15c00'], ['arancio', 'Arancio', 'Orange', '#ff9f0a', '#c24e00'], ['mandarino', 'Mandarino', 'Tangerine', '#ff7a45', '#c2410c']];
+  // Famiglie di colori: [id, nome IT, nome EN, colori]; ogni colore = [id, IT, EN, tema scuro, tema chiaro]
+  const FAMIGLIE = [
+    ['sistema', 'Classici', 'Classic', [['verde', 'Verde', 'Green', '#30d158', '#248a3d'], ['menta', 'Menta', 'Mint', '#63e6e2', '#0c817b'], ['azzurro', 'Azzurro', 'Cyan', '#64d2ff', '#0071a4'],
+      ['blu', 'Blu', 'Blue', '#0a84ff', '#0066cc'], ['indaco', 'Indaco', 'Indigo', '#7d7aff', '#3634a3'], ['viola', 'Viola', 'Purple', '#bf5af2', '#8944ab'],
+      ['ambra', 'Ambra', 'Amber', '#ffb340', '#a15c00'], ['arancio', 'Arancio', 'Orange', '#ff9f0a', '#c24e00'], ['mandarino', 'Mandarino', 'Tangerine', '#ff7a45', '#c2410c']]],
+    ['pista', 'Pista', 'Track', [['volt', 'Volt', 'Volt', '#d4ff1f', '#5c7300'], ['cremisi', 'Cremisi', 'Crimson', '#ff3b4f', '#c8102e'], ['fucsia', 'Fucsia', 'Fuchsia', '#ff4fa3', '#c2185b'],
+      ['laser', 'Blu laser', 'Laser blue', '#4d7cff', '#1d4ed8']]],
+    ['outdoor', 'Outdoor', 'Outdoor', [['ghiacciaio', 'Ghiacciaio', 'Glacier', '#1fb2ec', '#0072a3'], ['salvia', 'Salvia', 'Sage', '#9ccc9c', '#4a7a4a'], ['rame', 'Rame', 'Copper', '#e8894a', '#a8521a'],
+      ['segnale', 'Rosso segnale', 'Signal red', '#ff5a4a', '#c41e1e'], ['ardesia', 'Ardesia', 'Slate', '#a9bdd2', '#4a6178']]],
+    ['neon', 'Neon', 'Neon', [['ciano', 'Ciano', 'Cyan', '#00ecff', '#007a85'], ['magenta', 'Magenta', 'Magenta', '#ff3ddc', '#b0119a'], ['elettrico', 'Giallo elettrico', 'Electric yellow', '#ffe600', '#806b00'],
+      ['ultravioletto', 'Ultravioletto', 'Ultraviolet', '#a46bff', '#6b21d8']]]];
+  const COLORI = FAMIGLIE.flatMap((f) => f[3]);
+  let famigliaVista = null; // famiglia aperta nel profilo (solo per la vista, non si salva)
   function applicaColore(c) {
     if (!COLORI.some((x) => x[0] === c)) c = 'verde';
     document.documentElement.setAttribute('data-accent', c);
@@ -1933,10 +1943,21 @@
     const att = document.documentElement.getAttribute('data-accent') || 'verde';
     const scuro = document.documentElement.getAttribute('data-theme') !== 'light';
     const nome = (COLORI.find((x) => x[0] === att) || COLORI[0]);
-    return '<section class="card" id="acc-aspetto"><h3>' + T('Colore principale', 'Accent colour') + '</h3><p class="sub">' + T('Pulsanti, grafici e zone cardiache. Si salva nel tuo account.', 'Buttons, charts and heart-rate zones. Saved to your account.') + '</p>' +
-      '<div class="acc-colori" role="radiogroup">' + COLORI.map((x) => '<button type="button" role="radio" aria-checked="' + (x[0] === att) + '" aria-label="' + (LANG === 'en' ? x[2] : x[1]) + '" title="' + (LANG === 'en' ? x[2] : x[1]) + '" data-colore="' + x[0] + '" class="' + (x[0] === att ? 'on' : '') + '" style="--sw:' + (scuro ? x[3] : x[4]) + '">' + (x[0] === att ? '✓' : '') + '</button>').join('') + '</div>' +
+    const fam = FAMIGLIE.find((f) => f[0] === famigliaVista) || FAMIGLIE.find((f) => f[3].some((x) => x[0] === att)) || FAMIGLIE[0];
+    const sw = (x) => scuro ? x[3] : x[4];
+    return '<section class="card" id="acc-aspetto"><h3>' + T('Colore principale', 'Accent colour') + '</h3><p class="sub">' + T('Scegli una famiglia, poi il colore. Pulsanti, grafici e zone cardiache. Si salva nel tuo account.', 'Pick a family, then a colour. Buttons, charts and heart-rate zones. Saved to your account.') + '</p>' +
+      '<div class="acc-famiglie" role="tablist">' + FAMIGLIE.map((f) => '<button type="button" role="tab" aria-selected="' + (f === fam) + '" data-famiglia="' + f[0] + '" class="' + (f === fam ? 'on' : '') + '"><i aria-hidden="true">' +
+        f[3].slice(0, 3).map((x) => '<b style="--sw:' + sw(x) + '"></b>').join('') + '</i>' + (LANG === 'en' ? f[2] : f[1]) + '</button>').join('') + '</div>' +
+      '<div class="acc-colori" role="radiogroup">' + fam[3].map((x) => '<button type="button" role="radio" aria-checked="' + (x[0] === att) + '" aria-label="' + (LANG === 'en' ? x[2] : x[1]) + '" title="' + (LANG === 'en' ? x[2] : x[1]) + '" data-colore="' + x[0] + '" class="' + (x[0] === att ? 'on' : '') + '" style="--sw:' + sw(x) + ';color:' + (x[0] === att ? 'var(--accent-ink)' : '#fff') + '">' + (x[0] === att ? '✓' : '') + '</button>').join('') + '</div>' +
       '<p class="acc-colori-nomi">' + (LANG === 'en' ? nome[2] : nome[1]) + '</p></section>';
   }
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-famiglia]');
+    if (!b) return;
+    famigliaVista = b.dataset.famiglia;
+    const box = $('#acc-aspetto');
+    if (box) box.outerHTML = renderColori();
+  });
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-colore]');
     if (!b) return;
