@@ -77,6 +77,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     if (!col.has('intensita_auto')) sis.exec('ALTER TABLE utenti ADD COLUMN intensita_auto INTEGER'); // 0 = bloccata; vuoto/1 = regolata dal coach
     // cambio di obiettivo a piano iniziato: dalla settimana che contiene riparti_data si prosegue dalla
     // settimana riparti_settimana del nuovo piano (data di inizio e storico restano quelli di prima)
+    if (!col.has('giorni_modo')) sis.exec('ALTER TABLE utenti ADD COLUMN giorni_modo TEXT'); // preferiti (proposta, default) | fissi (obbligatori)
     if (!col.has('riparti_data')) sis.exec('ALTER TABLE utenti ADD COLUMN riparti_data TEXT');
     if (!col.has('riparti_settimana')) sis.exec('ALTER TABLE utenti ADD COLUMN riparti_settimana INTEGER');
     if (!col.has('giorni_sedute')) sis.exec('ALTER TABLE utenti ADD COLUMN giorni_sedute TEXT'); // giorni preferiti per le sedute, es. "1,3,5" (0 = domenica); vuoto = sceglie il coach
@@ -220,6 +221,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
           obiettivo: u.obiettivo || 'mezza',
           intensita: u.intensita || 'equilibrata',
           giorniSedute: giorniDa(u.giorni_sedute),
+          giorniModo: u.giorni_modo === 'fissi' ? 'fissi' : 'preferiti',
           ripartiData: u.riparti_data || null,
           ripartiSett: u.riparti_settimana || null,
         },
@@ -374,6 +376,7 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
         intensita: u.intensita || 'equilibrata',
         intensita_auto: u.intensita_auto !== 0,
         giorni_sedute: giorniDa(u.giorni_sedute), // null = sceglie il coach
+        giorni_modo: u.giorni_modo === 'fissi' ? 'fissi' : 'preferiti',
       },
       completo: Boolean(u.intervals_key && u.athlete_id && u.programma_inizio),
       // nuovo iscritto: utente (non amministratore) registrato negli ultimi 30 giorni -> domande iniziali sulla corsa
@@ -431,6 +434,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
       else if (!/^[0-6](,[0-6]){0,6}$/.test(v) || new Set(v.split(',')).size !== v.split(',').length) errori.push('giorni_sedute');
       else giorniIn = v.split(',').map(Number).sort((a, b2) => a - b2).join(',');
     }
+    const modoIn = b.giorni_modo !== undefined ? String(b.giorni_modo) : u.giorni_modo || 'preferiti';
+    if (!['preferiti', 'fissi'].includes(modoIn)) errori.push('giorni_modo');
     if (coloreIn && !['verde', 'menta', 'azzurro', 'blu', 'indaco', 'viola', 'ambra', 'arancio', 'mandarino'].includes(coloreIn)) errori.push('colore');
     if (errori.length) return { ok: false, errori };
     const chiaveFinale = nuovaChiave || decifra(u.intervals_key);
@@ -450,8 +455,8 @@ function creaAccount({ BASE, dbPer, contesto, cambioObiettivo }) {
     if ((inizioFinale || null) !== (u.programma_inizio || null) || (b.settimana_iniziale !== undefined && settIn !== u.settimana_iniziale)) {
       if (!(cambiaObiettivo && ripartiData)) { ripartiData = null; ripartiSett = null; }
     }
-    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ?, data_nascita = ?, giorni_sedute = ?, riparti_data = ?, riparti_settimana = ? WHERE id = ?')
-      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), nascitaIn, giorniIn, ripartiData, ripartiSett, u.id);
+    sis.prepare('UPDATE utenti SET athlete_id = ?, intervals_key = ?, eta = ?, programma_inizio = ?, programma_ora = ?, settimana_iniziale = ?, fc_max = ?, colore = ?, obiettivo = ?, intensita = ?, intensita_auto = ?, altezza = ?, peso = ?, peso_data = ?, data_nascita = ?, giorni_sedute = ?, giorni_modo = ?, riparti_data = ?, riparti_settimana = ? WHERE id = ?')
+      .run(athlete || null, nuovaChiave ? cifra(nuovaChiave) : u.intervals_key, eta || null, inizioFinale, oraP || '06:30', settFinale, fcMaxIn ?? null, coloreIn || null, obiettivoIn || null, intensitaIn || null, autoIn ?? null, altezzaIn ?? null, pesoIn ?? null, pesoIn == null ? null : pesoIn !== u.peso ? oggiLocale() : u.peso_data || oggiLocale(), nascitaIn, giorniIn, giorniIn ? modoIn : 'preferiti', ripartiData, ripartiSett, u.id);
     dimentica(u.id);
     return { ok: true, utente: perId(u.id) };
   }

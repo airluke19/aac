@@ -62,6 +62,7 @@ Only runs count (and sessions you mark as done by hand). Runs on days without a 
 - A **4th** (and a **5th** for half marathon and marathon) has to be **earned**: 3 weeks in a row with every session done, no fatigue, and training load growing safely (acute/chronic load ratio ≤ 1.3, Gabbett 2016). How many you can reach depends on your goal, phase and intensity, as in the classic plans by Daniels, Pfitzinger and Higdon.
 - The extra sessions are always **easy runs**: more volume, not more intensity (the 80/20 rule, Seiler).
 - They go away again with signs of fatigue, or if for 2 weeks they don't fit in your life. Recovery weeks, race week and the run‑walk phase stay at 3.
+- **Fixed days:** in your profile you choose whether your days are only **suggested** or **fixed**. With fixed days the coach only uses those: with 2 days it keeps the key sessions (long run, quality) and skips an easy run, and if they are back to back the second one is always easy; with just 1 day you do one session at a time and each plan week lasts two weeks, so the goal moves later. It tells you honestly when a choice is not ideal ("not the best, but let's try") and gives tips.
 - **Days:** for every week the coach tries every possible combination of days and picks the best one. The rules: never two hard sessions (long run, pace work, race) on consecutive days; long run and race preferably at the weekend; your **preferred days** whenever possible; a missed session moves to the days left in the week. When a session lands outside your preferred days, the calendar tells you why.
 
 **5. Every 3 weeks: intensity.** You choose *easy‑going*, *balanced* or *ambitious*. If 3 weeks in a row are too easy, or 2 out of 3 are too hard, the coach adjusts it by ±10% on its own.
@@ -77,7 +78,7 @@ Only runs count (and sessions you mark as done by hand). Runs on days without a 
 | Half marathon | 26 | Restart → aerobic base → build → peak, taper and race |
 | Marathon | 36 | Restart → aerobic base → build → marathon block → taper and race |
 
-Changing goal or intensity in your profile shows a **preview of the new plan** before you save. A new goal continues from the same phase of the new plan, starting from the current week: your history and the runs you already did stay.
+Changing goal, intensity or days in your profile shows a **preview of the new plan** (plan week, sessions S1, S2, S3…, estimated race date and tips) before you save. A new goal continues from the same phase of the new plan, starting from the current week: your history and the runs you already did stay.
 
 ### What you see in the app
 

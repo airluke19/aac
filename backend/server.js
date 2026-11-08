@@ -58,7 +58,7 @@ BASE.fcMax = fcMaxTanaka(BASE.eta);
 
 // Ogni richiesta (e ogni sincronizzazione) gira nel contesto di un utente: database e impostazioni sono i suoi.
 const contesto = new AsyncLocalStorage();
-const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'dataNascita', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto', 'giorniSedute', 'ripartiData', 'ripartiSett']);
+const CAMPI_UTENTE = new Set(['apiKey', 'athleteId', 'eta', 'etaImpostata', 'dataNascita', 'fcMax', 'fcMaxReale', 'altezza', 'peso', 'pesoData', 'programmaInizio', 'programmaOra', 'seedMock', 'settimanaIniziale', 'obiettivo', 'intensita', 'intensitaAuto', 'giorniSedute', 'giorniModo', 'ripartiData', 'ripartiSett']);
 const CONFIG = new Proxy(BASE, {
   get(t, k) {
     const c = contesto.getStore();
@@ -1398,6 +1398,41 @@ function descExtra(stepIdx, intensita) {
   return ['facile', Math.max(20, Math.round((base[1] * 0.8) / 5) * 5), false];
 }
 
+// Giorni obbligatori: il coach usa solo quelli (oltre ai giorni passati in cui hai corso davvero)
+const giorniFissi = () => (CONFIG.giorniModo === 'fissi' && Array.isArray(CONFIG.giorniSedute) && CONFIG.giorniSedute.length ? CONFIG.giorniSedute : null);
+// con meno sedute di quelle del piano si tengono le piu' importanti: gara, lungo, qualita', poi le facili.
+// turno: con 1 seduta a settimana la settimana del piano dura 2 settimane e la seconda propone l'altra seduta chiave
+function sceltaSedute(descs, n, turno) {
+  if (n >= descs.length) return descs.map((_, i) => i);
+  const rango = { G: 0, L: 1, Q: 2, E: 3 };
+  const ord = descs.map((d, i) => i).sort((x, y) => rango[ruoloSeduta(descs[x])] - rango[ruoloSeduta(descs[y])] || x - y);
+  const k = turno % ord.length;
+  return [...ord.slice(k), ...ord.slice(0, k)].slice(0, n).sort((x, y) => x - y);
+}
+
+// Consigli sui giorni scelti (profilo, anteprima e "il coach dice"): onesti, mai bloccanti
+function consigliGiorni(giorni, modo, obiettivo) {
+  const out = [];
+  if (!Array.isArray(giorni) || !giorni.length) return out;
+  const set = new Set(giorni), k = giorni.length;
+  const nomeG = (g) => (LINGUA === 'en' ? GIORNI_EN : GIORNI)[g];
+  const diFila = (g) => set.has((g + 1) % 7);
+  const fila3 = giorni.some((g) => set.has((g + 1) % 7) && set.has((g + 2) % 7));
+  const nomeOb = P((OBIETTIVI[obiettivo] || OBIETTIVI.mezza).nome);
+  if (modo === 'fissi') {
+    if (k === 1) out.push(L(`Un solo giorno (${nomeG(giorni[0])}): ogni settimana del piano durerà 2 settimane, quindi l’obiettivo slitta. Non è l’ideale, il corpo si adatta meglio con 2–3 uscite, ma ci proviamo. Se riesci, a metà settimana fai 30′ di camminata veloce: non conta per il piano ma aiuta tendini e fiato.`,
+      `A single day (${nomeG(giorni[0])}): each plan week will last 2 weeks, so your goal moves later. Not ideal, the body adapts better with 2–3 outings, but let’s try. If you can, add a 30′ brisk walk midweek: it does not count for the plan but helps tendons and breathing.`));
+    if (k === 2 && giorni.some(diFila)) out.push(L('Due giorni di fila: il primo è per la seduta chiave, il secondo è sempre facile (la qualità diventa corsa facile). Poi tanti giorni di riposo: se puoi, distanziali.',
+      'Two days in a row: the first is for the key session, the second is always easy (quality becomes an easy run). Then many rest days: spread them out if you can.'));
+    else if (k === 2) out.push(L('Due giorni: il piano non si allunga, ma salta una corsa facile a settimana. Tieni il ritmo davvero da conversazione.', 'Two days: the plan does not get longer, but skips one easy run a week. Keep the pace truly conversational.'));
+    if (k <= 2 && (obiettivo === 'mezza' || obiettivo === 'maratona')) out.push(L(`Per ${nomeOb === 'Maratona' ? 'la maratona' : 'la mezza'} nelle fasi finali servono almeno 3 uscite a settimana: con ${k} ${k === 1 ? 'giorno' : 'giorni'} valuta 10 km o 5 km, oppure aggiungi un giorno più avanti.`,
+      `For the ${obiettivo === 'maratona' ? 'marathon' : 'half marathon'} the final phases need at least 3 runs a week: with ${k} day${k === 1 ? '' : 's'} consider 10K or 5K, or add a day later on.`));
+    if (k === 3 || k === 4) out.push(L('Con giorni fissi la 4ª e 5ª seduta arrivano solo se ci sono giorni liberi: il coach non ne aggiunge altri.', 'With fixed days the 4th and 5th session only come if there are free days: the coach adds no others.'));
+  }
+  if (fila3) out.push(L('Tre giorni di corsa di fila affaticano gambe e tendini, soprattutto all’inizio: se puoi, lascia un giorno di riposo in mezzo.', 'Three running days in a row tire legs and tendons, especially at first: leave a rest day in between if you can.'));
+  return out;
+}
+
 // Sceglie i giorni delle sedute di una settimana. sedute = descrittori nell'ordine del piano.
 // Restituisce [{ off, i }] (off = giorno 0-6 dall'inizio del blocco, i = indice nella lista sedute).
 function scegliGiorni(sedute, c) {
@@ -1406,18 +1441,21 @@ function scegliGiorni(sedute, c) {
   const facili = sedute.map((d, i) => (sedutaDura(d) ? -1 : i)).filter((i) => i >= 0);
   const dataDi = (off) => addDays(c.da, off);
   const dowDi = (off) => new Date(dayMs(dataDi(off))).getUTCDay();
+  // giorni possibili: con giorni obbligatori solo quelli, piu' i giorni passati in cui hai corso davvero
+  const ammesso = (off) => !c.fissi || c.fissi.has(dowDi(off)) || (dataDi(off) <= c.oggi && c.giorniCorsa.has(dataDi(off)));
   let migliore = null;
   const valuta = (giorni, mappa) => {
     // mappa[k] = indice della seduta nel giorno giorni[k]
     const dura = new Set(), corsa = new Set(giorni.map(dataDi));
     giorni.forEach((g, k) => { if (sedutaDura(sedute[mappa[k]])) dura.add(dataDi(g)); });
-    for (const d of dura) if (dura.has(addDays(d, -1)) || c.precDure.has(addDays(d, -1))) return null;
     let p = 0;
+    // vincoli: con c.rilassa (giorni obbligatori senza alternative) diventano penalita'
+    for (const d of dura) if (dura.has(addDays(d, -1)) || c.precDure.has(addDays(d, -1))) { if (!c.rilassa) return null; p -= 8; }
     for (const d of corsa) {
       const ieri = corsa.has(addDays(d, -1)) || c.precCorsa.has(addDays(d, -1));
       const altroieri = corsa.has(addDays(d, -2)) || c.precCorsa.has(addDays(d, -2));
       if (ieri) p -= 1;
-      if (ieri && altroieri) { if (c.maxFila2) return null; p -= 2; }
+      if (ieri && altroieri) { if (c.maxFila2 && !c.rilassa) return null; p -= 2; }
     }
     // settimana della gara: meglio la corsa facile prima e la camminata di recupero dopo
     const kGara = giorni.findIndex((_, k) => sedute[mappa[k]][0] === 'gara');
@@ -1455,10 +1493,10 @@ function scegliGiorni(sedute, c) {
       posti(dure, []);
       return;
     }
-    for (let g = da; g <= 6; g++) combina(g + 1, [...scelti, g]);
+    for (let g = da; g <= 6; g++) if (ammesso(g)) combina(g + 1, [...scelti, g]);
   };
   combina(0, []);
-  if (!migliore) return sedute.map((_, i) => ({ off: [0, 2, 4, 6, 1][i] ?? i, i })); // nessuna combinazione valida
+  if (!migliore) return null; // nessuna combinazione valida: decide chi chiama (qualita' -> facile, poi vincoli rilassati)
   return migliore.giorni.map((off, k) => ({ off, i: migliore.mappa[k] }));
 }
 
@@ -1858,16 +1896,21 @@ function costruisciProgramma(oggiStr) {
   const pctDi = (g) => Math.round((baseInt.mult + g * PASSO_AUTO - 1) * 100);
   // frequenza: livello raggiunto (3-5 sedute), settimane buone di fila e settimane in cui le sedute non entrano
   let livelloFreq = 3, buoneDiFila = 0, scarseDiFila = 0, ultimaFreqInfo = null;
+  // giorni obbligatori: al massimo una seduta per giorno; con 1 solo giorno servono 2 settimane per la stessa settimana del piano
+  const fissi = giorniFissi();
+  const kFissi = fissi ? fissi.length : 7;
+  let accum = 0; // sedute gia' fatte della settimana del piano in corso (solo con 1 seduta a settimana)
   // cambio di obiettivo: nella settimana che contiene riparti_data si salta alla settimana scelta del nuovo piano
   const riparti = (da) => {
     const r = CONFIG.ripartiData;
-    if (r && CONFIG.ripartiSett && r >= da && r <= addDays(da, 6)) step = Math.min(ultimo, Math.max(0, CONFIG.ripartiSett - 1));
+    if (r && CONFIG.ripartiSett && r >= da && r <= addDays(da, 6)) { step = Math.min(ultimo, Math.max(0, CONFIG.ripartiSett - 1)); accum = 0; }
   };
   for (let w = 0; w < settCorrente; w++) {
     const da = addDays(inizio, w * 7);
     const a = addDays(da, 6);
     riparti(da);
-    const nSett = Math.min(livelloFreq, frequenzaObiettivo(step));
+    const nSett = Math.min(livelloFreq, frequenzaObiettivo(step), kFissi);
+    const turno = accum;
     let fatte = 0;
     for (let d = da; d <= a; d = addDays(d, 1)) if (dati.giorniCorsa.has(d)) fatte++;
     fatte = Math.min(nSett, fatte);
@@ -1891,7 +1934,11 @@ function costruisciProgramma(oggiStr) {
       vuoteDiFila++;
       esito = vuoteDiFila >= 2 ? 'indietro' : 'ripeti';
       motivi.push(vuoteDiFila >= 2 ? L('due settimane senza sedute: si riparte con calma', 'two weeks without sessions: easing back in') : L('nessuna seduta registrata', 'no sessions recorded'));
-    } else if (fatte === 1) {
+    } else if (fatte === 1 && nSett === 1 && accum === 0) {
+      esito = 'ripeti';
+      accum = 1;
+      motivi.push(L('1 seduta su 2 di questa settimana del piano: con un giorno a settimana dura 2 settimane', '1 of 2 sessions of this plan week: with one day a week it lasts 2 weeks'));
+    } else if (fatte === 1 && nSett > 1) {
       esito = 'ripeti';
       motivi.push(L(`1 seduta su ${nSett}`, `1 of ${nSett} sessions`));
     } else if (fcAlta) {
@@ -1902,9 +1949,11 @@ function costruisciProgramma(oggiStr) {
       motivi.push(L(`${giorniNonRecuperato} giorni con segnali di recupero incompleto`, `${giorniNonRecuperato} days with signs of incomplete recovery`));
     } else {
       esito = 'avanti';
-      motivi.push(L(`${fatte} sedute su ${nSett}${fcMedia ? `, FC media ${Math.round(fcMedia)} bpm` : ''}`, `${fatte} of ${nSett} sessions${fcMedia ? `, average HR ${Math.round(fcMedia)} bpm` : ''}`));
+      if (nSett === 1) motivi.push(L('2 sedute su 2 in due settimane', '2 of 2 sessions over two weeks'));
+      else motivi.push(L(`${fatte} sedute su ${nSett}${fcMedia ? `, FC media ${Math.round(fcMedia)} bpm` : ''}`, `${fatte} of ${nSett} sessions${fcMedia ? `, average HR ${Math.round(fcMedia)} bpm` : ''}`));
     }
     if (fatte > 0) vuoteDiFila = 0;
+    if (esito === 'avanti' || esito === 'indietro') accum = 0;
     if (esito === 'avanti') step = Math.min(ultimo, step + 1);
     if (esito === 'indietro') step = Math.max(0, step - 1);
 
@@ -1949,7 +1998,7 @@ function costruisciProgramma(oggiStr) {
       }
     }
     if (motivoFreq) { motivi.push(motivoFreq); if (livelloFreq !== prima) ultimaFreqInfo = { settimana: w + 1, data: a, motivo: motivoFreq }; }
-    storia.push({ numero: w + 1, da, a, settimana_piano: eseguito + 1, sedute: nSett, fatte, esito, motivi, intensita: intSett, intensita_pct: Math.round((intSett.mult - 1) * 100) });
+    storia.push({ numero: w + 1, da, a, settimana_piano: eseguito + 1, sedute: nSett, turno, fatte, esito, motivi, intensita: intSett, intensita_pct: Math.round((intSett.mult - 1) * 100) });
   }
   riparti(addDays(inizio, settCorrente * 7));
   const intensitaAttuale = intensitaDi(auto);
@@ -1967,14 +2016,27 @@ function costruisciProgramma(oggiStr) {
   const preferiti = new Set(Array.isArray(CONFIG.giorniSedute) ? CONFIG.giorniSedute : []);
   const descPerData = new Map(); // descrittore di ogni seduta (per alleggerire quella di oggi)
   let prec = { dure: new Set(), corsa: new Set(), dow: new Set() };
-  const settimanaCal = (w, stepIdx, n, intensita, proiezione) => {
+  const fissiSet = fissi ? new Set(fissi) : null;
+  const settimanaCal = (w, stepIdx, n, intensita, proiezione, turno = 0) => {
     const da = addDays(inizio, w * 7);
-    const descs = pianoAttivo()[stepIdx].sedute.map((d) => conIntensita(d, intensita));
+    let descs = pianoAttivo()[stepIdx].sedute.map((d) => conIntensita(d, intensita));
     for (let k = descs.length; k < n; k++) descs.push(descExtra(stepIdx, intensita));
-    const giorni = scegliGiorni(descs, {
-      da, oggi: oggiStr, preferiti, giorniCorsa: dati.giorniCorsa, maxFila2: faseDi(stepIdx + 1).id <= 2,
+    // meno giorni che sedute: si tengono le piu' importanti (gli indici restano quelli del piano)
+    const tenute = sceltaSedute(descs, n, turno);
+    const ctxG = {
+      da, oggi: oggiStr, preferiti, fissi: fissiSet, giorniCorsa: dati.giorniCorsa, maxFila2: faseDi(stepIdx + 1).id <= 2,
       precDure: prec.dure, precCorsa: prec.corsa, precDow: prec.dow,
-    }).sort((x, y) => x.off - y.off);
+    };
+    const prova = (ds) => { const g = scegliGiorni(tenute.map((i) => ds[i]), ctxG); return g && g.map((x) => ({ off: x.off, i: tenute[x.i] })); };
+    let giorni = prova(descs), facilitata = false;
+    if (!giorni) {
+      // giorni obbligatori attaccati: la qualita' diventa corsa facile, poi i vincoli diventano penalita'
+      const facile = descs.find((d) => d[0] === 'facile') || fa(30);
+      const ds2 = descs.map((d) => (ruoloSeduta(d) === 'Q' ? ['facile', facile[1], false] : d));
+      giorni = prova(ds2);
+      if (giorni) { descs = ds2; facilitata = true; } else { ctxG.rilassa = true; giorni = prova(descs) || tenute.map((i, k) => ({ off: [0, 2, 4, 6, 1][k] ?? k, i })); }
+    }
+    giorni.sort((x, y) => x.off - y.off);
     prec = { dure: new Set(), corsa: new Set(), dow: new Set() };
     const dataGara = (giorni.find(({ i }) => descs[i][0] === 'gara') || {}).off;
     giorni.forEach(({ off, i }, pos) => {
@@ -1988,8 +2050,12 @@ function costruisciProgramma(oggiStr) {
       if (extra) perche = proiezione
         ? L(`Seduta in più prevista: il coach la aggiunge se reggi bene il carico (${n} a settimana).`, `Extra session planned: the coach adds it if you handle the load well (${n} a week).`)
         : L(`Seduta in più (${n} a settimana): la tua forma regge più volume, sempre a ritmo facile.`, `Extra session (${n} a week): your fitness can take more volume, always at an easy pace.`);
+      if (facilitata && desc[0] === 'facile' && sedutaDura(pianoAttivo()[stepIdx].sedute[Math.min(i, 2)] || ['facile'])) perche = L('Doveva essere una seduta di qualità: con i tuoi giorni attaccati diventa corsa facile, per non fare due sedute impegnative di fila.', 'This was meant to be a quality session: with your back-to-back days it becomes an easy run, to avoid two hard sessions in a row.');
+      if (n < pianoAttivo()[stepIdx].sedute.length && pos === 0 && !perche) perche = n === 1
+        ? L('Con un giorno a settimana fai una seduta per volta: questa settimana del piano dura 2 settimane.', 'With one day a week you do one session at a time: this plan week lasts 2 weeks.')
+        : L(`Con ${n} giorni a settimana il coach tiene le sedute più importanti e salta una corsa facile.`, `With ${n} days a week the coach keeps the key sessions and skips an easy run.`);
       if (desc[0] === 'gara') perche = L('Data indicativa: le gare si corrono quasi sempre nel weekend.', 'Indicative date: races are almost always at the weekend.');
-      else if (preferiti.size && !preferiti.has(dow) && !(data <= oggiStr && dati.giorniCorsa.has(data)))
+      else if (!fissi && preferiti.size && !preferiti.has(dow) && !(data <= oggiStr && dati.giorniCorsa.has(data)))
         perche = (perche ? perche + ' ' : '') + L('Fuori dai tuoi giorni preferiti: lì non c’era posto senza due sedute impegnative di fila o senza recuperare quella saltata.', 'Outside your preferred days: there was no room there without two hard sessions back to back or without making up a missed one.');
       descPerData.set(data, desc);
       calendario.push({ ...sed, seduta: pos + 1, sedute_settimana: n, extra, perche_giorno: perche, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: data < oggiStr });
@@ -1997,13 +2063,17 @@ function costruisciProgramma(oggiStr) {
       if (sedutaDura(desc)) prec.dure.add(data);
     });
   };
-  storia.forEach((s, w) => settimanaCal(w, s.settimana_piano - 1, s.sedute, s.intensita, false));
-  // futuro: la frequenza cresce come da regola (3 settimane buone) fino al tetto dell'obiettivo
-  const freqCorrente = Math.min(livelloFreq, frequenzaObiettivo(step));
-  let livProj = livelloFreq, buoneProj = buoneDiFila;
-  for (let k = 0; step + k <= ultimo; k++) {
-    if (k > 0 && ++buoneProj >= 3 && livProj < frequenzaObiettivo(step + k)) { livProj++; buoneProj = 0; }
-    settimanaCal(settCorrente + k, step + k, k === 0 ? freqCorrente : Math.min(livProj, frequenzaObiettivo(step + k)), intensitaAttuale, k > 0);
+  storia.forEach((s, w) => settimanaCal(w, s.settimana_piano - 1, s.sedute, s.intensita, false, s.turno));
+  // futuro: la frequenza cresce come da regola (3 settimane buone) fino al tetto dell'obiettivo e dei giorni obbligatori;
+  // con 1 seduta a settimana ogni settimana del piano occupa 2 settimane di calendario
+  const freqCorrente = Math.min(livelloFreq, frequenzaObiettivo(step), kFissi);
+  let livProj = livelloFreq, buoneProj = buoneDiFila, accProj = accum;
+  for (let sP = step, w = settCorrente; sP <= ultimo && w < settCorrente + 200; w++) {
+    if (w > settCorrente && ++buoneProj >= 3 && livProj < frequenzaObiettivo(sP)) { livProj++; buoneProj = 0; }
+    const n = w === settCorrente ? freqCorrente : Math.min(livProj, frequenzaObiettivo(sP), kFissi);
+    settimanaCal(w, sP, n, intensitaAttuale, w > settCorrente, accProj);
+    if (n === 1 && ++accProj < 2) continue;
+    accProj = 0; sP++;
   }
   const gara = calendario.find((s) => s.tipo === 'gara');
 
@@ -2012,7 +2082,8 @@ function costruisciProgramma(oggiStr) {
   const ritmoAvanzamento = storia.length >= 3 ? Math.max(0.25, Math.min(1, netto / storia.length)) : 1;
   const settimaneStimate = Math.ceil((ultimo - step) / ritmoAvanzamento);
   const offGara = ((diffDays(calendario.find((c) => c.tipo === 'gara').data, inizio) % 7) + 7) % 7;
-  const dataStimata = addDays(inizio, (settCorrente + settimaneStimate) * 7 + offGara);
+  // con meno di 3 settimane di storia vale la proiezione del calendario (che tiene conto dei giorni obbligatori)
+  const dataStimata = storia.length >= 3 ? addDays(inizio, (settCorrente + settimaneStimate) * 7 + offGara) : calendario.find((c) => c.tipo === 'gara').data;
 
   // Tempo indicativo sulla distanza dell'obiettivo (formula di Riegel) dalla migliore corsa >= 20' delle ultime 6 settimane
   let previsione = null;
@@ -2062,8 +2133,10 @@ function costruisciProgramma(oggiStr) {
     a: settA,
     fatte: Math.min(freqCorrente, giorniFatti.length),
     sedute: freqCorrente,
+    // con 1 seduta a settimana: se e' la prima delle due, a fine settimana il piano non avanza ancora
+    una_su_due: freqCorrente === 1 ? accum + 1 : null,
     giorni_fatti: giorniFatti,
-    obiettivo: 2,
+    obiettivo: Math.min(2, freqCorrente),
     previste: calendario.filter((c) => c.data >= settDa && c.data <= settA).map((c) => ({ data: c.data, titolo: c.titolo, fatta: c.fatta, passata: c.passata })),
     settimana_piano: step + 1,
     // se la settimana scorsa era vuota, un'altra settimana vuota fa tornare indietro il piano
@@ -2093,6 +2166,7 @@ function costruisciProgramma(oggiStr) {
   }
   if (CONFIG.ripartiData && CONFIG.ripartiSett && diffDays(oggiStr, CONFIG.ripartiData) <= 13 && CONFIG.ripartiData >= inizio)
     consigli.push(L(`Nuovo obiettivo (${P(og.nome)}): dalla settimana del ${CONFIG.ripartiData.slice(8)}/${CONFIG.ripartiData.slice(5, 7)} segui la settimana ${CONFIG.ripartiSett} del nuovo piano. Le corse fatte prima restano e contano.`, `New goal (${P(og.nome)}): from the week of ${CONFIG.ripartiData.slice(5, 7)}/${CONFIG.ripartiData.slice(8)} you follow week ${CONFIG.ripartiSett} of the new plan. Earlier runs stay and count.`));
+  if (fissi) { const cg = consigliGiorni(fissi, 'fissi', CONFIG.obiettivo || 'mezza'); if (cg.length) consigli.push(cg[0]); }
   if (ultimaFreqInfo && settCorrente - ultimaFreqInfo.settimana <= 1) consigli.push(L(`Frequenza: ${ultimaFreqInfo.motivo}.`, `Frequency: ${ultimaFreqInfo.motivo}.`));
   if (ultimaModificaInfo && settCorrente - ultimaModificaInfo.settimana <= 2) consigli.push(L(`Ho regolato il piano: ${ultimaModificaInfo.motivo}.`, `I adjusted the plan: ${ultimaModificaInfo.motivo}.`));
   if (suggerimentoInt) consigli.push(suggerimentoInt);
@@ -2124,6 +2198,8 @@ function costruisciProgramma(oggiStr) {
       massima: Math.max(...pianoAttivo().map((_, i) => frequenzaObiettivo(i))),
       ultima_modifica: ultimaFreqInfo,
       preferiti: [...preferiti],
+      modo: fissi ? 'fissi' : 'preferiti',
+      consigli: consigliGiorni(fissi || [...preferiti], fissi ? 'fissi' : 'preferiti', CONFIG.obiettivo || 'mezza'),
     },
     ora: CONFIG.programmaOra,
     obiettivo: {
@@ -3599,10 +3675,15 @@ function creaApp() {
       const c = contesto.getStore();
       const ob = String(req.query.obiettivo || '');
       const int = String(req.query.intensita || '');
-      if (!c || !OBIETTIVI[ob] || (int && !INTENSITA[int])) return res.status(400).json({ errore: L('Parametri non validi', 'Invalid parameters') });
+      const gq = req.query.giorni != null ? String(req.query.giorni) : null; // "1,3,5" oppure "" = nessuno
+      const modo = req.query.modo != null ? String(req.query.modo) : null;
+      const giorniOk = gq === null || gq === '' || (/^[0-6](,[0-6]){0,6}$/.test(gq) && new Set(gq.split(',')).size === gq.split(',').length);
+      if (!c || !OBIETTIVI[ob] || (int && !INTENSITA[int]) || !giorniOk || (modo && !['preferiti', 'fissi'].includes(modo))) return res.status(400).json({ errore: L('Parametri non validi', 'Invalid parameters') });
       if (!c.cfg.programmaInizio) return res.status(404).json({ errore: L('Piano non ancora impostato', 'Plan not set up yet') });
       const cambio = ob !== (c.cfg.obiettivo || 'mezza') ? mappaCambioObiettivo(c, ob) : null;
       const cfg = { ...c.cfg, obiettivo: ob, intensita: int || c.cfg.intensita, ...(cambio ? { ripartiData: cambio.riparti_data, ripartiSett: cambio.riparti_settimana } : {}) };
+      if (gq !== null) cfg.giorniSedute = gq === '' ? null : gq.split(',').map(Number);
+      if (modo) cfg.giorniModo = modo;
       const out = contesto.run({ ...c, cfg }, () => {
         const p = costruisciProgramma(oggi());
         if (!p) return null;
@@ -3615,7 +3696,9 @@ function creaApp() {
           fase: f.nome,
           data_gara: p.obiettivo.data_gara,
           frequenza: p.frequenza,
-          prossime: p.prossime.slice(0, 3).map((x) => ({ data: x.data, giorno: x.giorno, titolo: x.titolo, durata_min: x.durata_min, extra: x.extra })),
+          data_stimata: p.obiettivo.data_stimata,
+          // le sedute della prossima settimana del piano: S1, S2, S3… e il tipo, senza minuti
+          prossime: p.prossime.slice(0, 5).filter((x, _, arr) => x.settimana === arr[0].settimana).map((x) => ({ data: x.data, giorno: x.giorno, settimana: x.settimana, seduta: x.seduta, tipo: x.tipo, nome: x.titolo.replace(/^(Sett\.|Wk) \d+ · /, ''), extra: x.extra })),
         };
       });
       if (!out) return res.status(404).json({ errore: L('Piano non disponibile', 'Plan not available') });

@@ -1626,11 +1626,26 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .ap-kv b { font-size: 1.25rem; font-variant-numeric: tabular-nums; }
 .ap-kv b small { font-size: .75rem; color: var(--muted); font-weight: 600; margin-left: 2px; }
 .ap-kv span { font-size: .72rem; color: var(--muted); }
-.ap-next { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; font-size: .82rem; }
-.ap-next span { display: inline-block; min-width: 54px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .acc-anteprima .sub { margin: 10px 0 0; }
 
 /* Calendario: perche' la seduta e' in quel giorno, seduta in piu' */
 .det-giorno { margin: 6px 0 0; font-size: .8rem; line-height: 1.4; color: var(--muted); }
 .det-extra { margin-left: 8px; padding: 2px 8px; border-radius: 999px; font-style: normal; font-size: .7rem; font-weight: 700; color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); vertical-align: middle; }
 .in-h { margin: 14px 0 6px; font-size: .9rem; }
+
+/* Giorni per correre: Proposti / Obbligatori */
+.giorni-modo { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; margin-bottom: 8px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.giorni-modo label { position: relative; cursor: pointer; }
+.acc-f .giorni-modo input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+.acc-f .giorni-modo span { display: flex; align-items: center; justify-content: center; height: 34px; border-radius: 9px; font-size: .85rem; font-weight: 600; color: var(--muted); }
+.giorni-modo input:checked + span { background: var(--surface); color: var(--text); box-shadow: 0 1px 3px rgba(0, 0, 0, .18); }
+.giorni-modo input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 1px; }
+.acc-giorni small b { color: var(--text); font-weight: 600; }
+/* Anteprima: sedute della settimana del piano (S1, S2…) e consigli */
+.ap-sett { margin: 12px 0 6px; font-size: .78rem; font-weight: 600; color: var(--muted); }
+.ap-sed { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ap-sed li { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px; font-size: .85rem; }
+.ap-sed li > b { font-variant-numeric: tabular-nums; color: var(--accent); min-width: 22px; }
+.ap-sed .ap-nome { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ap-sed .ap-d { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
+.ap-cons { margin: 12px 0 0; padding: 10px 12px 10px 28px; border-radius: 12px; background: color-mix(in srgb, var(--warn) 12%, transparent); font-size: .8rem; line-height: 1.45; display: grid; gap: 6px; }
