@@ -12,6 +12,10 @@ updates:
     directories: [/backend, /frontend, /aac-backup]
     target-branch: staging
     schedule: { interval: weekly, day: monday }
+    # Node: niente salti di versione maggiore automatici (le dispari non sono LTS); si passa a mano alla LTS successiva
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
 
   - package-ecosystem: github-actions
     directory: /
