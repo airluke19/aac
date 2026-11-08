@@ -742,8 +742,7 @@
         '<div class="acwr-v"><b class="num">' + fmt1(c.acwr) + '</b></div>' + barra + '</section>' : '') +
       '<section class="tiles">' +
         t(T('Km in 7 giorni', 'Km in 7 days'), fmt1(c.km_7) + '<small>km</small>', c.media_settimanale ? (c.aumento_pct != null ? (c.aumento_pct > 0 ? '+' : '') + c.aumento_pct + T('% sulla media di ', '% vs average of ') : T('media ', 'average ')) + fmt1(c.media_settimanale) + ' km' : T('media non ancora disponibile', 'average not available yet')) +
-        t(T('Corsa più lunga · 30 gg', 'Longest run · 30 days'), c.lungo_max_30 != null ? fmt1(c.lungo_max_30) + '<small>km</small>' : '–', T('il riferimento per il prossimo lungo', 'the reference for your next long run')) +
-        t(T('Prossimo lungo, al massimo', 'Next long run, at most'), c.limite_lungo_km != null ? fmt1(c.limite_lungo_km) + '<small>km</small>' : '–', T('+10% sulla corsa più lunga', '+10% over your longest run')) +
+        t(T('Prossimo lungo, al massimo', 'Next long run, at most'), c.limite_lungo_km != null ? fmt1(c.limite_lungo_km) + '<small>km</small>' : '–', c.lungo_max_30 != null ? T('+10% sulla più lunga del mese (', '+10% over the month’s longest (') + fmt1(c.lungo_max_30) + ' km)' : T('dopo la prima corsa', 'after your first run')) +
       '</section>' +
       (c.segnali.length ? '<div class="chips">' + c.segnali.map((x) => '<span class="chip">' + esc(x) + '</span>').join('') + '</div>' : '');
   }
