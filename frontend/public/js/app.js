@@ -490,13 +490,13 @@
       kv(T('Copia per AI', 'Copy for AI'), T('i dati di una seduta fatta, con età, altezza, peso e BMI se presenti', 'data of a completed session, with age, height, weight and BMI when available'));
 
     const limiti = li(T([
-      '<b>Nessun modello di AI</b>: regole fisse, uguali per tutti.',
+      '<b>Piano su misura</b>: si adatta ai tuoi dati e ogni cambiamento ha un motivo scritto.',
       'Senza la tua FC massima usa la stima dall’età.',
       'Non sostituisce il medico: se senti dolore, fermati.',
       'Dati su un server privato, un database per utente, chiave Intervals cifrata.',
       'L’amministratore vede quando usi l’app (giorni e minuti, finché hai l’account), mai cosa guardi.'
     ], [
-      '<b>No AI model</b>: fixed rules, the same for everyone.',
+      '<b>Tailored plan</b>: it adapts to your data and every change comes with a written reason.',
       'Without your max HR it uses the age-based estimate.',
       'It does not replace a doctor: if you feel pain, stop.',
       'Data on a private server, one database per user, encrypted Intervals key.',

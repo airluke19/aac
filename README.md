@@ -28,7 +28,7 @@ A training table from a magazine or a PDF is the same for everyone and never cha
 | The weeks feel too hard | You push or give up | The plan repeats the week or eases off by 10% |
 | Weekend is busy | Long run on Sunday anyway | The coach respects your preferred days whenever it can |
 
-**Principles:** clear rules, the same for everyone, no black box. Health comes before intensity. **Every change comes with a written reason** you can read in the app.
+**Principles:** a plan tailored to your data, no black box. Health comes before intensity. **Every change comes with a written reason** you can read in the app.
 
 ---
 
