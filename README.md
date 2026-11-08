@@ -84,7 +84,7 @@ Goal, intensity and days are set with a **step-by-step guide that opens inside t
 
 - **Today:** next session, how you are today, last run, this week
 - **Health:** resting HR, HRV, sleep, steps, BMI and more
-- **Plan:** calendar with every change explained; copy a finished session as Markdown to discuss it with any AI assistant; download the calendar (.ics)
+- **Plan:** calendar with every change explained; copy a finished session as Markdown to discuss it with any AI assistant; download the calendar (.ics); share a finished session as an image for a post (4:5) or a story (9:16), drawn on your device in your accent colour, with the route shape (no map) or without it
 - **Runs:** history, filters, shoes; run detail with GPS map, heart rate, pace, cadence, power, elevation, running dynamics, laps, effort (RPE) and weather
 - **Progress:** goal, predictions, training load
 - **Info:** every rule explained in plain language

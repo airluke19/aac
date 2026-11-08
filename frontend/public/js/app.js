@@ -136,6 +136,7 @@
     body: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2.2"/><path d="M6 9.5h12M12 9.5v5.5M12 15l-3 6M12 15l3 6"/></svg>',
     o2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s-6 6.6-6 11.1a6 6 0 0 0 12 0C18 9.1 12 2.5 12 2.5z"/></svg>',
     info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="0.6" fill="currentColor"/></svg>',
+    share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18M12 14v5M9.5 16.5 12 19l2.5-2.5"/></svg>',
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
@@ -226,6 +227,7 @@
       let azioni = x.fatta ? '<button type="button" class="btn-mini primary" data-copia="' + x.data + '">' + ICO.copy + T('Copia per AI', 'Copy for AI') + '</button>' : '';
       if (x.fatta && ultimoStorico && ultimoStorico.corse.some((c) => c.data === x.data)) {
         azioni += '<button type="button" class="btn-mini" data-apri-corsa="' + x.data + '">' + T('Vedi i dati della corsa', 'View run data') + '</button>';
+        if (puoCondividere()) azioni += '<button type="button" class="btn-mini" data-condividi-giorno="' + x.data + '">' + ICO.share + T('Condividi', 'Share') + '</button>';
       }
       if (x.data <= d.oggi && (!x.fatta || x.manuale)) {
         azioni += '<button type="button" class="btn-mini" data-segna="' + x.data + '">' + (x.manuale ? T('Annulla “fatta”', 'Undo “done”') : T('Segna come fatta', 'Mark as done')) + '</button>';
@@ -487,6 +489,7 @@
     const strumenti = kv(T('Calendario', 'Calendar'), T('tocca un giorno per la seduta', 'tap a day for the session')) +
       kv(T('Esporta', 'Export'), T('.ics per il tuo calendario', '.ics for your calendar')) +
       kv(T('Segna come fatta', 'Mark as done'), T('per le sedute senza orologio', 'for sessions without a watch')) +
+      kv(T('Condividi', 'Share'), T('immagine di una seduta fatta, per post o storie', 'image of a completed session, for posts or stories')) +
       kv(T('Copia per AI', 'Copy for AI'), T('i dati di una seduta fatta, con età, altezza, peso e BMI se presenti', 'data of a completed session, with age, height, weight and BMI when available'));
 
     const limiti = li(T([
@@ -1594,6 +1597,8 @@
     if (location.hash === '#admin') { apriAdmin(); return; }
     const mu = location.hash.match(/^#uso\/(\d+)$/);
     if (mu) { apriUso(mu[1]); return; }
+    const mc = location.hash.match(/^#condividi\/(.+)$/);
+    if (mc) { apriCondividi(decodeURIComponent(mc[1])); return; }
     const m = location.hash.match(/^#(seduta|salute)\/(.+)$/);
     if (!m) {
       if (!sh.hidden) { sheetCharts.splice(0).forEach((c) => c.destroy()); sh.hidden = true; document.body.classList.remove('sheet-open'); }
@@ -2724,10 +2729,207 @@
     if (!s) html += '<section class="card empty">' + T('I grafici secondo per secondo arrivano con la prossima sincronizzazione (servono i dati dettagliati da Intervals.icu).', 'Second-by-second charts arrive with the next sync (detailed data from Intervals.icu is needed).') + '</section>';
 
     html += '<div class="azioni dd-actions">' +
+      (puoCondividere() ? '<button type="button" class="btn-mini primary" data-condividi="' + esc(c.id) + '">' + ICO.share + T('Condividi', 'Share') + '</button>' : '') +
       '<a class="btn-mini" href="https://intervals.icu/activities/' + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">' + T('Apri su Intervals.icu', 'Open in Intervals.icu') + '</a></div>';
 
     mostraSheet(T('Allenamento', 'Workout'), html);
     if (s && typeof Chart !== 'undefined') disegnaSeduta(s, a, pr);
+  }
+
+  /* ====================================================================== */
+  /* Condividi: immagine della seduta fatta (generata nel browser, nessun   */
+  /* servizio esterno). Formato post 4:5 o storia 9:16, colore d'accento.   */
+  /* ====================================================================== */
+  const condividi = { id: null, a: null, formato: 'post', percorso: true, url: null, file: null };
+
+  function idCorsaDelGiorno(data) {
+    const c = (ultimoStorico && ultimoStorico.corse.find((x) => x.data === data))
+      || (ultimiDati && ultimiDati.programma && (ultimiDati.programma.corse_fuori_piano || []).find((x) => x.data === data));
+    return c ? c.id : null;
+  }
+  const puoCondividere = () => Boolean(ME && !ME.impersonato_da);
+
+  async function apriCondividi(id) {
+    if (condividi.id !== id || !condividi.a) {
+      mostraSheet(T('Condividi', 'Share'), '<div class="skeleton" style="height:420px"></div>');
+      try { condividi.a = await caricaJson('/api/attivita/' + encodeURIComponent(id)); condividi.id = id; }
+      catch (e) { mostraSheet(T('Condividi', 'Share'), '<div class="card empty">' + esc(e.message) + '</div>'); return; }
+    }
+    const haPercorso = Boolean(condividi.a.serie && condividi.a.serie.lat);
+    const seg = (k, v, l) => '<button type="button" data-cond-' + k + '="' + v + '" aria-pressed="' + (condividi[k] === v) + '">' + l + '</button>';
+    mostraSheet(T('Condividi', 'Share'),
+      '<section class="cond">' +
+        '<div class="cond-opz"><div class="cond-seg" role="group" aria-label="' + T('Formato', 'Format') + '">' +
+          seg('formato', 'post', T('Post 4:5', 'Post 4:5')) + seg('formato', 'storia', T('Storia 9:16', 'Story 9:16')) + '</div>' +
+          (haPercorso ? '<div class="cond-seg" role="group" aria-label="' + T('Percorso', 'Route') + '">' + seg('percorso', true, T('Con percorso', 'With route')) + seg('percorso', false, T('Senza', 'Without')) + '</div>' : '') +
+        '</div>' +
+        '<div class="cond-prev"><img id="cond-img" alt="' + T('Anteprima dell’immagine da condividere', 'Preview of the image to share') + '"></div>' +
+        '<div class="cond-az">' +
+          '<button type="button" class="btn-primary" id="cond-share" hidden>' + ICO.share + T('Condividi', 'Share') + '</button>' +
+          '<a class="btn-mini" id="cond-dl" download>' + T('Scarica l’immagine', 'Download image') + '</a>' +
+        '</div>' +
+        '<p class="g-note">' + T('L’immagine si crea sul tuo dispositivo. Il percorso è solo la forma, senza mappa: toglilo se parte da casa tua.', 'The image is created on your device. The route is only its shape, with no map: remove it if it starts from your home.') + '</p>' +
+      '</section>');
+    await generaImmagine();
+  }
+
+  async function generaImmagine() {
+    const cv = await disegnaCard(condividi.a, condividi.formato, condividi.percorso);
+    const blob = await new Promise((ok) => cv.toBlob(ok, 'image/png'));
+    if (!blob || !$('#cond-img')) return;
+    if (condividi.url) URL.revokeObjectURL(condividi.url);
+    condividi.url = URL.createObjectURL(blob);
+    const nome = 'aac-' + condividi.a.corsa.data + (condividi.formato === 'storia' ? '-storia' : '') + '.png';
+    condividi.file = new File([blob], nome, { type: 'image/png' });
+    $('#cond-img').src = condividi.url;
+    $('#cond-dl').href = condividi.url;
+    $('#cond-dl').setAttribute('download', nome);
+    $('#cond-share').hidden = !(navigator.canShare && navigator.canShare({ files: [condividi.file] }));
+  }
+
+  document.addEventListener('click', async (e) => {
+    const g = e.target.closest('[data-condividi-giorno]');
+    if (g) { const id = idCorsaDelGiorno(g.dataset.condividiGiorno); if (id) apriSheet('#condividi/' + encodeURIComponent(id)); return; }
+    const b = e.target.closest('[data-condividi]');
+    if (b) { apriSheet('#condividi/' + encodeURIComponent(b.dataset.condividi)); return; }
+    const f = e.target.closest('[data-cond-formato],[data-cond-percorso]');
+    if (f) {
+      if (f.dataset.condFormato) condividi.formato = f.dataset.condFormato;
+      else condividi.percorso = f.dataset.condPercorso === 'true';
+      f.parentNode.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === f)));
+      generaImmagine();
+      return;
+    }
+    if (e.target.closest('#cond-share') && condividi.file) {
+      try { await navigator.share({ files: [condividi.file], title: 'AAC' }); }
+      catch (err) { if (err && err.name !== 'AbortError') toast(T('Condivisione non riuscita: usa “Scarica”.', 'Sharing failed: use “Download”.'), 'err'); }
+    }
+  });
+
+  // Colore d'accento in rgba (il canvas normalizza qualunque colore CSS in #rrggbb)
+  function rgba(colore, alfa) {
+    const c = document.createElement('canvas').getContext('2d');
+    c.fillStyle = '#000'; c.fillStyle = colore;
+    const h = c.fillStyle;
+    if (h[0] !== '#') return h;
+    return 'rgba(' + parseInt(h.slice(1, 3), 16) + ',' + parseInt(h.slice(3, 5), 16) + ',' + parseInt(h.slice(5, 7), 16) + ',' + alfa + ')';
+  }
+
+  async function disegnaCard(a, formato, conPercorso) {
+    const c = a.corsa, s = a.serie, pr = a.prevista;
+    const W = 1080, H = formato === 'storia' ? 1920 : 1350;
+    const top = formato === 'storia' ? 230 : 84, bottom = formato === 'storia' ? 250 : 84, pad = 84;
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+    const x = cv.getContext('2d');
+    const FN = 'ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", Roboto, sans-serif';
+    const FT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, "Segoe UI", Roboto, sans-serif';
+    try { await Promise.all([document.fonts.load('700 40px Inter'), document.fonts.load('500 40px Inter')]); await document.fonts.ready; } catch (_) { /* font di sistema */ }
+    const accent = cssVar('--accent') || '#ff5a36';
+    const BIANCO = '#f5f5f7', GRIGIO = 'rgba(235,235,245,0.6)';
+
+    // sfondo scuro con bagliore del colore d'accento
+    x.fillStyle = '#0b0c0f'; x.fillRect(0, 0, W, H);
+    let gr = x.createRadialGradient(W * 0.85, H * 0.08, 0, W * 0.85, H * 0.08, W * 0.95);
+    gr.addColorStop(0, rgba(accent, 0.42)); gr.addColorStop(1, rgba(accent, 0));
+    x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    gr = x.createRadialGradient(W * 0.1, H * 0.95, 0, W * 0.1, H * 0.95, W * 0.7);
+    gr.addColorStop(0, rgba(accent, 0.16)); gr.addColorStop(1, rgba(accent, 0));
+    x.fillStyle = gr; x.fillRect(0, 0, W, H);
+
+    const testo = (t, px, peso, col, fam, X, Y, allinea) => { x.font = peso + ' ' + px + 'px ' + fam; x.fillStyle = col; x.textAlign = allinea || 'left'; x.textBaseline = 'alphabetic'; x.fillText(t, X, Y); return x.measureText(t).width; };
+    const adatta = (t, px, peso, fam, max) => { let p = px; x.font = peso + ' ' + p + 'px ' + fam; while (p > 28 && x.measureText(t).width > max) { p -= 2; x.font = peso + ' ' + p + 'px ' + fam; } return p; };
+
+    // logo (stesso disegno dell'app) e marchio
+    const logo = (X, Y, size) => {
+      x.save(); x.translate(X, Y); x.scale(size / 56, size / 56); x.translate(-4, -6);
+      x.strokeStyle = accent; x.lineWidth = 4.8; x.lineCap = 'round'; x.lineJoin = 'round';
+      x.stroke(new Path2D('M13.6 26.5A19 19 0 1 1 13.6 37.5')); x.stroke(new Path2D('M8 32h14l3.5-8 5 16 3.5-8h4'));
+      x.restore();
+    };
+    logo(pad, top, 60);
+    testo('AAC', 44, 700, BIANCO, FT, pad + 78, top + 46);
+    testo('aac.run', 34, 500, GRIGIO, FT, W - pad, top + 44, 'right');
+
+    // data, titolo della seduta, traguardo
+    let y = top + 150;
+    const dataTxt = new Date(c.data + 'T12:00:00').toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
+    x.letterSpacing = '3px';
+    testo(dataTxt, 30, 700, accent, FT, pad, y);
+    x.letterSpacing = '0px';
+    const titolo = (pr && pr.titolo ? pr.titolo.replace(/^(Sett\.|Wk) \d+ · /, '') : c.nome) || T('Corsa', 'Run');
+    y += 92;
+    testo(titolo, adatta(titolo, 80, 700, FT, W - 2 * pad), 700, BIANCO, FT, pad, y);
+
+    const corse = (ultimoStorico && ultimoStorico.corse) || [];
+    const badge = [];
+    if (corse.length >= 3 && c.distanza && corse.every((k) => k.id === c.id || (k.distanza || 0) < c.distanza)) badge.push(T('La corsa più lunga di sempre', 'Longest run ever'));
+    const p = ultimiDati && ultimiDati.programma;
+    if (pr && p && p.obiettivo) badge.push(T('Verso: ', 'Towards: ') + p.obiettivo.nome);
+    y += 34;
+    let bx = pad;
+    badge.forEach((t) => {
+      x.font = '600 30px ' + FT;
+      const w = x.measureText(t).width + 48;
+      if (bx + w > W - pad) return;
+      x.fillStyle = rgba(accent, 0.18); x.strokeStyle = rgba(accent, 0.55); x.lineWidth = 2;
+      x.beginPath(); x.roundRect ? x.roundRect(bx, y, w, 58, 29) : x.rect(bx, y, w, 58); x.fill(); x.stroke();
+      testo(t, 30, 600, BIANCO, FT, bx + 24, y + 39);
+      bx += w + 14;
+    });
+    const sottoTitolo = y + (badge.length ? 58 : 0);
+
+    // numeri in basso: chiave + 4 valori
+    const yFoot = H - bottom;
+    const valori = [
+      [T('Tempo', 'Time'), fmtDurata(c.tempo), ''],
+      [c.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo', 'Pace'), fmtPasso(c.passo_corsa || c.passo_medio), '/km'],
+      c.fc_media ? [T('FC media', 'Avg HR'), fmt0(c.fc_media), 'bpm'] : null,
+      c.dislivello ? [T('Dislivello', 'Elevation'), fmt0(c.dislivello), 'm'] : null,
+    ].filter(Boolean);
+    const colW = (W - 2 * pad) / valori.length;
+    const yVal = yFoot - 110;
+    valori.forEach(([l, v, u], i) => {
+      const X = pad + i * colW;
+      testo(l.toUpperCase(), 24, 600, GRIGIO, FT, X, yVal - 62);
+      const w = testo(v, adatta(v, 58, 700, FN, colW - 20 - (u ? 60 : 0)), 700, BIANCO, FN, X, yVal);
+      if (u) testo(u, 26, 600, GRIGIO, FT, X + w + 6, yVal);
+    });
+    x.fillStyle = 'rgba(255,255,255,0.12)'; x.fillRect(pad, yVal - 120, W - 2 * pad, 2);
+
+    // distanza grande
+    const yKm = yVal - 170;
+    const km = fmt1(c.distanza);
+    const wKm = testo(km, 230, 800, BIANCO, FN, pad - 6, yKm);
+    testo('km', 72, 700, accent, FN, pad + wKm + 8, yKm);
+
+    // percorso: solo la forma, senza mappa
+    const boxT = sottoTitolo + 50, boxB = yKm - 250;
+    if (conPercorso && s && s.lat && boxB - boxT > 160) {
+      const pts = [];
+      s.lat.forEach((la, i) => { if (la != null && s.lng[i] != null) pts.push([s.lng[i], la]); });
+      if (pts.length > 2) {
+        const lat0 = pts.reduce((t, q) => t + q[1], 0) / pts.length, k = Math.cos(lat0 * Math.PI / 180);
+        const xs = pts.map((q) => q[0] * k), ys = pts.map((q) => -q[1]);
+        const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+        const bw = W - 2 * pad - 40, bh = boxB - boxT;
+        const sc = Math.min(bw / Math.max(maxX - minX, 1e-9), bh / Math.max(maxY - minY, 1e-9));
+        const ox = (W - (maxX - minX) * sc) / 2, oy = boxT + (bh - (maxY - minY) * sc) / 2;
+        const P = (i) => [ox + (xs[i] - minX) * sc, oy + (ys[i] - minY) * sc];
+        x.beginPath();
+        pts.forEach((_, i) => { const [X, Y] = P(i); i ? x.lineTo(X, Y) : x.moveTo(X, Y); });
+        x.lineCap = 'round'; x.lineJoin = 'round';
+        x.shadowColor = rgba(accent, 0.7); x.shadowBlur = 28;
+        x.strokeStyle = accent; x.lineWidth = 11; x.stroke();
+        x.shadowBlur = 0;
+        const [sx, sy] = P(0);
+        x.fillStyle = BIANCO; x.beginPath(); x.arc(sx, sy, 13, 0, Math.PI * 2); x.fill();
+      }
+    }
+
+    // piede
+    testo(T('Il piano che si adatta a te', 'The plan that adapts to you'), 28, 500, GRIGIO, FT, pad, yFoot);
+    testo('AI Adaptive Coach', 28, 700, BIANCO, FT, W - pad, yFoot, 'right');
+    return cv;
   }
 
   function disegnaSeduta(s, a, pr) {
