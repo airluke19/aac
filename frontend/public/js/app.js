@@ -136,6 +136,8 @@
     body: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="4.5" r="2.2"/><path d="M6 9.5h12M12 9.5v5.5M12 15l-3 6M12 15l3 6"/></svg>',
     o2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s-6 6.6-6 11.1a6 6 0 0 0 12 0C18 9.1 12 2.5 12 2.5z"/></svg>',
     info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="0.6" fill="currentColor"/></svg>',
+    dati: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>',
+    spunta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
     cal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18M12 14v5M9.5 16.5 12 19l2.5-2.5"/></svg>',
@@ -224,13 +226,14 @@
       const stato = x.fatta ? ['fatta', x.manuale ? T('✓ Fatta (a mano)', '✓ Done (manual)') : T('✓ Fatta', '✓ Done')] : x.passata ? ['saltata', T('Saltata', 'Missed')] : x.data === d.oggi ? ['oggi', T('Oggi', 'Today')] : ['futura', quando(d.oggi, x.data)];
       const tipo = tipiSeduta().find((t) => t.tipo === x.tipo);
       // Copia per AI solo per le sedute fatte: prima non ci sono dati da commentare
-      let azioni = x.fatta ? '<button type="button" class="btn-mini primary" data-copia="' + x.data + '">' + ICO.copy + T('Copia per AI', 'Copy for AI') + '</button>' : '';
+      const az = (attr, ico, txt) => '<button type="button" class="az" ' + attr + '="' + x.data + '">' + ico + '<span>' + txt + '</span></button>';
+      let azioni = x.fatta ? az('data-copia', ICO.copy, T('Copia per AI', 'Copy for AI')) : '';
       if (x.fatta && ultimoStorico && ultimoStorico.corse.some((c) => c.data === x.data)) {
-        azioni += '<button type="button" class="btn-mini" data-apri-corsa="' + x.data + '">' + T('Vedi i dati della corsa', 'View run data') + '</button>';
-        if (puoCondividere()) azioni += '<button type="button" class="btn-mini" data-condividi-giorno="' + x.data + '">' + ICO.share + T('Condividi', 'Share') + '</button>';
+        azioni += az('data-apri-corsa', ICO.dati, T('Dettagli', 'Details'));
+        if (puoCondividere()) azioni += az('data-condividi-giorno', ICO.share, T('Condividi', 'Share'));
       }
       if (x.data <= d.oggi && (!x.fatta || x.manuale)) {
-        azioni += '<button type="button" class="btn-mini" data-segna="' + x.data + '">' + (x.manuale ? T('Annulla “fatta”', 'Undo “done”') : T('Segna come fatta', 'Mark as done')) + '</button>';
+        azioni += az('data-segna', ICO.spunta, x.manuale ? T('Annulla “fatta”', 'Undo “done”') : T('Segna come fatta', 'Mark as done'));
       }
       det = '<div class="cal-det" id="cal-det">' +
         '<div class="cal-det-head"><div><b>' + esc(fmtDataLunga(x.data)) + ' · ' + esc(p.ora) + '</b>' +
@@ -238,7 +241,7 @@
         '<span class="stato ' + stato[0] + '">' + esc(stato[1]) + '</span></div>' +
         '<h4 class="det-title"><span class="sig">' + siglaTipo(x.tipo) + '</span>' + esc(x.titolo.replace(/^(Sett\.|Wk) \d+ · /, '')) + (x.extra ? '<em class="det-extra">' + T('in più', 'extra') + '</em>' : '') + '</h4>' +
         (x.perche_giorno ? '<p class="det-giorno">' + esc(x.perche_giorno) + '</p>' : '') +
-        bannerAdattata(x) + confrontoPasso(x) + corpoSeduta(x, true, tipo ? '<p class="det-why">' + esc(tipo.testo) + '</p>' : '') + '<div class="azioni">' + azioni + '</div></div>';
+        bannerAdattata(x) + confrontoPasso(x) + corpoSeduta(x, true, tipo ? '<p class="det-why">' + esc(tipo.testo) + '</p>' : '') + '<div class="az-row">' + azioni + '</div></div>';
     }
 
     const tipiUsati = new Set(p.calendario.map((c) => c.tipo));
@@ -276,7 +279,7 @@
         ta.value = md; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
         document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove();
       }
-      if (btn) { const t = btn.innerHTML; btn.innerHTML = T('✓ Copiato', '✓ Copied'); setTimeout(() => { btn.innerHTML = t; }, 1800); }
+      if (btn) { const t = btn.innerHTML; btn.innerHTML = btn.classList.contains('az') ? ICO.spunta + '<span>' + T('Copiato', 'Copied') + '</span>' : T('✓ Copiato', '✓ Copied'); setTimeout(() => { btn.innerHTML = t; }, 1800); }
       toast(T('Copiato in Markdown: incollalo in Claude o in un’altra AI', 'Copied as Markdown: paste it into Claude or another AI'), 'ok');
     } catch (e) { toast(e.message, 'err'); }
   }
@@ -2740,7 +2743,7 @@
   /* Condividi: immagine della seduta fatta (generata nel browser, nessun   */
   /* servizio esterno). Formato post 4:5 o storia 9:16, colore d'accento.   */
   /* ====================================================================== */
-  const condividi = { id: null, a: null, formato: 'post', percorso: true, url: null, file: null };
+  const condividi = { id: null, a: null, formato: 'post', percorso: true, sfondo: (() => { try { return localStorage.getItem('coach-cond-sfondo') || 'scuro'; } catch (_) { return 'scuro'; } })(), url: null, file: null };
 
   function idCorsaDelGiorno(data) {
     const c = (ultimoStorico && ultimoStorico.corse.find((x) => x.data === data))
@@ -2763,6 +2766,8 @@
           seg('formato', 'post', T('Post 4:5', 'Post 4:5')) + seg('formato', 'storia', T('Storia 9:16', 'Story 9:16')) + '</div>' +
           (haPercorso ? '<div class="cond-seg" role="group" aria-label="' + T('Percorso', 'Route') + '">' + seg('percorso', true, T('Con percorso', 'With route')) + seg('percorso', false, T('Senza', 'Without')) + '</div>' : '') +
         '</div>' +
+        '<div class="cond-sf" role="group" aria-label="' + T('Sfondo', 'Background') + '">' + SFONDI.map((q) => '<button type="button" data-cond-sfondo="' + q.id + '" class="sf-' + q.id + '"' +
+          (q.c1 ? ' style="background:linear-gradient(160deg,' + q.c1 + ',' + q.c2 + ')"' : '') + ' aria-pressed="' + (condividi.sfondo === q.id) + '" aria-label="' + esc(T(q.it, q.en)) + '" title="' + esc(T(q.it, q.en)) + '"></button>').join('') + '</div>' +
         '<div class="cond-prev"><img id="cond-img" alt="' + T('Anteprima dell’immagine da condividere', 'Preview of the image to share') + '"></div>' +
         '<div class="cond-az">' +
           '<button type="button" class="btn-primary" id="cond-share" hidden>' + ICO.share + T('Condividi', 'Share') + '</button>' +
@@ -2774,7 +2779,7 @@
   }
 
   async function generaImmagine() {
-    const cv = await disegnaCard(condividi.a, condividi.formato, condividi.percorso);
+    const cv = await disegnaCard(condividi.a, condividi.formato, condividi.percorso, condividi.sfondo);
     const blob = await new Promise((ok) => cv.toBlob(ok, 'image/png'));
     if (!blob || !$('#cond-img')) return;
     if (condividi.url) URL.revokeObjectURL(condividi.url);
@@ -2792,9 +2797,10 @@
     if (g) { const id = idCorsaDelGiorno(g.dataset.condividiGiorno); if (id) apriSheet('#condividi/' + encodeURIComponent(id)); return; }
     const b = e.target.closest('[data-condividi]');
     if (b) { apriSheet('#condividi/' + encodeURIComponent(b.dataset.condividi)); return; }
-    const f = e.target.closest('[data-cond-formato],[data-cond-percorso]');
+    const f = e.target.closest('[data-cond-formato],[data-cond-percorso],[data-cond-sfondo]');
     if (f) {
-      if (f.dataset.condFormato) condividi.formato = f.dataset.condFormato;
+      if (f.dataset.condSfondo) { condividi.sfondo = f.dataset.condSfondo; try { localStorage.setItem('coach-cond-sfondo', condividi.sfondo); } catch (_) { /* solo comodità */ } }
+      else if (f.dataset.condFormato) condividi.formato = f.dataset.condFormato;
       else condividi.percorso = f.dataset.condPercorso === 'true';
       f.parentNode.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === f)));
       generaImmagine();
@@ -2806,16 +2812,29 @@
     }
   });
 
-  // Colore d'accento in rgba (il canvas normalizza qualunque colore CSS in #rrggbb)
-  function rgba(colore, alfa) {
+  // Sfondi dell'immagine: scuro (predefinito), colore del tema, chiaro e qualche tinta sportiva
+  const SFONDI = [
+    { id: 'scuro', it: 'Scuro', en: 'Dark', c1: '#101114', c2: '#07080a' },
+    { id: 'tema', it: 'Colore del tema', en: 'Theme colour' },
+    { id: 'chiaro', it: 'Chiaro', en: 'Light', c1: '#ffffff', c2: '#ececf1' },
+    { id: 'notte', it: 'Blu notte', en: 'Midnight blue', c1: '#13234f', c2: '#060b1c' },
+    { id: 'viola', it: 'Viola', en: 'Purple', c1: '#35155e', c2: '#0f0620' },
+    { id: 'bordeaux', it: 'Bordeaux', en: 'Burgundy', c1: '#5a1426', c2: '#1a050b' },
+    { id: 'bosco', it: 'Verde bosco', en: 'Forest green', c1: '#123b2a', c2: '#04120c' },
+    { id: 'grafite', it: 'Grafite', en: 'Graphite', c1: '#3a3d44', c2: '#16171a' },
+  ];
+  // Colori per il canvas (che normalizza qualunque colore CSS in #rrggbb)
+  function inRgb(colore) {
     const c = document.createElement('canvas').getContext('2d');
     c.fillStyle = '#000'; c.fillStyle = colore;
     const h = c.fillStyle;
-    if (h[0] !== '#') return h;
-    return 'rgba(' + parseInt(h.slice(1, 3), 16) + ',' + parseInt(h.slice(3, 5), 16) + ',' + parseInt(h.slice(5, 7), 16) + ',' + alfa + ')';
+    if (h[0] !== '#') return [0, 0, 0];
+    return [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
   }
+  const rgba = (colore, alfa) => 'rgba(' + inRgb(colore).join(',') + ',' + alfa + ')';
+  const mescola = (c1, c2, t) => { const a = inRgb(c1), b = inRgb(c2); return 'rgb(' + a.map((v, i) => Math.round(v + (b[i] - v) * t)).join(',') + ')'; };
 
-  async function disegnaCard(a, formato, conPercorso) {
+  async function disegnaCard(a, formato, conPercorso, sfondo) {
     const c = a.corsa, s = a.serie, pr = a.prevista;
     const W = 1080, H = formato === 'storia' ? 1920 : 1350;
     const top = formato === 'storia' ? 230 : 84, bottom = formato === 'storia' ? 250 : 84, pad = 84;
@@ -2825,16 +2844,25 @@
     const FT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, "Segoe UI", Roboto, sans-serif';
     try { await Promise.all([document.fonts.load('700 40px Inter'), document.fonts.load('500 40px Inter')]); await document.fonts.ready; } catch (_) { /* font di sistema */ }
     const accent = cssVar('--accent') || '#ff5a36';
-    const BIANCO = '#f5f5f7', GRIGIO = 'rgba(235,235,245,0.6)';
+    const sf = SFONDI.find((q) => q.id === sfondo) || SFONDI[0];
+    const chiaro = sf.id === 'chiaro', tema = sf.id === 'tema';
+    const BIANCO = chiaro ? '#111114' : '#f5f5f7', GRIGIO = chiaro ? 'rgba(17,17,20,0.58)' : 'rgba(245,245,247,0.66)';
+    // colore dei dettagli: l'accento, più scuro sul chiaro, bianco quando lo sfondo è già l'accento
+    const EV = tema ? '#ffffff' : chiaro ? mescola(accent, '#000000', 0.25) : accent;
 
-    // sfondo scuro con bagliore del colore d'accento
-    x.fillStyle = '#0b0c0f'; x.fillRect(0, 0, W, H);
-    let gr = x.createRadialGradient(W * 0.85, H * 0.08, 0, W * 0.85, H * 0.08, W * 0.95);
-    gr.addColorStop(0, rgba(accent, 0.42)); gr.addColorStop(1, rgba(accent, 0));
+    // sfondo: sfumatura del colore scelto con bagliore del colore d'accento
+    const base1 = tema ? mescola(accent, '#000000', 0.05) : sf.c1, base2 = tema ? mescola(accent, '#000000', 0.55) : sf.c2;
+    let gr = x.createLinearGradient(0, 0, W * 0.4, H);
+    gr.addColorStop(0, base1); gr.addColorStop(1, base2);
     x.fillStyle = gr; x.fillRect(0, 0, W, H);
-    gr = x.createRadialGradient(W * 0.1, H * 0.95, 0, W * 0.1, H * 0.95, W * 0.7);
-    gr.addColorStop(0, rgba(accent, 0.16)); gr.addColorStop(1, rgba(accent, 0));
-    x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    if (!tema) {
+      gr = x.createRadialGradient(W * 0.85, H * 0.08, 0, W * 0.85, H * 0.08, W * 0.95);
+      gr.addColorStop(0, rgba(accent, chiaro ? 0.30 : 0.42)); gr.addColorStop(1, rgba(accent, 0));
+      x.fillStyle = gr; x.fillRect(0, 0, W, H);
+      gr = x.createRadialGradient(W * 0.1, H * 0.95, 0, W * 0.1, H * 0.95, W * 0.7);
+      gr.addColorStop(0, rgba(accent, chiaro ? 0.12 : 0.16)); gr.addColorStop(1, rgba(accent, 0));
+      x.fillStyle = gr; x.fillRect(0, 0, W, H);
+    }
 
     const testo = (t, px, peso, col, fam, X, Y, allinea) => { x.font = peso + ' ' + px + 'px ' + fam; x.fillStyle = col; x.textAlign = allinea || 'left'; x.textBaseline = 'alphabetic'; x.fillText(t, X, Y); return x.measureText(t).width; };
     const adatta = (t, px, peso, fam, max) => { let p = px; x.font = peso + ' ' + p + 'px ' + fam; while (p > 28 && x.measureText(t).width > max) { p -= 2; x.font = peso + ' ' + p + 'px ' + fam; } return p; };
@@ -2842,7 +2870,7 @@
     // logo (stesso disegno dell'app) e marchio
     const logo = (X, Y, size) => {
       x.save(); x.translate(X, Y); x.scale(size / 56, size / 56); x.translate(-4, -6);
-      x.strokeStyle = accent; x.lineWidth = 4.8; x.lineCap = 'round'; x.lineJoin = 'round';
+      x.strokeStyle = EV; x.lineWidth = 4.8; x.lineCap = 'round'; x.lineJoin = 'round';
       x.stroke(new Path2D('M13.6 26.5A19 19 0 1 1 13.6 37.5')); x.stroke(new Path2D('M8 32h14l3.5-8 5 16 3.5-8h4'));
       x.restore();
     };
@@ -2854,7 +2882,7 @@
     let y = top + 150;
     const dataTxt = new Date(c.data + 'T12:00:00').toLocaleDateString(LOC, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).toUpperCase();
     x.letterSpacing = '3px';
-    testo(dataTxt, 30, 700, accent, FT, pad, y);
+    testo(dataTxt, 30, 700, EV, FT, pad, y);
     x.letterSpacing = '0px';
     const titolo = (pr && pr.titolo ? pr.titolo.replace(/^(Sett\.|Wk) \d+ · /, '') : c.nome) || T('Corsa', 'Run');
     y += 92;
@@ -2871,7 +2899,7 @@
       x.font = '600 30px ' + FT;
       const w = x.measureText(t).width + 48;
       if (bx + w > W - pad) return;
-      x.fillStyle = rgba(accent, 0.18); x.strokeStyle = rgba(accent, 0.55); x.lineWidth = 2;
+      x.fillStyle = rgba(EV, tema ? 0.16 : 0.18); x.strokeStyle = rgba(EV, 0.55); x.lineWidth = 2;
       x.beginPath(); x.roundRect ? x.roundRect(bx, y, w, 58, 29) : x.rect(bx, y, w, 58); x.fill(); x.stroke();
       testo(t, 30, 600, BIANCO, FT, bx + 24, y + 39);
       bx += w + 14;
@@ -2897,13 +2925,13 @@
       const w = testo(v, adatta(v, 58, 700, FN, colW - 20 - (u ? 60 : 0)), 700, BIANCO, FN, X, yVal);
       if (u) testo(u, 26, 600, GRIGIO, FT, X + w + 6, yVal);
     });
-    x.fillStyle = 'rgba(255,255,255,0.12)'; x.fillRect(pad, yVal - 120, W - 2 * pad, 2);
+    x.fillStyle = chiaro ? 'rgba(0,0,0,0.12)' : 'rgba(255,255,255,0.16)'; x.fillRect(pad, yVal - 120, W - 2 * pad, 2);
 
     // distanza grande
     const yKm = yVal - 170;
     const km = fmt1(c.distanza);
     const wKm = testo(km, 230, 800, BIANCO, FN, pad - 6, yKm);
-    testo('km', 72, 700, accent, FN, pad + wKm + 8, yKm);
+    testo('km', 72, 700, EV, FN, pad + wKm + 8, yKm);
 
     // percorso: solo la forma, senza mappa
     const boxT = sottoTitolo + 50, boxB = yKm - 250;
@@ -2921,11 +2949,11 @@
         x.beginPath();
         pts.forEach((_, i) => { const [X, Y] = P(i); i ? x.lineTo(X, Y) : x.moveTo(X, Y); });
         x.lineCap = 'round'; x.lineJoin = 'round';
-        x.shadowColor = rgba(accent, 0.7); x.shadowBlur = 28;
-        x.strokeStyle = accent; x.lineWidth = 11; x.stroke();
+        x.shadowColor = rgba(EV, chiaro ? 0.35 : 0.7); x.shadowBlur = 28;
+        x.strokeStyle = EV; x.lineWidth = 11; x.stroke();
         x.shadowBlur = 0;
         const [sx, sy] = P(0);
-        x.fillStyle = BIANCO; x.beginPath(); x.arc(sx, sy, 13, 0, Math.PI * 2); x.fill();
+        x.fillStyle = tema ? base2 : BIANCO; x.beginPath(); x.arc(sx, sy, 13, 0, Math.PI * 2); x.fill();
       }
     }
 

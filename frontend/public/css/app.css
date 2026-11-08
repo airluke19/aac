@@ -1734,3 +1734,19 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .cond-az .btn-primary { display: inline-flex; align-items: center; gap: 8px; }
 .cond-az .btn-primary svg { width: 18px; height: 18px; }
 .cond .g-note { text-align: center; max-width: 420px; }
+
+/* Azioni della seduta nel calendario: riquadri uguali, icona sopra e testo sotto */
+.az-row { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; margin-top: 14px; }
+.az-row:empty { display: none; }
+.az { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; min-height: 64px; padding: 10px 6px; border-radius: 14px;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--text); font: inherit; font-size: .78rem; font-weight: 600; line-height: 1.2; text-align: center; cursor: pointer; transition: background .15s, transform .1s; }
+.az svg { width: 20px; height: 20px; color: var(--accent); }
+.az:hover { background: color-mix(in srgb, var(--accent) 10%, var(--surface-2)); }
+.az:active { transform: scale(.97); }
+.az:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { .az { transition: none; } .az:active { transform: none; } }
+.cond-sf { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.cond-sf button { width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(127,127,127,.35); cursor: pointer; padding: 0; transition: transform .12s; }
+.cond-sf .sf-tema { background: linear-gradient(160deg, var(--accent), color-mix(in srgb, var(--accent) 45%, #000)); }
+.cond-sf button[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent); transform: scale(1.06); }
+@media (prefers-reduced-motion: reduce) { .cond-sf button { transition: none; } }
