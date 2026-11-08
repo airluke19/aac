@@ -1,7 +1,7 @@
 {
   "name": "ai-adaptive-coach-backend",
   "version": "1.0.0",
-  "description": "AAC - AI Adaptive Coach: adaptive running coach backend with Intervals.icu sync",
+  "description": "AAC - Always Adaptive Coach: adaptive running coach backend with Intervals.icu sync",
   "license": "AGPL-3.0-only",
   "private": true,
   "main": "server.js",

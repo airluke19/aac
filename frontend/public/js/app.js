@@ -2875,8 +2875,8 @@
       x.restore();
     };
     logo(pad, top, 60);
-    testo('AAC', 44, 700, BIANCO, FT, pad + 78, top + 46);
-    testo('aac.run', 34, 500, GRIGIO, FT, W - pad, top + 44, 'right');
+    const marchio = 'Always Adaptive Coach';
+    testo(marchio, adatta(marchio, 44, 700, FT, W - 2 * pad - 78), 700, BIANCO, FT, pad + 78, top + 46);
 
     // data, titolo della seduta, traguardo
     let y = top + 150;
@@ -2959,7 +2959,7 @@
 
     // piede
     testo(T('Il piano che si adatta a te', 'The plan that adapts to you'), 28, 500, GRIGIO, FT, pad, yFoot);
-    testo('AI Adaptive Coach', 28, 700, BIANCO, FT, W - pad, yFoot, 'right');
+    testo('aac.run', 30, 700, BIANCO, FT, W - pad, yFoot, 'right');
     return cv;
   }
 

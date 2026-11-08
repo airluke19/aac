@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * AI Adaptive Coach - Backend
+ * Always Adaptive Coach - Backend
  * ---------------------------------------------------------------------------
  * - Express + SQLite (better-sqlite3): database locale corse.db
  * - Sincronizzazione con Intervals.icu (manuale via POST /api/sync, all'apertura e cron ogni 30 minuti)
@@ -2282,7 +2282,7 @@ function generaIcs() {
   };
 
   const righe = [
-    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AI Adaptive Coach//Piano di corsa//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Always Adaptive Coach//Piano di corsa//IT', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     L(`X-WR-CALNAME:Corsa · Verso: ${P(obiettivoCorrente().nome)}`, `X-WR-CALNAME:Running · Road to: ${P(obiettivoCorrente().nome)}`), 'X-WR-TIMEZONE:Europe/Rome',
     'BEGIN:VTIMEZONE', 'TZID:Europe/Rome',
     'BEGIN:DAYLIGHT', 'TZOFFSETFROM:+0100', 'TZOFFSETTO:+0200', 'TZNAME:CEST', 'DTSTART:19700329T020000', 'RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=-1SU', 'END:DAYLIGHT',
@@ -3250,8 +3250,8 @@ function markdownSessione(data, perParere = false) {
   R.push(L(`# Allenamento di ${dataLunga} — ${stato}`, `# Workout on ${dataLunga} — ${stato}`));
   R.push('');
   R.push(L(
-    `> Esportato da AI Adaptive Coach il ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC. Dati dall’orologio via Intervals.icu. "n/a" = dato non disponibile.`,
-    `> Exported from AI Adaptive Coach on ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC. Data from the watch via Intervals.icu. "n/a" = not available.`
+    `> Esportato da Always Adaptive Coach il ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC. Dati dall’orologio via Intervals.icu. "n/a" = dato non disponibile.`,
+    `> Exported from Always Adaptive Coach on ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC. Data from the watch via Intervals.icu. "n/a" = not available.`
   ));
   R.push('');
 
@@ -3827,7 +3827,7 @@ function main() {
   contesto.run(account.contestoDi(account.admin()), seedSeVuoto);
   const app = creaApp();
   const server = app.listen(CONFIG.port, '0.0.0.0', () => {
-    console.log(`[server] AI Adaptive Coach in ascolto sulla porta ${CONFIG.port} (db: ${CONFIG.dbPath})`);
+    console.log(`[server] Always Adaptive Coach in ascolto sulla porta ${CONFIG.port} (db: ${CONFIG.dbPath})`);
   });
   avviaScheduler();
 

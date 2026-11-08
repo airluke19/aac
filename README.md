@@ -1,4 +1,4 @@
-# AAC — AI Adaptive Coach
+# AAC — Always Adaptive Coach
 
 **A running coach that gets you to your goal (5 km, 10 km, half marathon or marathon) with a plan that changes every day and every week based on how you are actually doing.**
 
