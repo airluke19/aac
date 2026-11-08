@@ -1710,7 +1710,9 @@
         '<div class="corpo-az"><span></span><button type="submit" class="btn-primary">' + T('Inizia il piano', 'Start the plan') + '</button></div>' +
       '</form></dialog>');
     const dlg = $('#inizio-dlg');
+    let salvato = false;
     dlg.addEventListener('cancel', (e) => e.preventDefault()); // la data serve: Esc non chiude
+    dlg.addEventListener('close', () => { if (!salvato && dlg.isConnected) dlg.showModal(); }); // alcuni browser chiudono lo stesso: si riapre
     $('#inizio-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const v = String(new FormData(e.target).get('programma_inizio') || '').trim(), err = $('#inizio-err');
@@ -1720,7 +1722,7 @@
         const { ok, out } = await inviaJson('PUT', '/api/profilo', { programma_inizio: v });
         if (!ok) { err.textContent = T('Data non valida.', 'Invalid date.'); err.hidden = false; return; }
         ME = out;
-        dlg.close(); dlg.remove();
+        salvato = true; dlg.close(); dlg.remove();
         toast(T('Piano pronto: ecco il calendario', 'Plan ready: here is your calendar'), 'ok');
         await caricaDati(true);
         vaiTab('piano');
