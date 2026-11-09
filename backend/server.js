@@ -345,12 +345,14 @@ function testoNotifica(u, tipo, lingua) {
       }
       if (tipo === 'domenica') {
         const st = p.settimana;
-        const km = db.prepare("SELECT COALESCE(SUM(distanza), 0) AS km FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ?").get(addDays(oggiStr, -6), oggiStr).km;
+        const r7 = db.prepare("SELECT COUNT(*) AS n, COALESCE(SUM(distanza), 0) AS km FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ?").get(addDays(oggiStr, -6), oggiStr);
         const prox = p.prossime.find((x) => x.data > oggiStr);
-        const kmTxt = String(round(km, 1)).replace('.', LINGUA === 'en' ? '.' : ',');
+        const kmTxt = String(round(r7.km, 1)).replace('.', LINGUA === 'en' ? '.' : ',');
+        const corse = r7.n === 1 ? L('1 corsa', '1 run') : L(`${r7.n} corse`, `${r7.n} runs`);
+        const piano = L(`piano: ${st.fatte} ${st.fatte === 1 ? 'seduta' : 'sedute'} su ${st.sedute}`, `plan: ${st.fatte} of ${st.sedute} sessions`);
         return {
           title: L('La tua settimana', 'Your week'),
-          body: L(`${st.fatte} sedute su ${st.sedute} · ${kmTxt} km negli ultimi 7 giorni.`, `${st.fatte} of ${st.sedute} sessions · ${kmTxt} km in the last 7 days.`) +
+          body: L(`${corse} e ${kmTxt} km negli ultimi 7 giorni · ${piano}.`, `${corse} and ${kmTxt} km in the last 7 days · ${piano}.`) +
             (prox ? L(` Prossima: ${giornoSettimana(prox.data)}, ${nome(prox)} ${prox.durata_min}′.`, ` Next: ${giornoSettimana(prox.data)}, ${nome(prox)} ${prox.durata_min}′.`) : ''),
           tag: 'domenica', url: '/',
         };
