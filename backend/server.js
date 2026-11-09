@@ -1967,8 +1967,8 @@ function valutaLivello(oggiStr) {
   const kmSettTxt = String(kmSett).replace('.', LINGUA === 'en' ? '.' : ',');
   const motivo = !corse.length
     ? L('Su Intervals.icu non vedo corse nelle ultime 8 settimane: raccontami tu come stai messo.', 'I see no runs on Intervals.icu in the last 8 weeks: tell me where you are.')
-    : L(`Nelle ultime 6 settimane hai fatto ${recenti.length} corse (${perSettTxt} a settimana, ${kmSettTxt} km a settimana); la corsa continua più lunga è di ${lungo}′.`,
-        `In the last 6 weeks you did ${recenti.length} runs (${perSettTxt} per week, ${kmSettTxt} km per week); your longest continuous run is ${lungo}′.`) +
+    : L(`Nelle ultime 6 settimane hai fatto ${recenti.length === 1 ? '1 corsa' : recenti.length + ' corse'} (${perSettTxt} a settimana, ${kmSettTxt} km a settimana); la corsa continua più lunga è di ${lungo}′.`,
+        `In the last 6 weeks you did ${recenti.length === 1 ? '1 run' : recenti.length + ' runs'} (${perSettTxt} per week, ${kmSettTxt} km per week); your longest continuous run is ${lungo}′.`) +
       (sett === 1 ? L(' Conviene partire dalla settimana 1, con brevi tratti di corsa.', ' Best to start from week 1, with short running bouts.')
         : L(` Puoi saltare le prime ${sett - 1} settimane e partire da “${fase.nome}”.`, ` You can skip the first ${sett - 1} weeks and start from “${fase.nome}”.`));
 
