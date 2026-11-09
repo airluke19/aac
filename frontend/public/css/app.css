@@ -1905,3 +1905,8 @@ body.rivivi-on #tabbar { display: none; }
 .avviso.inst { --c: var(--accent); }
 .avviso.inst .link-btn { margin-top: 8px; }
 @media (prefers-reduced-motion: reduce) { .nt-sw, .nt-sw::after { transition: none; } }
+.inst-btn { margin-top: 12px; }
+.avviso.inst .link-btn { display: block; }
+.inst-ico { display: inline-grid; place-items: center; width: 24px; height: 24px; vertical-align: middle; border-radius: 6px; background: var(--surface-2); color: var(--accent); font-weight: 700; }
+.inst-ico svg { width: 15px; height: 15px; }
+.nt-inst { margin-top: 12px; display: inline-flex; }

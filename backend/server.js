@@ -4009,6 +4009,7 @@ if (require.main === module) {
 
 module.exports = {
   analizzaStream,
+  testoNotifica, // testi delle notifiche (verifiche)
   // zone cardiache (usate anche nei test)
   fcMaxTanaka,
   soglieZone,

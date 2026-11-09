@@ -2540,6 +2540,22 @@
   const installata = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
   const pushSupportato = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   let swPronto = null;
+  // Android e Chrome desktop: il browser offre l'installazione e noi la mostriamo con il nostro pulsante
+  let promptInstalla = null;
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    promptInstalla = e;
+    if (ultimiDati && !$('#inst-card')) render(ultimiDati);
+    if ($('#acc-notifiche')) riempiNotifiche();
+  });
+  window.addEventListener('appinstalled', () => { promptInstalla = null; const c = $('#inst-card'); if (c) c.remove(); toast(T('AAC è sulla schermata Home', 'AAC is on your Home Screen'), 'ok'); });
+  async function installaOra() {
+    if (!promptInstalla) return;
+    const p = promptInstalla; promptInstalla = null;
+    p.prompt();
+    try { await p.userChoice; } catch (_) { /* annullato */ }
+    const c = $('#inst-card'); if (c) c.remove();
+  }
   function registraSW() {
     if (!('serviceWorker' in navigator) || swPronto) return swPronto;
     swPronto = navigator.serviceWorker.register('/sw.js').then(() => navigator.serviceWorker.ready).catch(() => null);
@@ -2564,6 +2580,7 @@
       return;
     }
     if (!pushSupportato()) { box.innerHTML = titolo + '<p class="sub">' + T('Questo browser non supporta le notifiche.', 'This browser does not support notifications.') + '</p>'; return; }
+    const installa = promptInstalla && !installata() ? '<button type="button" class="btn-mini nt-inst" id="nt-installa">' + ICO.share + T('Installa l’app sulla schermata Home', 'Install the app on your Home Screen') + '</button>' : '';
     let st;
     try { st = await caricaJson('/api/push/stato'); } catch (_) { box.remove(); return; }
     if (!st.disponibile) { box.remove(); return; }
@@ -2572,7 +2589,7 @@
     if (!sub) {
       box.innerHTML = titolo + '<p class="sub">' + T('Ogni mattina la seduta del giorno (anche quando il coach la alleggerisce) e la domenica sera il riepilogo della settimana.', 'Every morning your session for the day (also when the coach lightens it) and on Sunday evening your weekly recap.') + '</p>' +
         (negato ? '<p class="nt-nota">' + T('Le notifiche sono bloccate: riattivale nelle impostazioni del telefono o del browser per questo sito.', 'Notifications are blocked: turn them back on in your phone or browser settings for this site.') + '</p>'
-          : '<button type="button" class="btn-primary nt-attiva" id="nt-attiva">' + T('Attiva le notifiche', 'Turn on notifications') + '</button>');
+          : '<button type="button" class="btn-primary nt-attiva" id="nt-attiva">' + T('Attiva le notifiche', 'Turn on notifications') + '</button>') + installa;
       return;
     }
     const ore = []; for (let h = 5; h <= 11; h++) for (const m of ['00', '30']) ore.push(String(h).padStart(2, '0') + ':' + m);
@@ -2619,6 +2636,7 @@
       riempiNotifiche();
       return;
     }
+    if (e.target.closest('#inst-ora') || e.target.closest('#nt-installa')) { installaOra(); return; }
     if (e.target.closest('#inst-dopo')) {
       try { localStorage.setItem('coach-installa-dopo', String(Date.now() + 30 * 864e5)); } catch (_) { /* solo comodità */ }
       const c = $('#inst-card'); if (c) c.remove();
@@ -2628,13 +2646,20 @@
 
   // Invito a installare l'app: solo su iPhone in Safari, mai in demo o "Vedi come", rimandabile di 30 giorni
   function renderInstalla() {
-    if (!suIOS() || installata() || !ME || ME.demo || ME.impersonato_da) return '';
+    if (installata() || !ME || ME.demo || ME.impersonato_da) return '';
+    const ios = suIOS();
+    if (!ios && !promptInstalla) return '';
     let dopo = 0; try { dopo = Number(localStorage.getItem('coach-installa-dopo')) || 0; } catch (_) { /* nessuna preferenza */ }
     if (Date.now() < dopo) return '';
     return '<section class="avviso inst" id="inst-card"><div class="av-h">' + ICO.share + '<h3>' + T('Metti AAC sulla schermata Home', 'Add AAC to your Home Screen') + '</h3></div>' +
-      '<p>' + T('Tocca <b>Condividi</b> in Safari e poi <b>Aggiungi alla schermata Home</b>: AAC si apre come un’app e può mandarti la seduta del mattino.', 'Tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>: AAC opens like an app and can send you your morning session.') + '</p>' +
+      (ios
+        ? '<p>' + T('Si apre come un’app e può mandarti la seduta del mattino. Su iPhone bastano due tocchi:', 'It opens like an app and can send you your morning session. On iPhone it takes two taps:') + '</p>' +
+          '<ol class="nt-passi"><li>' + T('Tocca <b>Condividi</b> ', 'Tap <b>Share</b> ') + '<span class="inst-ico">' + ICO.share + '</span>' + T(' nella barra di Safari', ' in the Safari bar') + '</li><li>' + T('Scegli <b>Aggiungi alla schermata Home</b> ', 'Choose <b>Add to Home Screen</b> ') + '<span class="inst-ico">＋</span></li></ol>'
+        : '<p>' + T('Si apre come un’app e può mandarti la seduta del mattino.', 'It opens like an app and can send you your morning session.') + '</p>' +
+          '<button type="button" class="btn-primary inst-btn" id="inst-ora">' + T('Installa l’app', 'Install the app') + '</button>') +
       '<button type="button" class="link-btn" id="inst-dopo">' + T('Più tardi', 'Later') + '</button></section>';
   }
+
 
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
