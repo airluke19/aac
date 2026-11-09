@@ -477,12 +477,17 @@
 
     const fmi = d.atleta && d.atleta.fc_max_info;
     const zone = '<div class="in-zones">' + [['&lt; Z1', '&lt; 50%', 'z0'], ['Z1', '50–60%'], ['Z2', '60–70%'], ['Z3', '70–80%'], ['Z4', '80–90%'], ['Z5', '90–100%']].map((z, i) => '<div><span class="zchip ' + (z[2] || 'z' + i) + '">' + z[0] + '</span><small>' + z[1] + '</small></div>').join('') + '</div>' +
-      kv(T('Modello', 'Model'), T('5 zone in % della FC max, come Garmin, Polar e Suunto', '5 zones as % of max HR, like Garmin, Polar and Suunto')) +
+      (fmi && fmi.metodo === 'riserva'
+        ? kv(T('Modello', 'Model'), T('5 zone in % della riserva cardiaca (Karvonen), come Garmin e Polar', '5 zones as % of heart-rate reserve (Karvonen), like Garmin and Polar')) +
+          kv(T('FC a riposo', 'Resting HR'), fmi.fc_riposo + T(' bpm · mediana degli ultimi 28 giorni', ' bpm · median of the last 28 days'))
+        : kv(T('Modello', 'Model'), T('5 zone in % della FC max, come Garmin, Polar e Suunto', '5 zones as % of max HR, like Garmin, Polar and Suunto'))) +
       kv(T('FC massima', 'Max HR'), fcMax + ' bpm · ' + (fmi && fmi.fonte === 'misurata' ? T('misurata', 'measured') : T('stimata dall’età', 'age-based estimate'))) +
       kv(T('FC di sicurezza', 'Safety HR'), T('non superare ', 'do not exceed ') + fcMax + ' bpm') +
       kv(T('Corse facili', 'Easy runs'), T('sotto ', 'below ') + facile + ' bpm') + kv(T('Passo indicativo', 'Guide pace'), T('dopo 3 corse, dalla tua efficienza', 'after 3 runs, from your efficiency')) +
       '<p class="in-p">' + T(
+        'Con almeno 5 misure di <b>FC a riposo</b> negli ultimi 28 giorni le zone usano la <b>riserva cardiaca</b> (metodo di Karvonen): FC a riposo + % × (FC max − FC a riposo). Così le zone sono tue, non solo della tua età: chi è più allenato ha il riposo più basso e zone diverse. La corsa facile non supera mai l’80% della FC max e la corsa-cammino resta un po’ più bassa (65% della riserva). Verifica semplice: se riesci a parlare a frasi intere sei in zona facile. '+
         'Senza un test sul campo la FC max si stima con <b>208 − 0,7 × età</b> (Tanaka): è più precisa di <b>220 − età</b>, che la sottostima dopo i 40 anni. La stima può sbagliare di ±10 bpm: se fai un test, inserisci il valore nel profilo e zone e limiti si ricalcolano da soli, anche per le corse passate. Il tempo nelle zone viene dai battiti secondo per secondo dell’orologio; sotto il 50% è “fuori zona”.',
+        'With at least 5 <b>resting HR</b> readings in the last 28 days, zones use your <b>heart-rate reserve</b> (Karvonen method): resting HR + % × (max HR − resting HR). This makes the zones yours, not just your age’s: fitter people have a lower resting HR and different zones. Easy running never goes above 80% of max HR and run-walk stays a little lower (65% of the reserve). Simple check: if you can speak in full sentences you are in the easy zone. '+
         'Without a field test, max HR is estimated as <b>208 − 0.7 × age</b> (Tanaka): more accurate than <b>220 − age</b>, which underestimates it after 40. The estimate can be off by ±10 bpm: if you do a test, enter it in your profile and zones and limits update automatically, past runs included. Time in zones comes from your watch’s second-by-second heart rate; below 50% is “below zones”.') + '</p>';
 
     const bmi = '<div class="in-zones">' + [['&lt; 18,5', T('sottopeso', 'underweight')], ['18,5–24,9', T('normopeso', 'healthy')], ['25–29,9', T('sovrappeso', 'overweight')], ['≥ 30', T('obesità', 'obesity')]].map((z) => '<div><b>' + z[0] + '</b><small>' + z[1] + '</small></div>').join('') + '</div>' +
@@ -616,10 +621,10 @@
     if (!ps) return '';
     const how = comeCalcolo(T(
       'Per ogni corsa delle ultime 6 settimane calcolo l’<b>efficienza</b>: velocità ÷ battiti (nelle sedute corsa-cammino uso <b>solo i tratti di corsa</b>, riconosciuti dalla cadenza o dalla velocità). Prendo la mediana delle ultime 8 corse e la trasformo in passo per ogni fascia di frequenza: ' +
-      '<b>facile</b> Z2 (60–70% della FC max), <b>ritmo medio</b> Z3 (70–80%), <b>ritmo gara</b> (la zona del tuo obiettivo). Il <b>passo gara</b> viene dalla previsione del tempo (se disponibile) oppure dall’80% della FC con un 4% di margine per la fatica. ' +
+      '<b>facile</b> Z2 (60–70% della riserva cardiaca, o della FC max se mancano i dati a riposo), <b>ritmo medio</b> Z3 (70–80%), <b>ritmo gara</b> (la zona del tuo obiettivo). Il <b>passo gara</b> viene dalla previsione del tempo (se disponibile) oppure dall’80% della FC con un 4% di margine per la fatica. ' +
       'È un’indicazione: se il cuore supera la soglia della seduta, conta il cuore.',
       'For each run in the last 6 weeks I compute <b>efficiency</b>: speed ÷ heart rate (in run-walk sessions I use <b>only the running parts</b>, detected from cadence or speed). I take the median of the last 8 runs and turn it into a pace for each heart-rate band: ' +
-      '<b>easy</b> Z2 (60–70% of max HR), <b>steady</b> Z3 (70–80%), <b>race pace</b> (your goal’s zone). <b>Race pace</b> comes from the time forecast (when available) or from 80% HR with a 4% fatigue margin. ' +
+      '<b>easy</b> Z2 (60–70% of heart-rate reserve, or of max HR without resting data), <b>steady</b> Z3 (70–80%), <b>race pace</b> (your goal’s zone). <b>Race pace</b> comes from the time forecast (when available) or from 80% HR with a 4% fatigue margin. ' +
       'It is a guide: if your heart goes above the session threshold, your heart wins.'));
     if (!ps.disponibile && !ps.ultimo) return '';
     if (!ps.disponibile) {

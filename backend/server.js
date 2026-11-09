@@ -1707,7 +1707,7 @@ function specSeduta(d) {
   const facile = L('facile', 'easy');
   switch (tipo) {
     case 'cc':
-      return { ...base, tipo: 'corsa-cammino', titolo: L('Corsa e cammino', 'Run-walk'),
+      return { ...base, fc: fcCorsaCammino(), tipo: 'corsa-cammino', titolo: L('Corsa e cammino', 'Run-walk'),
         blocchi: L(`${a} × (${b}' corsa lenta + ${c}' camminata)`, `${a} × (${b}' slow run + ${c}' walk)`),
         lavoro: a * (b + c), corsa: a * b, segmenti: ripeti(a, () => [{ tipo: 'run', min: b }, { tipo: 'walk', min: c }]) };
     case 'facile':
@@ -2669,13 +2669,32 @@ function aggregaSettimane(righe, oggiStr, massimo = 12) {
 // ===========================================================================
 
 // ---------------------------------------------------------------------------
-// Zone cardiache: modello standard a 5 zone in % della FC max (come Garmin, Polar, Suunto).
-// UNICO punto in cui si calcolano i limiti: grafico, barre, tempi, percentuali e testi li prendono da qui.
+// Zone cardiache a 5 zone (come Garmin, Polar, Suunto). UNICO punto in cui si calcolano i limiti:
+// grafico, barre, tempi, percentuali, sedute e testi li prendono da qui.
 //   < Z1 fuori zona < 50% · Z1 50-60% · Z2 60-70% · Z3 70-80% · Z4 80-90% · Z5 90-100%
-// Limiti interi senza sovrapposizioni: soglia = parte intera di FCmax x %, il bpm della soglia sta
-// nella zona sotto. Con FC max 185: < 93 · 93-111 · 112-129 · 130-148 · 149-166 · 167-185.
+// Percentuali della RISERVA cardiaca (Karvonen: FC riposo + % x (FC max - FC riposo)) quando c'e' una FC a riposo
+// affidabile (mediana di almeno 5 misure negli ultimi 28 giorni, tra 40 e 90 bpm); altrimenti della FC max.
+// Protezione: l'inizio di Z3 (tetto della corsa facile) non supera mai l'80% della FC max.
+// Limiti interi senza sovrapposizioni: soglia = parte intera, il bpm della soglia sta nella zona sotto.
+// Con FC max 185 senza FC a riposo: < 93 · 93-111 · 112-129 · 130-148 · 149-166 · 167-185.
+// Con FC max 185 e riposo 70: < 128 · 128-139 · 140-148 · 149-162 · 163-173 · 174-185 (Z2/Z3 dal tetto dell'80%).
 // ---------------------------------------------------------------------------
 const ZONE_PCT = [50, 60, 70, 80, 90];
+const TETTO_FACILE = 0.8; // inizio di Z3 al massimo all'80% della FC max
+// FC a riposo usata per le zone (mediana 28 giorni), con una piccola cache per utente (10 minuti)
+function fcRiposoZone() {
+  const st = contesto.getStore();
+  const ora = Date.now();
+  if (st && st._fcRip && ora - st._fcRip.t < 600000) return st._fcRip.v;
+  let v = null;
+  try {
+    const fino = oggi();
+    const vals = db.prepare("SELECT fc_riposo FROM benessere WHERE fc_riposo BETWEEN 40 AND 90 AND data > date(?, '-28 day') AND data <= ?").all(fino, fino).map((r) => r.fc_riposo);
+    if (vals.length >= 5) v = Math.round(mediana(vals));
+  } catch (_) { v = null; }
+  if (st) st._fcRip = { t: ora, v };
+  return v;
+}
 const ZONE_FC = [
   { z: 'Z1', nome: ['Recupero/Riscaldamento', 'Recovery/Warm-up'] },
   { z: 'Z2', nome: ['Aerobica facile', 'Easy aerobic'] },
@@ -2684,7 +2703,22 @@ const ZONE_FC = [
   { z: 'Z5', nome: ['Massimale', 'Maximal'] },
 ];
 // soglie[k] = ultimo bpm sotto il k-esimo limite (interi, aritmetica intera: niente errori di arrotondamento)
-const soglieZone = (fcMax = CONFIG.fcMax) => ZONE_PCT.map((p) => Math.floor((fcMax * p) / 100));
+const soglieZone = (fcMax = CONFIG.fcMax, rip = fcRiposoZone()) => {
+  if (!rip || rip >= fcMax - 40) return ZONE_PCT.map((p) => Math.floor((fcMax * p) / 100));
+  const s = ZONE_PCT.map((p) => Math.floor(rip + ((fcMax - rip) * p) / 100));
+  s[2] = Math.min(s[2], Math.floor(fcMax * TETTO_FACILE)); // la corsa facile non sale oltre l'80% della FC max
+  if (s[1] >= s[2]) s[1] = s[2] - 1;
+  return s;
+};
+// Metodo in uso per le zone (per i testi e l'export)
+const metodoZone = () => { const r = fcRiposoZone(); return r && r < CONFIG.fcMax - 40 ? { metodo: 'riserva', fc_riposo: r } : { metodo: 'fcmax', fc_riposo: null }; };
+// Tetto della corsa-cammino: piu' prudente della corsa facile (65% della riserva), mai oltre il tetto della facile
+function fcCorsaCammino() {
+  const r = metodoZone().fc_riposo;
+  const facile = limitiZone()[2].da;
+  if (!r) return `< ${facile}`;
+  return `< ${Math.min(facile, Math.floor(r + (CONFIG.fcMax - r) * 0.65) + 1)}`;
+}
 // -1 = fuori zona (< Z1), 0..4 = Z1..Z5 (oltre la FC max resta Z5)
 function indiceZona(bpm, soglie) {
   const h = Math.round(bpm);
@@ -2720,6 +2754,7 @@ const sottoZone = (fcMax = CONFIG.fcMax) => ({ z: '< Z1', nome: L('Fuori zona', 
 function infoFcMax() {
   const misurata = Boolean(CONFIG.fcMaxReale);
   return {
+    ...metodoZone(),
     valore: CONFIG.fcMax,
     fonte: misurata ? 'misurata' : 'stimata',
     stimata: fcMaxTanaka(CONFIG.eta),
@@ -3456,7 +3491,9 @@ function markdownSessione(data, perParere = false) {
   R.push(CONFIG.fcMaxReale
     ? L(`- FC massima **misurata** ${CONFIG.fcMax} bpm (inserita dall'atleta).`, `- **Measured** max HR ${CONFIG.fcMax} bpm (entered by the athlete).`)
     : L(`- FC massima **stimata** ${CONFIG.fcMax} bpm (formula di Tanaka 208 − 0,7 × età, non misurata).`, `- **Estimated** max HR ${CONFIG.fcMax} bpm (Tanaka formula 208 − 0.7 × age, not measured).`));
-  R.push(L(`- Zone FC usate dall'app: ${zoneTxt} bpm.`, `- HR zones used by the app: ${zoneTxt} bpm.`));
+  const mz = metodoZone();
+  R.push(L(`- Zone FC usate dall'app: ${zoneTxt} bpm (${mz.metodo === 'riserva' ? `riserva cardiaca, FC a riposo ${mz.fc_riposo} bpm, corsa facile al massimo all'80% della FC max` : '% della FC max'}).`,
+    `- HR zones used by the app: ${zoneTxt} bpm (${mz.metodo === 'riserva' ? `heart-rate reserve, resting HR ${mz.fc_riposo} bpm, easy running capped at 80% of max HR` : '% of max HR'}).`));
   if (p) {
     const o = p.obiettivo;
     const statoOb = { in_linea: L('in linea', 'on track'), ritardo: L(`entro ${o.mesi_limite} mesi`, `within ${o.mesi_limite} months`), oltre: L(`oltre ${o.mesi_limite} mesi`, `beyond ${o.mesi_limite} months`) }[o.stato];
@@ -4029,6 +4066,8 @@ module.exports = {
   soglieZone,
   indiceZona,
   limitiZone,
+  soglieFcPiano,
+  metodoZone,
   tempoInZone,
   istogrammaDaStreams,
   creaApp,

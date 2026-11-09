@@ -67,7 +67,7 @@ Only runs count (and sessions you mark as done by hand). Runs on days without a 
 
 **5. Every 3 weeks: intensity.** You choose *easy‑going*, *balanced* or *ambitious*. If 3 weeks in a row are too easy, or 2 out of 3 are too hard, the coach adjusts it by ±10% on its own.
 
-**6. Your zones, pace and predictions.** Heart‑rate zones are personal, computed from your max HR (measured by you, or estimated as 208 − 0.7 × age): easy runs below 70%, quality work at 80–90%. From your runs AAC estimates your efficiency, your race time (Riegel formula) and the date your goal becomes realistic.
+**6. Your zones, pace and predictions.** Heart‑rate zones are personal: with enough resting‑HR data they use your **heart‑rate reserve** (Karvonen: resting HR + % × (max HR − resting HR)), otherwise a % of max HR (measured by you, or estimated as 208 − 0.7 × age). Easy runs up to 70% (never above 80% of max HR), run‑walk a little lower, quality work at 80–90%. From your runs AAC estimates your efficiency, your race time (Riegel formula) and the date your goal becomes realistic.
 
 ### Plans
 
