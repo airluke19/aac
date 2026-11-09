@@ -1839,3 +1839,12 @@ body.rivivi-on #tabbar { display: none; }
 .dd-share:active { transform: scale(.98); }
 .dd-share:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .dd-share { transition: none; } .dd-share:active { transform: none; } }
+
+/* Profilo: guida al collegamento accanto al titolo Intervals.icu */
+.acc-h3row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.acc-h3row h3 { margin: 0; }
+.acc-guida { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 999px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--line));
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface)); color: var(--text); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; }
+.acc-guida svg { width: 15px; height: 15px; color: var(--accent); }
+.acc-guida:hover { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
+.acc-guida:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

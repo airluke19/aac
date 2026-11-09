@@ -2196,7 +2196,7 @@
         '<li>' + T('Incollali qui sotto e scegli il giorno della prima seduta.', 'Paste them below and pick the day of your first session.') + '</li></ol></section>';
     }
     html += '<form id="acc-form" class="card acc-form" autocomplete="off">' +
-      '<h3>Intervals.icu</h3>' +
+      '<div class="acc-h3row"><h3>Intervals.icu</h3><button type="button" class="acc-guida" data-apri-sheet="#collega">' + ICO.sync + '<span>' + T('Collega l’orologio', 'Connect your watch') + '</span></button></div>' +
       campo('acc-ath', 'Athlete ID', '<input id="acc-ath" name="athlete_id" inputmode="text" placeholder="i123456" value="' + esc(p.athlete_id) + '">') +
       campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
       '<h3>' + T('Programma', 'Plan') + '</h3>' +
