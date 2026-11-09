@@ -4,7 +4,7 @@
  * Always Adaptive Coach - Backend
  * ---------------------------------------------------------------------------
  * - Express + SQLite (better-sqlite3): database locale corse.db
- * - Sincronizzazione con Intervals.icu (manuale via POST /api/sync, all'apertura e cron ogni 30 minuti)
+ * - Sincronizzazione con Intervals.icu (manuale via POST /api/sync, all'apertura e cron ogni 15 minuti)
  * - GET /api/coach-data: stato di forma (CTL/ATL/TSB), zona, prossimi 3 allenamenti
  * - Serve la SPA statica da ./public
  *
@@ -30,7 +30,7 @@ const BASE = {
   intervalsBase: (process.env.INTERVALS_BASE_URL || 'https://intervals.icu').replace(/\/+$/, ''),
   apiKey: (process.env.INTERVALS_API_KEY || '').trim(),
   athleteId: (process.env.INTERVALS_ATHLETE_ID || '').trim(),
-  syncCron: process.env.SYNC_CRON || '*/30 * * * *',
+  syncCron: process.env.SYNC_CRON || '*/15 * * * *',
   timezone: process.env.TZ || 'Europe/Rome',
   historyDays: parseInt(process.env.SYNC_HISTORY_DAYS || '365', 10),
   recentDays: parseInt(process.env.SYNC_RECENT_DAYS || '21', 10),

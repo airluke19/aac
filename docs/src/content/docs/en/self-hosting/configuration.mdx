@@ -11,7 +11,7 @@ sidebar:
 | `ADMIN_EMAIL` | Google account of the administrator |
 | `APP_SECRET` | Secret that encrypts the Intervals.icu keys (`openssl rand -base64 32`); never change it. If empty, a key file is generated in the data volume and included in backups |
 | `ATHLETE_AGE` | Initial age of the admin for the max-HR estimate (default `33`); editable later in the profile |
-| `SYNC_CRON` | Sync schedule (default `*/30 * * * *`); the app also syncs when opened and with the Sync button |
+| `SYNC_CRON` | Sync schedule (default `*/15 * * * *`); the app also syncs when opened and with "Sync now" in the profile |
 | `BIND_ADDR` / `HOST_PORT` | Host address and port of the app (default `127.0.0.1:3000`) |
 | `AAC_TAG` | Image tag: `latest` (default), `staging` or `sha-<commit>` |
 | `COMPOSE_PROFILES` | `backup` runs the nightly backups; `docs` also serves this documentation. Remove `backup` only on a test instance |

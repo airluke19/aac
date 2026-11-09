@@ -11,7 +11,7 @@ sidebar:
 | `ADMIN_EMAIL` | Account Google dell'amministratore |
 | `APP_SECRET` | Segreto che cifra le chiavi Intervals.icu (`openssl rand -base64 32`); non cambiarlo mai. Se vuoto, viene creato un file chiave nel volume dei dati, incluso nei backup |
 | `ATHLETE_AGE` | Età iniziale dell'amministratore per stimare la FC max (default `33`); poi si cambia dal profilo |
-| `SYNC_CRON` | Frequenza di sincronizzazione (default `*/30 * * * *`); l'app sincronizza anche all'apertura e con il pulsante |
+| `SYNC_CRON` | Frequenza di sincronizzazione (default `*/15 * * * *`); l'app sincronizza anche all'apertura e con "Sincronizza ora" nel profilo |
 | `BIND_ADDR` / `HOST_PORT` | Indirizzo e porta dell'app sull'host (default `127.0.0.1:3000`) |
 | `AAC_TAG` | Versione delle immagini: `latest` (default), `staging` o `sha-<commit>` |
 | `COMPOSE_PROFILES` | `backup` attiva i backup notturni; `docs` anche questa documentazione. Togli `backup` solo su un'istanza di prova |

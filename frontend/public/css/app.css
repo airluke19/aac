@@ -1943,3 +1943,11 @@ body.rivivi-on #tabbar { display: none; }
 .fc-perche b { color: var(--text); }
 /* Schermi stretti (es. iPhone SE) con tutte le icone dell'amministratore: icone e spazi un po' più piccoli */
 @media (max-width: 360px) { .top { gap: 5px; } .top .icon-btn { width: 33px; height: 33px; } .top .icon-btn svg { width: 18px; height: 18px; } .lang-btn { font-size: .78rem; } }
+/* Profilo: azioni accanto a Intervals.icu (collega l'orologio, sincronizza ora) e stato della sincronizzazione */
+.acc-h3az { display: flex; flex-wrap: wrap; gap: 8px; }
+.acc-guida:disabled { opacity: .6; cursor: default; }
+.acc-guida.loading svg { animation: giro 1s linear infinite; }
+@keyframes giro { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .acc-guida.loading svg { animation: none; } }
+.acc-sync-stato { margin: 8px 0 2px; font-size: .84rem; color: var(--muted); }
+.acc-sync-stato .err { color: var(--danger); font-weight: 600; }

@@ -6,7 +6,8 @@
 
 ---
 
-> 📖 **Documentation:** [docs.aac.run](https://docs.aac.run) (Italian and English) · **Live demo:** [aac.run/demo](https://aac.run/demo)
+> 📖 **Documentation: [docs.aac.run](https://docs.aac.run)** — what AAC is, how the coach works, what to expect, screenshots and the full self-hosting guide, in Italian and English.
+> 🏃 **Live demo:** [aac.run/demo](https://aac.run/demo) · ☁️ **Cloud:** [aac.run](https://aac.run), free for all of 2026 · 🏠 **Self-hosted:** open source and free on your own server.
 
 ## What it is
 
@@ -101,121 +102,25 @@ Light and dark theme, Italian and English, 26 sporty accent colours. Multi‑use
 
 ---
 
-## Self‑hosting in 6 steps
+## Self‑hosting
 
-### What you need
+AAC is open source (AGPL‑3.0) and free to run on your own server with Docker. **The complete guide lives in the documentation:**
 
-- A Linux machine (or Mac/Windows) with **Docker** and **Docker Compose** (`docker compose version` must work)
-- A **domain** with HTTPS in front of it (Caddy, Nginx, Traefik or a Cloudflare Tunnel)
-- A **Google account** to create the sign‑in client (free)
-- Each user needs a free **Intervals.icu** account with their watch syncing to it
+- [Installation in six steps](https://docs.aac.run/en/self-hosting/install/) — requirements, Google sign‑in client, `.env`, HTTPS, first sign‑in
+- [Configuration](https://docs.aac.run/en/self-hosting/configuration/) — every `.env` option
+- [Backups and updates](https://docs.aac.run/en/self-hosting/backup-and-updates/) — everyday commands, verified nightly backups, restore, image verification
 
-### 1. Download
-
-```bash
-git clone https://github.com/airluke19/aac.git
-cd aac
-cp .env.example .env
-chmod 600 .env
-```
-
-### 2. Create the Google sign‑in client
-
-1. Open [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials) (create a project if asked).
-2. **Create credentials → OAuth client ID → Web application.**
-3. Under **Authorized redirect URIs** add `https://YOUR-DOMAIN/auth/google/callback`.
-4. Copy the **Client ID** and **Client secret**.
-
-### 3. Fill in `.env`
-
-Open `.env` with any editor and set these 5 values:
+Quick start, if you already know Docker:
 
 ```bash
-PUBLIC_URL=https://YOUR-DOMAIN           # no trailing slash
-GOOGLE_CLIENT_ID=...                     # from step 2
-GOOGLE_CLIENT_SECRET=...                 # from step 2
-ADMIN_EMAIL=you@gmail.com                # your Google account: you approve new users
-APP_SECRET=...                           # run: openssl rand -base64 32   (never change it afterwards)
+git clone https://github.com/airluke19/aac.git && cd aac
+cp .env.example .env && chmod 600 .env     # fill in PUBLIC_URL, Google client, ADMIN_EMAIL, APP_SECRET
+docker compose pull && docker compose up -d
 ```
 
-Leave `COMPOSE_PROFILES=backup` as it is: it turns on the nightly backups.
+Then put HTTPS in front of `127.0.0.1:3000` and sign in with your `ADMIN_EMAIL` account. Italian guide: [docs.aac.run/self-hosting/install](https://docs.aac.run/self-hosting/install/).
 
-### 4. Start
-
-```bash
-docker compose pull      # download the ready-made images
-docker compose up -d     # start
-docker compose ps        # wait until every service says (healthy), about 30 seconds
-```
-
-The app now answers on `http://127.0.0.1:3000` on that machine.
-
-### 5. Put HTTPS in front of it
-
-Point your domain to the app. Two common ways:
-
-- **Caddy** (gets the certificate on its own): `caddy reverse-proxy --from YOUR-DOMAIN --to 127.0.0.1:3000`
-- **Cloudflare Tunnel**: create a tunnel for `YOUR-DOMAIN` with service `http://127.0.0.1:3000`
-
-If the proxy runs on *another* machine, set `BIND_ADDR=0.0.0.0` in `.env` and run `docker compose up -d` again.
-
-### 6. First sign‑in
-
-1. Open `https://YOUR-DOMAIN` and sign in with the `ADMIN_EMAIL` account.
-2. In **Account**, paste your Intervals.icu **Athlete ID** and **API key** (Intervals.icu → Settings → Developer Settings). The key is stored encrypted.
-3. Choose your goal: AAC reads your history and proposes where to start.
-
-New users sign in with Google and wait for your approval (gear icon next to your avatar).
-
-> **Just trying it on your computer?** Leave the Google variables empty: AAC starts in single‑user mode **without sign‑in**, on `http://127.0.0.1:3000` only. Never expose that mode to the internet.
-
-### Everyday commands
-
-| What | Command |
-|---|---|
-| Update to the latest version | `git pull && docker compose pull && docker compose up -d` |
-| Roll back to a known build | set `AAC_TAG=sha-<commit>` in `.env`, then `docker compose pull && docker compose up -d` |
-| See the logs | `docker logs aac-backend` |
-| Status | `docker compose ps` |
-| Build the images yourself instead of downloading | `docker compose up -d --build` |
-
-### Backups and restore
-
-Every night at 03:30 the `backup` service saves a verified copy of all databases (integrity check, SHA‑256 checksums, row counts) into the `aac-backup` volume. It keeps 7 daily, 4 weekly and 6 monthly copies by default, and is marked unhealthy if the last backup is older than 26 hours.
-
-Restore:
-
-```bash
-docker compose stop backend
-docker compose run --rm backup node restore.js                  # list backups
-docker compose run --rm backup node restore.js 2026-11-08_0330  # restore one
-docker compose start backend
-```
-
-The restore checks everything before touching anything, moves the current data to `/data/pre-restore-<date>/` (never deletes it) and rolls back if something fails. Backups stay on the same machine: copy the `aac-backup` volume elsewhere to survive a disk failure, and keep `.env` safe (it is not in the backup).
-
-<details>
-<summary><b>All configuration options</b></summary>
-
-| Variable | Description |
-|---|---|
-| `PUBLIC_URL` | Public HTTPS URL, no trailing slash |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth client (Web application), redirect URI `<PUBLIC_URL>/auth/google/callback` |
-| `ADMIN_EMAIL` | Google account of the administrator |
-| `APP_SECRET` | Secret that encrypts the Intervals.icu keys (`openssl rand -base64 32`); never change it. If empty, a key file is generated in the data volume and included in backups |
-| `ATHLETE_AGE` | Initial age of the admin user for the max‑HR estimate (default `33`); editable later in **Account** |
-| `SYNC_CRON` | Sync schedule (default `*/30 * * * *`); the app also syncs when opened and with the Sync button |
-| `BIND_ADDR` / `HOST_PORT` | Host address and port of the app (default `127.0.0.1:3000`) |
-| `AAC_TAG` | Image tag: `latest` (default, branch `main`), `staging`, or `sha-<commit>` |
-| `COMPOSE_PROFILES` | `backup` runs the nightly backups (remove it only on a test instance); add `docs` to also serve the documentation site |
-| `DOCS_PORT` | Host port of the documentation site when the `docs` profile is on (default `3001`) |
-| `BACKUP_CRON` / `BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY` / `BACKUP_KEEP_MONTHLY` | Backup time and retention (defaults `30 3 * * *`, 7 / 4 / 6) |
-| `LOGIN_GOOGLE` | `off` forces single‑user mode; the backend then refuses requests coming from the internet |
-| `AAC_AMBIENTE` | `staging` shows a **BETA** badge, so a test instance is never mistaken for production |
-| `COMPOSE_PROJECT_NAME` / `AAC_PREFIX` | Run several instances on one host (containers and volumes are named `<AAC_PREFIX>-backend`, `<AAC_PREFIX>-db`…) |
-| `INTERVALS_API_KEY` / `INTERVALS_ATHLETE_ID` | Single‑user mode only: Intervals.icu credentials (they can also be entered in **Account**) |
-
-</details>
+The documentation site itself is in [`docs/`](docs/) (Astro + Starlight): enable it with `COMPOSE_PROFILES=backup,docs` and `DOCS_PORT`.
 
 ---
 

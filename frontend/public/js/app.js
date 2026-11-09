@@ -160,20 +160,19 @@
     else { b.hidden = true; }
   }
 
+  // Stato della sincronizzazione: si mostra nel profilo, accanto a Intervals.icu (il pulsante non e' piu' nell'intestazione)
+  let statoSyncHtml = '', syncInCorso = false;
   function renderSyncInfo(d) {
     const s = d.sincronizzazione || {};
-    const el = $('#sync-info');
     const e = s.ultimo_esito;
-    if (!s.configurata) el.innerHTML = T('<span class="err">Intervals.icu non collegato</span> · inserisci API key e Athlete ID nel tuo profilo (avatar in alto)', '<span class="err">Intervals.icu not connected</span> · add your API key and Athlete ID in your profile (avatar at the top)');
-    else if (e && e.ok === false) el.innerHTML = T('<span class="err">Ultima sincronizzazione fallita:</span> ', '<span class="err">Last sync failed:</span> ') + esc(e.errore);
-    else if (s.ultimo_sync) el.innerHTML = T('Ultima sincronizzazione <b>', 'Last sync <b>') + esc(fmtQuando(s.ultimo_sync)) + '</b>';
-    else el.textContent = T('Nessuna sincronizzazione ancora eseguita', 'No sync yet');
-    // lo stato finisce nel suggerimento del pallino; in caso di problemi compare un puntino rosso
-    const b = $('#btn-sync');
-    b.title = T('Sincronizza', 'Sync') + ' · ' + el.textContent;
-    b.setAttribute('aria-label', b.title);
-    b.classList.toggle('err', Boolean(el.querySelector('.err')));
+    if (!s.configurata) statoSyncHtml = T('<span class="err">Intervals.icu non collegato</span>: inserisci API key e Athlete ID qui sotto', '<span class="err">Intervals.icu not connected</span>: add your API key and Athlete ID below');
+    else if (e && e.ok === false) statoSyncHtml = T('<span class="err">Ultima sincronizzazione fallita:</span> ', '<span class="err">Last sync failed:</span> ') + esc(e.errore);
+    else if (s.ultimo_sync) statoSyncHtml = T('Ultima sincronizzazione <b>', 'Last sync <b>') + esc(fmtQuando(s.ultimo_sync)) + '</b>' + T(' · automatica ogni 15 minuti', ' · automatic every 15 minutes');
+    else statoSyncHtml = T('Nessuna sincronizzazione ancora eseguita', 'No sync yet');
+    const el = $('#acc-sync-stato');
+    if (el) el.innerHTML = statoSyncHtml;
   }
+
 
   /* ---- Calendario delle sedute ---- */
   let meseCal = null;       // 'YYYY-MM' mostrato
@@ -524,7 +523,7 @@
       kv('Apple Watch', T('app Intervals.icu Companion', 'Intervals.icu Companion app')) +
       kv('Garmin, Coros, Polar, Suunto', T('collegamento diretto in Intervals.icu', 'direct link in Intervals.icu')) +
       kv(T('Nel profilo', 'In your profile'), T('API key e Athlete ID', 'API key and Athlete ID')) +
-      kv(T('Sincronizzazione', 'Sync'), T('ogni 30′, all’apertura e a richiesta', 'every 30′, on open and on demand')) +
+      kv(T('Sincronizzazione', 'Sync'), T('automatica ogni 15′ e all’apertura; a richiesta dal profilo', 'automatic every 15′ and on open; on demand from your profile')) +
       kv('Strava', T('le attività importate da Strava non arrivano ad AAC', 'activities imported from Strava do not reach AAC')) +
       '<button type="button" class="gc-cta" data-apri-sheet="#collega"><span>' + T('Guida: collega l’orologio', 'Guide: connect your watch') + '</span>' + FRECCIA + '</button>';
 
@@ -846,7 +845,7 @@
         '<div class="cl-note"><h4>' + T('Da sapere', 'Good to know') + '</h4><ul>' +
           '<li>' + T('Strava può restare collegato: Intervals unisce i doppioni, ma per AAC contano solo le attività arrivate direttamente.', 'Strava can stay connected: Intervals merges duplicates, but AAC only uses activities that arrive directly.') + '</li>' +
           '<li>' + T('Le corse vecchie arrivate solo da Strava non si recuperano da lì: se Intervals.icu te lo propone, importa lo storico direttamente dall’orologio.', 'Old runs that came only from Strava cannot be recovered that way: if Intervals.icu offers it, import your history directly from the watch.') + '</li>' +
-          '<li>' + T('Dopo il collegamento tocca <b>Sincronizza</b> in alto: le nuove corse compaiono in pochi minuti.', 'After connecting, tap <b>Sync</b> at the top: new runs show up within minutes.') + '</li>' +
+          '<li>' + T('Dopo il collegamento tocca <b>Sincronizza ora</b> nel profilo, accanto a Intervals.icu: le nuove corse compaiono subito (in automatico arrivano ogni 15 minuti).', 'After connecting, tap <b>Sync now</b> in your profile, next to Intervals.icu: new runs show up right away (automatically they arrive every 15 minutes).') + '</li>' +
           '<li>' + T('API key e Athlete ID restano quelli del tuo profilo AAC: non cambiano.', 'The API key and Athlete ID in your AAC profile stay the same.') + '</li>' +
         '</ul></div>' +
         '<a class="btn-primary cl-go" href="https://intervals.icu/settings" target="_blank" rel="noopener">' + T('Apri le impostazioni di Intervals.icu', 'Open Intervals.icu settings') + '</a>' +
@@ -2264,7 +2263,11 @@
         '<li>' + T('Incollali qui sotto e scegli il giorno della prima seduta.', 'Paste them below and pick the day of your first session.') + '</li></ol></section>';
     }
     html += '<form id="acc-form" class="card acc-form" autocomplete="off">' +
-      '<div class="acc-h3row"><h3>Intervals.icu</h3><button type="button" class="acc-guida" data-apri-sheet="#collega">' + ICO.sync + '<span>' + T('Collega l’orologio', 'Connect your watch') + '</span></button></div>' +
+      '<div class="acc-h3row"><h3>Intervals.icu</h3><div class="acc-h3az">' +
+        '<button type="button" class="acc-guida" data-apri-sheet="#collega">' + ICO.share + '<span>' + T('Collega l’orologio', 'Connect your watch') + '</span></button>' +
+        (p.ha_chiave && p.athlete_id ? '<button type="button" class="acc-guida" id="acc-sync"' + (syncInCorso ? ' disabled' : '') + '>' + ICO.sync + '<span>' + (syncInCorso ? T('Sincronizzo…', 'Syncing…') : T('Sincronizza ora', 'Sync now')) + '</span></button>' : '') +
+      '</div></div>' +
+      '<p class="acc-sync-stato" id="acc-sync-stato">' + statoSyncHtml + '</p>' +
       campo('acc-ath', 'Athlete ID', '<input id="acc-ath" name="athlete_id" inputmode="text" placeholder="i123456" value="' + esc(p.athlete_id) + '">') +
       campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
       '<h3>' + T('Programma', 'Plan') + '</h3>' +
@@ -4026,14 +4029,16 @@
   /* Sincronizzazione                                                       */
   /* ---------------------------------------------------------------------- */
   function impostaSyncUI(inCorso) {
-    const btn = $('#btn-sync');
+    syncInCorso = inCorso;
+    const btn = $('#acc-sync');
+    if (!btn) return;
     btn.disabled = inCorso;
     btn.classList.toggle('loading', inCorso);
-    $('#btn-sync-label').textContent = inCorso ? T('Sincronizzazione in corso…', 'Syncing…') : T('Sincronizza', 'Sync');
+    btn.querySelector('span').textContent = inCorso ? T('Sincronizzo…', 'Syncing…') : T('Sincronizza ora', 'Sync now');
   }
 
   async function sincronizza() {
-    if ($('#btn-sync').disabled) return;
+    if (syncInCorso) return;
     impostaSyncUI(true);
     try {
       const res = await fetch(conLang('/api/sync'), { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'coach', Accept: 'application/json' } });
@@ -4050,6 +4055,7 @@
     }
   }
 
+
   /* ---------------------------------------------------------------------- */
   /* Lingua IT / EN                                                         */
   /* ---------------------------------------------------------------------- */
@@ -4061,7 +4067,6 @@
     $('#btn-lingua').title = T('English', 'Italiano');
     $('#btn-tema').setAttribute('aria-label', T('Cambia tema chiaro/scuro', 'Toggle light/dark theme'));
     $('#btn-tema').title = T('Tema chiaro/scuro', 'Light/dark theme');
-    if (!$('#btn-sync').disabled) $('#btn-sync-label').textContent = T('Sincronizza', 'Sync');
   }
   $('#btn-lingua').addEventListener('click', () => {
     LANG = LANG === 'en' ? 'it' : 'en';
@@ -4076,9 +4081,9 @@
   });
   applicaTestiStatici();
 
-  $('#btn-sync').addEventListener('click', sincronizza);
-  setInterval(() => { if (!document.hidden && !$('#btn-sync').disabled) caricaDati(true); }, 5 * 60 * 1000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden && !$('#btn-sync').disabled) caricaDati(true); });
+  document.addEventListener('click', (e) => { if (e.target.closest('#acc-sync')) sincronizza(); });
+  setInterval(() => { if (!document.hidden && !syncInCorso) caricaDati(true); }, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && !syncInCorso) caricaDati(true); });
 
   caricaDati(false).then(caricaMe).then(rotta);
 })();

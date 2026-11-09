@@ -94,7 +94,7 @@ services:
       DB_PATH: /data/corse.db
       INTERVALS_API_KEY: ${INTERVALS_API_KEY:-}
       INTERVALS_ATHLETE_ID: ${INTERVALS_ATHLETE_ID:-}
-      SYNC_CRON: ${SYNC_CRON:-*/30 * * * *}
+      SYNC_CRON: ${SYNC_CRON:-*/15 * * * *}
       # Eta' iniziale del primo utente (admin), per stimare la FC massima; poi si cambia dal profilo
       ATHLETE_AGE: ${ATHLETE_AGE:-33}
       # Programma di ripartenza corsa/cammino (8 settimane): data della prima seduta
