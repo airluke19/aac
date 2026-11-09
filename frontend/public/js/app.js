@@ -305,6 +305,14 @@
     if (segna) { segnaFatta(segna.dataset.segna); return; }
     const apri = e.target.closest('[data-apri-corsa]');
     if (apri) { apriCorsaDelGiorno(apri.dataset.apriCorsa); return; }
+    const sw = e.target.closest('[data-cg]');
+    if (sw) {
+      const d = sw.dataset.cg, n = corseDelGiorno(d).length;
+      corsaSel.set(d, Math.max(0, Math.min(n - 1, (corsaSel.get(d) || 0) + Number(sw.dataset.cgDir))));
+      const v = $('#cal');
+      if (v && ultimiDati) { v.outerHTML = renderCalendario(ultimiDati); const b = $('#cal-det [data-cg-dir="' + sw.dataset.cgDir + '"]:not([disabled])') || $('#cal-det [data-cg]:not([disabled])'); if (b) b.focus(); }
+      return;
+    }
     const nav = e.target.closest('[data-mese]');
     const day = e.target.closest('[data-giorno]');
     if (!nav && !day) return;
@@ -569,9 +577,25 @@
   }
 
   // Confronto dopo la corsa: passo reale (tratti di corsa) vs indicativo
+  // Piu' corse nello stesso giorno (es. orologio interrotto): si scorrono con le frecce, la seduta conta una volta
+  const corsaSel = new Map();
+  const corseDelGiorno = (data) => (ultimoStorico ? ultimoStorico.corse.filter((x) => x.data === data).sort((a, b) => String(a.ora_inizio || '').localeCompare(String(b.ora_inizio || ''))) : []);
+  const corsaDelGiorno = (data) => { const l = corseDelGiorno(data); if (!l.length) return null; const i = Math.min(l.length - 1, corsaSel.get(data) || 0); return l[i]; };
+  function selettoreCorse(data) {
+    const l = corseDelGiorno(data);
+    if (l.length < 2) return '';
+    const i = Math.min(l.length - 1, corsaSel.get(data) || 0), c = l[i];
+    const km = l.reduce((t, x) => t + (x.distanza || 0), 0), sec = l.reduce((t, x) => t + (x.tempo || 0), 0);
+    return '<div class="cg-switch" role="group" aria-label="' + T('Corse del giorno', 'Runs of the day') + '">' +
+      '<button type="button" class="cg-freccia" data-cg="' + data + '" data-cg-dir="-1" aria-label="' + T('Corsa precedente', 'Previous run') + '"' + (i === 0 ? ' disabled' : '') + '>‹</button>' +
+      '<div class="cg-info"><b>' + T('Corsa ', 'Run ') + (i + 1) + T(' di ', ' of ') + l.length + '</b><span>' + (c.ora_inizio ? esc(c.ora_inizio) + ' · ' : '') + fmt1(c.distanza) + ' km · ' + fmtDurata(c.tempo) + '</span>' +
+        '<small>' + T('Totale del giorno: ', 'Day total: ') + fmt1(km) + ' km · ' + fmtDurata(sec) + '</small></div>' +
+      '<button type="button" class="cg-freccia" data-cg="' + data + '" data-cg-dir="1" aria-label="' + T('Corsa successiva', 'Next run') + '"' + (i === l.length - 1 ? ' disabled' : '') + '>›</button></div>';
+  }
+
   function confrontoPasso(s) {
     if (!ultimoStorico || !s.fatta) return '';
-    const c = ultimoStorico.corse.find((x) => x.data === s.data);
+    const c = corsaDelGiorno(s.data);
     const ps = ultimiDati && ultimiDati.passo;
     if (!c) return '';
     const reale = c.passo_corsa || c.passo_medio;
@@ -582,7 +606,7 @@
         : reale > z.passo_lento + 20 ? ['ok', T('più lento del previsto: va benissimo se la FC era bassa', 'slower than expected: perfectly fine if HR was low')]
         : ['ok', T('nel passo facile previsto ✓', 'within the expected easy pace ✓')];
     }
-    return '<div class="pace-real"><div><small>' + T('Passo reale', 'Actual pace') + (c.passo_corsa ? T(' · tratti di corsa', ' · running parts') : '') + '</small><b>' + fmtPasso(reale) + '/km</b></div>' +
+    return selettoreCorse(s.data) + '<div class="pace-real"><div><small>' + T('Passo reale', 'Actual pace') + (c.passo_corsa ? T(' · tratti di corsa', ' · running parts') : '') + '</small><b>' + fmtPasso(reale) + '/km</b></div>' +
       (c.fc_corsa || c.fc_media ? '<div><small>' + T('FC in corsa', 'HR while running') + '</small><b>' + fmt0(c.fc_corsa || c.fc_media) + ' bpm</b></div>' : '') +
       (giudizio ? '<p class="' + giudizio[0] + '">' + giudizio[1] + '</p>' : '') + '</div>';
   }
@@ -1455,7 +1479,7 @@
   }
 
   function apriCorsaDelGiorno(data) {
-    const c = (ultimoStorico && ultimoStorico.corse.find((x) => x.data === data))
+    const c = corsaDelGiorno(data)
       || (ultimiDati && ultimiDati.programma && (ultimiDati.programma.corse_fuori_piano || []).find((x) => x.data === data));
     if (c) apriSheet('#seduta/' + encodeURIComponent(c.id));
   }
