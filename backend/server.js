@@ -324,6 +324,15 @@ const notifiche = creaNotifiche({
   },
 });
 
+// L'amministratore riceve una notifica a ogni nuova richiesta di accesso (tocco = pannello di amministrazione)
+account.eventi.nuovaRichiesta = (u) => {
+  const chi = u.nome || u.email;
+  notifiche.avvisaAdmin((lingua) => (lingua === 'en'
+    ? { title: 'New access request', body: `${chi} wants to use AAC. Approve or decline in the admin panel.`, tag: 'richiesta-' + u.id, url: '/#admin' }
+    : { title: 'Nuova richiesta di accesso', body: `${chi} vuole usare AAC. Approva o rifiuta dal pannello di amministrazione.`, tag: 'richiesta-' + u.id, url: '/#admin' }))
+    .catch((e) => console.warn('[notifiche] avviso admin', e.message));
+};
+
 // Testo delle notifiche (solo seduta o settimana, niente dati di salute). Sincrono: LINGUA torna com'era.
 function testoNotifica(u, tipo, lingua) {
   const prima = LINGUA;

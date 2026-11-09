@@ -38,6 +38,7 @@ const MAX_IN_ATTESA = 50; // richieste di accesso non ancora approvate
 
 function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
   const sis = new Database(path.join(BASE.dataDir, 'sistema.db'));
+  const eventi = { nuovaRichiesta: null }; // impostati da fuori (es. notifiche all'amministratore)
   sis.pragma('journal_mode = WAL');
   sis.pragma('busy_timeout = 5000');
   sis.exec(`
@@ -332,6 +333,7 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
           .run(email, info.name || null, info.picture || null, ora());
         u = perId(r.lastInsertRowid);
         console.log(`[account] Nuova richiesta di accesso: ${email}`);
+        if (eventi.nuovaRichiesta) { try { eventi.nuovaRichiesta(u); } catch (e) { console.warn('[account] avviso richiesta', e.message); } }
       }
       sis.prepare('UPDATE utenti SET nome = COALESCE(?, nome), foto = COALESCE(?, foto), ultimo_accesso = ? WHERE id = ?')
         .run(info.name || null, info.picture || null, ora(), u.id);
@@ -712,7 +714,7 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
     });
   }
 
-  return { attivo, inizializza, admin, utentiAttivi, contestoDi, monta, sistema: sis, cifra, decifra };
+  return { attivo, inizializza, admin, utentiAttivi, contestoDi, monta, sistema: sis, cifra, decifra, eventi };
 }
 
 module.exports = { creaAccount, etaDa };

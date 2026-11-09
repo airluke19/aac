@@ -22,7 +22,7 @@ self.addEventListener('notificationclick', (e) => {
   const url = new URL((e.notification.data && e.notification.data.url) || '/', self.location.origin).href;
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((finestre) => {
     for (const w of finestre) {
-      if (new URL(w.url).origin === self.location.origin && 'focus' in w) return w.focus();
+      if (new URL(w.url).origin === self.location.origin && 'focus' in w) return w.focus().then((f) => (f && f.navigate && f.url !== url ? f.navigate(url) : f));
     }
     return self.clients.openWindow(url);
   }));

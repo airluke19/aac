@@ -155,10 +155,18 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale }) {
     });
   }
 
+  // Avviso agli amministratori (es. nuova richiesta di accesso): a tutti i loro dispositivi, indipendente dalle preferenze
+  async function avvisaAdmin(crea) {
+    const admin = sis.prepare("SELECT id FROM utenti WHERE ruolo = 'admin' AND stato = 'attivo'").all();
+    let n = 0;
+    for (const a of admin) n += await inviaA(a.id, crea);
+    return n;
+  }
+
   // all'eliminazione dell'account
   const rimuoviUtente = (id) => sis.prepare('DELETE FROM push_iscrizioni WHERE utente_id = ?').run(id);
 
-  return { monta, giro, rimuoviUtente };
+  return { monta, giro, rimuoviUtente, avvisaAdmin };
 }
 
 module.exports = { creaNotifiche };
