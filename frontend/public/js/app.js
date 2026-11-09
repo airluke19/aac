@@ -3009,7 +3009,7 @@
         await fermo(map, 6000);
         avanza(k / (tappe + 1) * 0.3, T('Preparo la mappa…', 'Preparing the map…'));
       }
-      const padFine = { top: H / PR * 0.2, bottom: H / PR * 0.42, left: 30, right: 30 };
+      const padFine = { top: H / PR * 0.17, bottom: (bottom + 640) / PR, left: 30, right: 30 };
       map.fitBounds(bounds, { padding: padFine, pitch: 45, duration: 0, maxZoom: 16 });
       await fermo(map, 6000);
       map.jumpTo({ center: coords[0], zoom: v.zoom, pitch: 48, bearing });
@@ -3022,7 +3022,7 @@
       const pezzi = [];
       rec.ondataavailable = (e) => { if (e.data && e.data.size) pezzi.push(e.data); };
       const finito = new Promise((ok) => { rec.onstop = ok; });
-      const INTRO = 700, VOLO = 2200, FINE = 3600, TOT = INTRO + v.durata + VOLO + FINE;
+      const INTRO = 700, VOLO = 2200, FINE = 4200, TOT = INTRO + v.durata + VOLO + FINE;
       const testo = (t, px, peso, col, fam, X, Y, al) => { x.font = peso + ' ' + px + 'px ' + fam; x.fillStyle = col; x.textAlign = al || 'left'; x.fillText(t, X, Y); return x.measureText(t).width; };
       const tondo = (X, Y, w, h, r) => { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, w, h, r); else x.rect(X, Y, w, h); };
       const vetro = (X, Y, w, h, r) => {
@@ -3037,7 +3037,7 @@
         x.restore();
       };
       const pad = 60, top = formato === 'storia' ? 150 : 60, bottom = formato === 'storia' ? 230 : 60;
-      const disegna = (fase, u, alfaFine) => {
+      const disegna = (fase, u, tFine) => {
         x.drawImage(map.getCanvas(), 0, 0, W, H);
         let g = x.createLinearGradient(0, 0, 0, top + 260); g.addColorStop(0, 'rgba(0,0,0,0.55)'); g.addColorStop(1, 'rgba(0,0,0,0)');
         x.fillStyle = g; x.fillRect(0, 0, W, top + 260);
@@ -3057,33 +3057,47 @@
           vetro(pad, hY, hW, 170, 36);
           val.forEach(([n, l], j) => { const cx = pad + hW / val.length * (j + 0.5); testo(n, 62, 700, '#ffffff', FN, cx, hY + 92, 'center'); testo(l, 28, 600, 'rgba(255,255,255,0.7)', FT, cx, hY + 136, 'center'); });
         }
-        if (alfaFine > 0) {
-          x.save(); x.globalAlpha = alfaFine;
-          const cH = 420, cY = H - bottom - cH, cW = W - 2 * pad;
-          vetro(pad, cY, cW, cH, 40);
-          const dataTxt = fmtDataLunga(c.data).toUpperCase();
-          x.letterSpacing = '3px'; testo(dataTxt, 26, 700, accent, FT, pad + 44, cY + 70); x.letterSpacing = '0px';
-          testo(c.nome || T('Corsa', 'Run'), 46, 700, '#ffffff', FT, pad + 44, cY + 128);
-          const kmT = fmt1(c.distanza);
-          x.font = '700 40px ' + FN; const wu = x.measureText('km').width;
-          testo('km', 40, 700, accent, FN, pad + cW - 44, cY + 128, 'right');
-          testo(kmT, 104, 800, '#ffffff', FN, pad + cW - 44 - wu - 10, cY + 128, 'right');
-          const st = [[fmtDurata(c.tempo), T('Tempo', 'Time')], [fmtPasso(c.passo_corsa || c.passo_medio) + '/km', c.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo', 'Pace')]];
-          if (c.fc_media) st.push([fmt0(c.fc_media) + ' bpm', T('FC media', 'Avg HR')]);
-          if (c.dislivello != null) st.push([fmt0(c.dislivello) + ' m', T('Dislivello', 'Elevation')]);
-          const sw = (cW - 88) / st.length;
-          st.forEach(([n, l], j) => { const X = pad + 44 + sw * j; testo(l.toUpperCase(), 22, 600, 'rgba(255,255,255,0.7)', FT, X, cY + 250); testo(n, sw < 230 ? 44 : 52, 700, '#ffffff', FN, X, cY + 310); });
+        if (tFine >= 0) {
+          // finale nello stile di aac.run: sfumatura dal basso, km in grande che contano, quattro dati puliti
+          const ease = (q) => 1 - Math.pow(1 - Math.min(1, Math.max(0, q)), 3);
+          const entra = (ritardo, durata) => ease((tFine - ritardo) / (durata || 450));
+          const Y0 = H - bottom - 600;
+          x.save();
+          x.globalAlpha = entra(0, 600);
+          g = x.createLinearGradient(0, Y0 - 260, 0, H); g.addColorStop(0, 'rgba(6,7,9,0)'); g.addColorStop(0.35, 'rgba(6,7,9,0.72)'); g.addColorStop(1, 'rgba(6,7,9,0.92)');
+          x.fillStyle = g; x.fillRect(0, Y0 - 260, W, H - Y0 + 260);
           x.restore();
+          const pezzo = (ritardo, fn) => { const a = entra(ritardo); if (a <= 0) return; x.save(); x.globalAlpha = a; x.translate(0, (1 - a) * 26); fn(); x.restore(); };
+          pezzo(0, () => { x.letterSpacing = '4px'; testo(fmtDataLunga(c.data).toUpperCase(), 28, 700, accent, FT, pad, Y0); x.letterSpacing = '0px'; });
+          pezzo(90, () => testo(c.nome || T('Corsa', 'Run'), 54, 700, '#ffffff', FT, pad, Y0 + 66));
+          pezzo(160, () => {
+            const v = (c.distanza || 0) * ease((tFine - 160) / 1100);
+            const w = testo(fmt1(v), 230, 800, '#ffffff', FN, pad - 8, Y0 + 300);
+            testo('km', 80, 700, accent, FN, pad + w + 6, Y0 + 300);
+          });
+          const lw = (W - 2 * pad) * entra(450, 600);
+          if (lw > 0) { x.fillStyle = 'rgba(255,255,255,0.22)'; x.fillRect(pad, Y0 + 352, lw, 2); }
+          const st = [[T('Tempo', 'Time'), fmtDurata(c.tempo), ''], [c.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo', 'Pace'), fmtPasso(c.passo_corsa || c.passo_medio), '/km']];
+          if (c.fc_media) st.push([T('FC media', 'Avg HR'), fmt0(c.fc_media), 'bpm']);
+          if (c.dislivello != null) st.push([T('Dislivello', 'Elevation'), fmt0(c.dislivello), 'm']);
+          const cw = (W - 2 * pad) / st.length;
+          st.forEach(([l, n, un], j) => pezzo(560 + j * 120, () => {
+            const X = pad + cw * j;
+            testo(l.toUpperCase(), 24, 600, 'rgba(255,255,255,0.62)', FT, X, Y0 + 420);
+            x.font = '700 64px ' + FN; let px = 64; while (px > 40 && x.measureText(n).width + (un ? 60 : 0) > cw - 16) { px -= 2; x.font = '700 ' + px + 'px ' + FN; }
+            const w = testo(n, px, 700, '#ffffff', FN, X, Y0 + 492);
+            if (un) testo(un, 26, 600, 'rgba(255,255,255,0.62)', FT, X + w + 6, Y0 + 492);
+          }));
         }
       };
-      disegna('volo', 0, 0);
+      disegna('volo', 0, -1);
       rec.start(500);
       const t0 = performance.now();
       let voloFinale = false;
       await new Promise((ok) => {
         const passo = (now) => {
           const t = now - t0;
-          let fase = 'volo', u = Math.min(1, Math.max(0, (t - INTRO) / v.durata)), alfa = 0;
+          let fase = 'volo', u = Math.min(1, Math.max(0, (t - INTRO) / v.durata)), tFine = -1;
           if (t < INTRO + v.durata) {
             const d = u * v.tot, p = v.trova(d).p;
             const dietro = v.trova(Math.max(0, d - v.avanti * 0.5)).p, davanti = v.trova(Math.min(v.tot, d + v.avanti)).p;
@@ -3099,9 +3113,9 @@
               map.fitBounds(bounds, { padding: padFine, pitch: 45, bearing, duration: VOLO, maxZoom: 16 });
               map.once('moveend', () => map.easeTo({ bearing: bearing + 25, duration: FINE + 600, easing: (q) => q }));
             }
-            alfa = Math.min(1, Math.max(0, (t - INTRO - v.durata - VOLO * 0.6) / 600));
+            tFine = t - INTRO - v.durata - VOLO * 0.55;
           }
-          disegna(fase, u, alfa);
+          disegna(fase, u, tFine);
           avanza(0.3 + 0.7 * Math.min(1, t / TOT), T('Registro il video…', 'Recording the video…'));
           if (t >= TOT) { ok(); return; }
           requestAnimationFrame(passo);
@@ -3477,7 +3491,7 @@
         $w('#rv-p').textContent = fmtPasso(passoA(i));
         if (s.hr && $w('#rv-fc')) $w('#rv-fc').textContent = s.hr[i] ? fmt0(s.hr[i]) : '–';
         if (s.alt && $w('#rv-alt')) $w('#rv-alt').textContent = s.alt[i] != null ? fmt0(s.alt[i]) : '–';
-        if (u < 1 && $w('.rv-fine')) { $w('.rv-fine').remove(); if ($w('.rv-marchio')) $w('.rv-marchio').remove(); $w('.rv-hud').hidden = false; }
+        if (u < 1 && $w('.rv-fine')) { $w('.rv-fine').remove(); if ($w('.rv-marchio')) $w('.rv-marchio').remove(); $w('.rv-hud').hidden = false; wrap.classList.remove('rv-finito'); }
         $w('#rv-fill').style.width = (u * 100).toFixed(1) + '%';
         $w('#rv-prog').setAttribute('aria-valuenow', String(Math.round(u * 100)));
       };
@@ -3491,18 +3505,21 @@
           // marchio come nell'immagine condivisa: nome intero a sinistra, aac.run a destra
           $w('.rv-back').insertAdjacentHTML('afterend', '<div class="rv-marchio"><span>' + ICO.logo + 'Always Adaptive Coach</span><b>aac.run</b></div>');
           $w('.rv-bar').insertAdjacentHTML('beforebegin', '<div class="rv-fine">' +
-            '<div class="rv-fine-top"><div><small>' + esc(dataTxt) + '</small><h3>' + esc(corsa.nome || T('Corsa', 'Run')) + '</h3></div>' +
-              '<b class="rv-fine-km">' + fmt1(corsa.distanza) + '<small>km</small></b></div>' +
+            '<small class="rv-fine-d">' + esc(dataTxt) + '</small><h3>' + esc(corsa.nome || T('Corsa', 'Run')) + '</h3>' +
+            '<div class="rv-fine-km"><b data-km="' + (corsa.distanza || 0) + '">' + fmt1(corsa.distanza) + '</b><small>km</small></div><i class="rv-fine-l"></i>' +
             '<div class="rv-fine-g">' +
             r(T('Tempo', 'Time'), fmtDurata(corsa.tempo)) +
-            r(corsa.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo medio', 'Avg pace'), fmtPasso(corsa.passo_corsa || corsa.passo_medio), '/km') +
-            r(T('Dislivello', 'Elevation gain'), corsa.dislivello != null ? fmt0(corsa.dislivello) : null, 'm') +
+            r(corsa.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo', 'Pace'), fmtPasso(corsa.passo_corsa || corsa.passo_medio), '/km') +
             r(T('FC media', 'Avg HR'), corsa.fc_media ? fmt0(corsa.fc_media) : null, 'bpm') +
-            r(T('FC max', 'Max HR'), corsa.fc_max ? fmt0(corsa.fc_max) : null, 'bpm') +
+            r(T('Dislivello', 'Elevation'), corsa.dislivello != null ? fmt0(corsa.dislivello) : null, 'm') +
             '</div></div>');
+          wrap.classList.add('rv-finito');
+          // i km contano da 0 al valore
+          const kb = $w('.rv-fine-km b'), kmFin = Number(kb.dataset.km);
+          if (!lento && kmFin > 0) { const t0k = performance.now(); const conta = (now) => { const q = Math.min(1, (now - t0k) / 1100); kb.textContent = fmt1(kmFin * (1 - Math.pow(1 - q, 3))); if (q < 1 && kb.isConnected) requestAnimationFrame(conta); }; requestAnimationFrame(conta); }
         }
         $w('#rv-pp').innerHTML = ICO.play; $w('#rv-pp').setAttribute('aria-label', T('Rivedi', 'Replay'));
-        map.fitBounds(bounds, { padding: { top: 150, bottom: corsa ? 380 : 120, left: 40, right: 40 }, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
+        map.fitBounds(bounds, { padding: { top: 150, bottom: corsa ? 400 : 120, left: 40, right: 40 }, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
         // poi un giro lento intorno al percorso
         if (!lento) map.once('moveend', () => { if (finito && wrap.classList.contains('rivivi')) map.easeTo({ bearing: map.getBearing() + 40, duration: 16000, easing: (t) => t }); });
       };
@@ -3537,7 +3554,7 @@
       const chiudi = () => {
         chiudiRivivi = null;
         cancelAnimationFrame(raf);
-        wrap.classList.remove('rivivi'); document.body.classList.remove('rivivi-on');
+        wrap.classList.remove('rivivi', 'rv-finito'); document.body.classList.remove('rivivi-on');
         wrap.querySelectorAll('.rv-hud, .rv-bar, .rv-back, .rv-fine, .rv-marchio').forEach((x) => x.remove());
         map.setLayoutProperty('fatto', 'visibility', 'none');
         ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 1));

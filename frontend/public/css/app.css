@@ -1828,13 +1828,7 @@ body.rivivi-on #tabbar { display: none; }
 .rv-prog i { display: block; height: 8px; border-radius: 999px; background: rgba(255,255,255,.2); overflow: hidden; }
 .rv-prog b { display: block; height: 100%; width: 0; background: var(--accent); border-radius: inherit; }
 
-.rv-fine { position: absolute; z-index: 3; left: 12px; right: 12px; bottom: calc(86px + env(safe-area-inset-bottom)); padding: 16px; border-radius: 20px; color: #fff; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, rgba(12,12,14,.18)), rgba(12,12,14,.30)); border: 1px solid rgba(255,255,255,.16); -webkit-backdrop-filter: blur(8px) saturate(140%); backdrop-filter: blur(8px) saturate(140%); text-shadow: 0 1px 3px rgba(0,0,0,.55); }
-.rv-fine h3 { margin: 0 0 12px; font-size: 1.05rem; font-weight: 700; }
-.rv-fine-g { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px 8px; }
-.rv-fine-g div { display: flex; flex-direction: column; }
-.rv-fine-g b { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: 1.35rem; font-weight: 700; line-height: 1.1; }
-.rv-fine-g b small { font-size: .7rem; font-weight: 600; color: rgba(255,255,255,.65); margin-left: 3px; }
-.rv-fine-g span { font-size: .72rem; color: rgba(255,255,255,.65); }
+.rv-fine { position: absolute; z-index: 3; left: 20px; right: 20px; bottom: calc(92px + env(safe-area-inset-bottom)); color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,.45); }
 
 /* Condividi nel riquadro iniziale del dettaglio corsa */
 .dd-share { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; max-width: 360px; height: 46px; margin: 16px auto 0; border-radius: 999px;
@@ -1859,12 +1853,7 @@ body.rivivi-on #tabbar { display: none; }
 .rv-marchio span { display: inline-flex; align-items: center; gap: 8px; font-family: var(--f-disp); font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; }
 .rv-marchio svg { width: 26px; height: 26px; color: var(--accent); filter: drop-shadow(0 1px 3px rgba(0,0,0,.5)); }
 .rv-marchio b { font-size: .92rem; font-weight: 700; }
-.rv-fine-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-.rv-fine-top small { display: block; font-size: .72rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); filter: brightness(1.25); }
-.rv-fine-top h3 { margin: 2px 0 0; }
-.rv-fine-km { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: 2.6rem; font-weight: 800; line-height: 1; letter-spacing: -0.02em; white-space: nowrap; }
-.rv-fine-km small { font-size: 1rem; font-weight: 700; color: var(--accent); filter: brightness(1.25); margin-left: 4px; }
-@media (prefers-reduced-motion: no-preference) { .rv-fine, .rv-marchio { animation: rv-in .5s ease-out both; } }
+@media (prefers-reduced-motion: no-preference) { .rv-marchio { animation: rv-in .5s ease-out both; } }
 @keyframes rv-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 /* Condividi: video del percorso */
 .cond-tipo { align-self: center; }
@@ -1874,3 +1863,25 @@ body.rivivi-on #tabbar { display: none; }
 .cond-vwait .btn-primary { display: inline-flex; align-items: center; gap: 8px; }
 .cond-vwait .btn-primary svg { width: 18px; height: 18px; }
 .cond-vwait p { margin: 0; min-height: 1.3em; font-size: .88rem; color: var(--muted); }
+
+/* Finale del replay: stile aac.run, niente riquadro, km in grande */
+.dd-map-wrap.rv-finito::after { height: 62%; background: linear-gradient(rgba(6,7,9,0), rgba(6,7,9,.72) 35%, rgba(6,7,9,.92)); transition: height .5s; }
+.rv-fine-d { display: block; font-size: .74rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); filter: brightness(1.2); }
+.rv-fine h3 { margin: 4px 0 0; font-family: var(--f-disp); font-size: 1.35rem; font-weight: 700; letter-spacing: -0.01em; }
+.rv-fine-km { display: flex; align-items: baseline; gap: 6px; margin-top: 2px; }
+.rv-fine-km b { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: clamp(4rem, 22vw, 6.2rem); font-weight: 800; line-height: .95; letter-spacing: -0.035em; }
+.rv-fine-km small { font-family: var(--f-num); font-size: 1.6rem; font-weight: 700; color: var(--accent); filter: brightness(1.2); }
+.rv-fine-l { display: block; height: 1px; margin: 14px 0 12px; background: rgba(255,255,255,.22); transform-origin: left; }
+.rv-fine-g { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 8px; }
+.rv-fine-g div { display: flex; flex-direction: column-reverse; gap: 4px; min-width: 0; }
+.rv-fine-g span { font-size: .64rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: rgba(255,255,255,.62); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rv-fine-g b { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: clamp(1.1rem, 5.4vw, 1.5rem); font-weight: 700; line-height: 1.05; white-space: nowrap; }
+.rv-fine-g b small { font-size: .62em; font-weight: 600; color: rgba(255,255,255,.62); margin-left: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  .rv-fine > * { animation: rv-in .5s cubic-bezier(.2,.8,.2,1) both; }
+  .rv-fine > h3 { animation-delay: .08s; } .rv-fine-km { animation-delay: .15s; }
+  .rv-fine-l { animation: rv-linea .6s .4s cubic-bezier(.2,.8,.2,1) both; }
+  .rv-fine-g div { animation: rv-in .45s cubic-bezier(.2,.8,.2,1) both; }
+  .rv-fine-g div:nth-child(1) { animation-delay: .55s; } .rv-fine-g div:nth-child(2) { animation-delay: .67s; } .rv-fine-g div:nth-child(3) { animation-delay: .79s; } .rv-fine-g div:nth-child(4) { animation-delay: .91s; }
+}
+@keyframes rv-linea { from { transform: scaleX(0); } to { transform: scaleX(1); } }
