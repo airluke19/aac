@@ -1791,9 +1791,15 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .cl-go { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; justify-self: start; }
 
 /* ===================== Rivivi la corsa (replay 3D) ===================== */
-.rv-play { position: absolute; right: 12px; bottom: 12px; z-index: 3; display: grid; place-items: center; width: 52px; height: 52px; padding: 0 0 0 3px; border: 0; border-radius: 50%;
-  background: var(--accent); color: var(--accent-ink); font: inherit; font-size: .88rem; font-weight: 700; cursor: pointer; box-shadow: 0 4px 16px rgba(0,0,0,.28); }
-.rv-play svg { width: 24px; height: 24px; }
+.rv-play { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: grid; place-items: center; width: 52px; height: 52px; padding: 0 0 0 3px; border-radius: 50%;
+  border: 1px solid rgba(255,255,255,.35); color: #fff; cursor: pointer;
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 38%, rgba(255,255,255,.12)), rgba(12,12,14,.28));
+  -webkit-backdrop-filter: blur(10px) saturate(150%); backdrop-filter: blur(10px) saturate(150%);
+  box-shadow: 0 6px 20px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.35); transition: transform .12s, background .15s; }
+.rv-play svg { width: 22px; height: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+.rv-play:hover { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,.12)), rgba(12,12,14,.28)); }
+.rv-play:active { transform: scale(.94); }
+@media (prefers-reduced-motion: reduce) { .rv-play { transition: none; } .rv-play:active { transform: none; } }
 .rv-play:focus-visible, .rv-btn:focus-visible, .rv-prog:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .dd-map-wrap.rivivi { position: fixed; inset: 0; z-index: 1000; background: #000; }
 .dd-map-wrap.rivivi .dd-map { height: 100%; height: 100dvh; }
