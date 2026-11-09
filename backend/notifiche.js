@@ -15,7 +15,7 @@ const HOST_PUSH = /^(web\.push\.apple\.com|fcm\.googleapis\.com|android\.googlea
 const B64URL = /^[A-Za-z0-9_-]{16,200}={0,2}$/;
 const ORA = /^([01]\d|2[0-3]):[0-5]\d$/;
 
-function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale }) {
+function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota }) {
   sis.exec(`
     CREATE TABLE IF NOT EXISTS chiavi_sistema (nome TEXT PRIMARY KEY, valore TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS push_iscrizioni (
@@ -57,10 +57,11 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale }) {
   const iscrizioni = (id) => sis.prepare('SELECT * FROM push_iscrizioni WHERE utente_id = ?').all(id);
 
   async function inviaA(utenteId, crea) {
-    let inviate = 0;
+    let inviate = 0, ultima = null;
     for (const s of iscrizioni(utenteId)) {
       const dati = crea(s.lingua);
       if (!dati) continue;
+      ultima = dati;
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(dati), { TTL: 6 * 3600, urgency: 'normal' });
         if (s.errori) sis.prepare('UPDATE push_iscrizioni SET errori = 0 WHERE id = ?').run(s.id);
@@ -73,6 +74,8 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale }) {
         console.warn(`[notifiche] u${utenteId} invio non riuscito (${codice || (e && e.message) || 'errore'})`);
       }
     }
+    // ogni notifica arrivata finisce anche nel diario del coach dell'utente
+    if (inviate && annota) { try { annota(utenteId, ultima); } catch (e) { console.warn('[notifiche] diario', e.message); } }
     return inviate;
   }
 

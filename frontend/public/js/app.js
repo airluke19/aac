@@ -141,6 +141,7 @@
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     indietro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
     logo: '<svg viewBox="4 6 56 52" aria-hidden="true"><g stroke="currentColor" stroke-width="4.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 26.5A19 19 0 1 1 13.6 37.5"/><path d="M8 32h14l3.5-8 5 16 3.5-8h4"/></g></svg>',
+    campana: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 0 1 12 0c0 6 2.5 7.5 2.5 7.5h-17S6 15 6 9z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>',
     play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.2 5.6c-.8-.5-1.7.1-1.7 1v10.8c0 .9.9 1.5 1.7 1l8.6-5.4c.7-.4.7-1.5 0-1.9z" transform="translate(.9 0)"/></svg>',
     pausa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>',
     sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
@@ -370,8 +371,27 @@
       '</div></div>' +
       timelineSeduta(s) +
       (compatto
-        ? '<details class="more"><summary>' + T('Come si svolge', 'How it goes') + '</summary>' + (intro || '') + notaPasso + '<ul class="phases">' + fasi + '</ul>' + tip + '</details>'
-        : notaPasso + '<ul class="phases">' + fasi + '</ul>' + tip);
+        ? '<details class="more"><summary>' + T('Come si svolge', 'How it goes') + '</summary>' + (intro || '') + notaPasso + fcPerche(s) + '<ul class="phases">' + fasi + '</ul>' + tip + '</details>'
+        : notaPasso + fcPerche(s) + '<ul class="phases">' + fasi + '</ul>' + tip);
+  }
+
+  // Perche' quel limite di FC: da dove viene il numero (FC a riposo, FC max, metodo)
+  function fcPerche(s) {
+    const fmi = ultimiDati && ultimiDati.atleta && ultimiDati.atleta.fc_max_info;
+    if (!fmi || !s.fc_target || s.tipo === 'gara') return '';
+    const max = fmi.valore, orig = fmi.fonte === 'misurata' ? T('misurata', 'measured') : T('stimata dall’età', 'age-based estimate');
+    let txt;
+    if (/4×4/.test(s.titolo || '')) txt = T('85–95% della tua FC max (' + max + ' bpm, ' + orig + '), come nel protocollo originale del 4×4.', '85–95% of your max HR (' + max + ' bpm, ' + orig + '), as in the original 4×4 protocol.');
+    else if (s.tipo === 'qualita' && !/[<]/.test(s.fc_target) && /ritmo (5|10) km|ritmo mezza|ritmo maratona|race pace|5K pace|10K pace|marathon pace|half-marathon pace/i.test(s.titolo || '')) return '';
+    else {
+      const pct = s.tipo === 'corsa-cammino' ? '65%' : s.tipo === 'qualita' ? '80–90%' : '70%';
+      txt = fmi.metodo === 'riserva'
+        ? T('Il limite viene dalla tua FC a riposo (' + fmi.fc_riposo + ' bpm, mediana degli ultimi 28 giorni) e dalla FC max (' + max + ' bpm, ' + orig + '): ' + pct + ' della riserva cardiaca' + (s.tipo === 'qualita' ? '' : ', mai oltre l’80% della FC max') + '. Si aggiorna da solo quando cambiano i tuoi dati.',
+          'The limit comes from your resting HR (' + fmi.fc_riposo + ' bpm, median of the last 28 days) and max HR (' + max + ' bpm, ' + orig + '): ' + pct + ' of your heart-rate reserve' + (s.tipo === 'qualita' ? '' : ', never above 80% of max HR') + '. It updates by itself as your data changes.')
+        : T('Il limite è il ' + (s.tipo === 'qualita' ? '80–90%' : '70%') + ' della tua FC max (' + max + ' bpm, ' + orig + '). Con almeno 5 misure di FC a riposo dall’orologio diventa più personale.',
+          'The limit is ' + (s.tipo === 'qualita' ? '80–90%' : '70%') + ' of your max HR (' + max + ' bpm, ' + orig + '). With at least 5 resting HR readings from your watch it becomes more personal.');
+    }
+    return '<p class="fc-perche"><b>' + T('Perché questa FC', 'Why this HR') + '</b> · ' + esc(txt) + (s.tipo === 'qualita' ? '' : ' ' + esc(T('Se riesci a parlare a frasi intere va bene anche qualche battito sopra.', 'If you can speak in full sentences, a few beats above is fine.'))) + '</p>';
   }
 
   function bannerAdattata(s) {
@@ -543,7 +563,7 @@
       voce('partenza', G.flag, '#ff9500', T('Punto di partenza', 'Starting point'), T('La settimana da cui parti', 'The week you start from'), partenza) +
       voce('piano', G.cal, '#5856d6', T('Il piano', 'The plan'), tot + T(' settimane · 3 sedute alle ', ' weeks · 3 sessions at ') + esc(ora), fasi) +
       voce('sedute', G.list, '#007aff', T('Le sedute', 'Sessions'), T('Cosa significano le sigle', 'What the codes mean'), '<div class="in-tipi">' + tipiSeduta().map((t) => '<div class="in-tipo"><span class="sig">' + esc(t.sigla) + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('') + '</div>') +
-      voce('zone', G.heart, '#ff3b30', T('Zone e passo', 'Zones and pace'), T('Dalla tua FC massima', 'From your max HR'), zone) +
+      voce('zone', G.heart, '#ff3b30', T('Zone e passo', 'Zones and pace'), T('Dalla tua FC a riposo e massima', 'From your resting and max HR'), zone) +
       voce('bmi', G.heart, '#ff2d55', 'BMI', T('Peso e altezza, in Salute', 'Weight and height, in Health'), bmi) +
       voce('carico', G.shield, '#ff9500', T('Carico e infortuni', 'Load and injuries'), T('Crescere senza farsi male', 'Build up without getting hurt'), carico) +
       voce('previsioni', G.trend, '#30b0c7', T('Previsioni', 'Forecasts'), T('Data, tempo e forma per la gara', 'Race date, time and form'), previsioni) +
@@ -1745,6 +1765,7 @@
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
     if (location.hash === '#collega') { apriCollega(); return; }
+    if (location.hash === '#diario') { apriDiario(); return; }
     const mu = location.hash.match(/^#uso\/(\d+)$/);
     if (mu) { apriUso(mu[1]); return; }
     const mc = location.hash.match(/^#condividi\/(.+)$/);
@@ -1973,6 +1994,7 @@
     ab.title = nome;
   }
   $('#btn-account').addEventListener('click', () => apriSheet('#account'));
+  $('#btn-diario').addEventListener('click', () => apriSheet('#diario'));
   $('#btn-admin').addEventListener('click', () => apriSheet('#admin'));
   // il conteggio si aggiorna quando torni sull'app
   document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) caricaJson('/api/me').then((m) => { ME = m; aggiornaAvatar(); }).catch(() => {}); });
@@ -2686,6 +2708,37 @@
 
 
 
+
+  /* ---- Cosa ha fatto il coach: lo storico di ogni intervento ---- */
+  const leggiVisto = () => { try { return localStorage.getItem('coach-diario-visto') || ''; } catch (_) { return ''; } };
+  function aggiornaPallinoDiario() {
+    const b = $('#btn-diario');
+    if (!b) return;
+    b.hidden = !ME || Boolean(ME.demo);
+    const ultimo = ultimiDati && ultimiDati.diario_ultimo;
+    b.querySelector('.diario-dot').hidden = !ultimo || ultimo <= leggiVisto();
+  }
+  const ICO_DIARIO = { settimana: 'cal', alleggerita: 'wave', intensita: 'dati', frequenza: 'cal', zone: 'heart', carico: 'flame', notifica: 'campana' };
+  async function apriDiario() {
+    mostraSheet(T('Cosa ha fatto il coach', 'What the coach did'), '<div class="skeleton" style="height:300px"></div>');
+    let voci = [];
+    try { voci = (await caricaJson('/api/diario')).voci; } catch (e) { mostraSheet(T('Cosa ha fatto il coach', 'What the coach did'), '<div class="card empty">' + esc(e.message) + '</div>'); return; }
+    const visto = leggiVisto();
+    let html = '<p class="dr-intro">' + T('Ogni volta che il coach cambia qualcosa, o ti scrive, lo trovi qui con il motivo.', 'Every time the coach changes something, or messages you, you find it here with the reason.') + '</p>';
+    if (!voci.length) html += '<div class="card empty">' + T('Ancora nessun intervento: arriveranno con le prime settimane di allenamento.', 'No interventions yet: they will come with your first weeks of training.') + '</div>';
+    let giorno = null;
+    html += '<ol class="dr-lista">';
+    for (const v of voci) {
+      const g = v.quando.slice(0, 10);
+      if (g !== giorno) { giorno = g; html += '<li class="dr-giorno">' + esc(fmtDataLunga(g)).replace(/^./, (x) => x.toUpperCase()) + '</li>'; }
+      const ora = /T\d\d:\d\d/.test(v.quando) && !/T21:00:00$/.test(v.quando) ? new Date(v.quando).toLocaleTimeString(LOC, { hour: '2-digit', minute: '2-digit' }) : '';
+      html += '<li class="dr-voce t-' + esc(v.tipo) + (v.quando > visto ? ' nuova' : '') + '"><span class="dr-ico">' + (ICO[ICO_DIARIO[v.tipo]] || ICO.info) + '</span><div><b>' + esc(v.titolo) + '</b>' + (ora ? '<small>' + ora + '</small>' : '') + (v.testo ? '<p>' + esc(v.testo) + '</p>' : '') + '</div></li>';
+    }
+    html += '</ol>';
+    mostraSheet(T('Cosa ha fatto il coach', 'What the coach did'), html);
+    if (voci[0]) { try { localStorage.setItem('coach-diario-visto', voci[0].quando); } catch (_) { /* solo comodità */ } }
+    aggiornaPallinoDiario();
+  }
 
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
@@ -3898,6 +3951,7 @@
     ultimiDati = d;
     renderBadge(d);
     renderSyncInfo(d);
+    aggiornaPallinoDiario();
     const pane = (id, titolo, sotto, html) => '<div class="tab-pane" data-pane="' + id + '"' + (id === tabAttiva ? '' : ' hidden') + '>' +
       '<div class="pane-head"><h1>' + titolo + '</h1>' + (sotto ? '<span>' + sotto + '</span>' : '') + '</div>' + html + '</div>';
     $('#main').innerHTML =

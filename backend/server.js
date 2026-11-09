@@ -220,6 +220,16 @@ function apriDbUtente(file) {
       data   TEXT PRIMARY KEY,
       creato TEXT NOT NULL
     );
+
+    -- Diario del coach: ogni intervento (decisioni settimanali, sedute alleggerite, zone, carico, notifiche)
+    CREATE TABLE IF NOT EXISTS diario (
+      id     INTEGER PRIMARY KEY AUTOINCREMENT,
+      quando TEXT NOT NULL,          -- ISO
+      tipo   TEXT NOT NULL,          -- settimana | alleggerita | intensita | frequenza | zone | carico | notifica
+      chiave TEXT NOT NULL UNIQUE,   -- evita i doppioni
+      titolo TEXT NOT NULL,
+      testo  TEXT
+    );
   `);
 
   // Migrazione: dettagli delle corse per lo storico e le statistiche
@@ -317,12 +327,56 @@ const notifiche = creaNotifiche({
   sis: account.sistema, cifra: account.cifra, decifra: account.decifra,
   soggetto: /^https:\/\//.test(BASE.publicUrl || '') ? BASE.publicUrl : 'https://aac.run',
   testo: (u, tipo, lingua) => testoNotifica(u, tipo, lingua),
+  annota: (utenteId, dati) => {
+    if (!dati || dati.tag === 'prova') return;
+    const u = account.utentiAttivi().find((x) => x.id === utenteId);
+    if (!u) return;
+    const quando = new Date().toISOString();
+    account.contestoDi(u).db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo) VALUES (?, ?, ?, ?, ?)')
+      .run(quando, 'notifica', `notifica:${dati.tag}:${quando.slice(0, 16)}`, dati.title, dati.body);
+  },
   oraLocale: () => {
     const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: CONFIG.timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'short', hourCycle: 'h23' })
       .formatToParts(new Date()).map((x) => [x.type, x.value]));
     return { giorno: `${p.year}-${p.month}-${p.day}`, hhmm: `${p.hour}:${p.minute}`, giornoSett: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday) };
   },
 });
+
+// Diario del coach: si annota ogni intervento, una volta sola (chiave unica). Testi nella lingua in uso in quel momento.
+function registraDiario(cd) {
+  const p = cd.programma;
+  if (!p) return;
+  const ins = db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo) VALUES (?, ?, ?, ?, ?)');
+  const ora = new Date().toISOString();
+  const gm = (d) => `${giornoSettimana(d)} ${Number(d.slice(8))}/${Number(d.slice(5, 7))}`;
+  db.transaction(() => {
+    for (const w of p.storia || []) {
+      const t = { avanti: L('si avanza', 'moving forward'), ripeti: L('la ripetiamo', 'we repeat it'), indietro: L('un passo indietro', 'one step back') }[w.esito];
+      if (t) ins.run(`${w.a}T21:00:00`, 'settimana', `settimana:${w.da}`, L(`Settimana ${w.numero}: ${t}`, `Week ${w.numero}: ${t}`), w.motivi.join(', '));
+    }
+    const s0 = p.prossime && p.prossime[0];
+    if (s0 && s0.adattata) ins.run(ora, 'alleggerita', `alleggerita:${s0.data}`, L('Seduta alleggerita', 'Session lightened'),
+      L(`${gm(s0.data)}: ${s0.adattata.motivi.join(', ')}. Prevista: ${s0.adattata.originale}.`, `${gm(s0.data)}: ${s0.adattata.motivi.join(', ')}. Planned: ${s0.adattata.originale}.`));
+    const im = p.intensita && p.intensita.ultima_modifica;
+    if (im) ins.run(`${im.data}T21:00:00`, 'intensita', `intensita:${im.data}`, L('Intensità ritoccata', 'Intensity adjusted'), im.motivo);
+    const fm = p.frequenza && p.frequenza.ultima_modifica;
+    if (fm) ins.run(`${fm.data}T21:00:00`, 'frequenza', `frequenza:${fm.data}`, L('Sedute a settimana', 'Sessions per week'), fm.motivo);
+    const c = p.carico;
+    if (c && c.livello !== 'ok') ins.run(ora, 'carico', `carico:${cd.oggi}:${c.livello}`, c.livello === 'alto' ? L('Carico troppo alto', 'Load too high') : L('Carico in crescita rapida', 'Load rising fast'), c.segnali.join('; '));
+    // zone: si annota quando cambiano (prima volta: confronto con il vecchio calcolo in % della FC max)
+    const z = limitiZone(), mz = metodoZone();
+    const firma = `${mz.metodo}:${mz.fc_riposo || ''}:${z[2].da}:${z[3].da}`;
+    const prima = getMeta('zone_firma') || `fcmax::${Math.floor(CONFIG.fcMax * 0.7) + 1}:${Math.floor(CONFIG.fcMax * 0.8) + 1}`;
+    if (prima !== firma) {
+      setMeta('zone_firma', firma);
+      const fac = z[2].da - 1, q = `${z[3].da}–${z[3].a}`;
+      ins.run(ora, 'zone', `zone:${firma}:${cd.oggi}`, L('Zone cardiache aggiornate', 'Heart-rate zones updated'), mz.metodo === 'riserva'
+        ? L(`Corsa facile fino a ${fac} bpm, qualità ${q} bpm: calcolate sulla tua FC a riposo (${mz.fc_riposo} bpm, mediana di 28 giorni) e sulla FC max (${CONFIG.fcMax} bpm), con la riserva cardiaca. La corsa facile non supera mai l’80% della FC max.`,
+          `Easy running up to ${fac} bpm, quality ${q} bpm: based on your resting HR (${mz.fc_riposo} bpm, 28-day median) and max HR (${CONFIG.fcMax} bpm), using heart-rate reserve. Easy running never exceeds 80% of max HR.`)
+        : L(`Corsa facile fino a ${fac} bpm, qualità ${q} bpm: in % della FC max (${CONFIG.fcMax} bpm).`, `Easy running up to ${fac} bpm, quality ${q} bpm: as % of max HR (${CONFIG.fcMax} bpm).`));
+    }
+  })();
+}
 
 // L'amministratore riceve una notifica a ogni nuova richiesta di accesso (tocco = pannello di amministrazione)
 account.eventi.nuovaRichiesta = (u) => {
@@ -3810,6 +3864,12 @@ function creaApp() {
     });
   });
 
+  app.get('/api/diario', (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    try { res.json({ voci: db.prepare('SELECT quando, tipo, titolo, testo FROM diario ORDER BY quando DESC, id DESC LIMIT 200').all() }); }
+    catch (_) { res.json({ voci: [] }); }
+  });
+
   app.get('/api/coach-data', async (req, res) => {
     res.set('Cache-Control', 'no-store');
     // All'apertura dell'app: se l'ultimo sync ha piu' di 2 minuti, prendo i dati nuovi da Intervals
@@ -3825,7 +3885,10 @@ function creaApp() {
       /* i dati gia' salvati restano validi */
     }
     try {
-      res.json(costruisciCoachData());
+      const cd = costruisciCoachData();
+      if (!req.demo) { try { registraDiario(cd); } catch (e) { console.warn('[diario]', e.message); } }
+      try { cd.diario_ultimo = db.prepare('SELECT MAX(quando) AS q FROM diario').get().q; } catch (_) { cd.diario_ultimo = null; }
+      res.json(cd);
     } catch (e) {
       console.error('[api] coach-data:', e);
       res.status(500).json({ errore: L('Errore interno nel calcolo dei dati del coach', 'Internal error computing coach data') });

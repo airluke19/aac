@@ -1920,3 +1920,24 @@ body.rivivi-on #tabbar { display: none; }
 .cg-info b { font-size: .92rem; }
 .cg-info span { font-size: .85rem; font-variant-numeric: tabular-nums; }
 .cg-info small { font-size: .74rem; color: var(--muted); }
+
+/* Cosa ha fatto il coach: pulsante nell'intestazione e cronologia */
+.diario-btn { position: relative; }
+.diario-btn svg { width: 20px; height: 20px; }
+.diario-dot { position: absolute; top: 7px; right: 7px; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--bg); }
+.dr-intro { margin: 0 4px 14px; color: var(--muted); font-size: .92rem; }
+.dr-lista { list-style: none; margin: 0; padding: 0; }
+.dr-giorno { margin: 18px 4px 8px; font-size: .78rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.dr-giorno:first-child { margin-top: 0; }
+.dr-voce { display: flex; gap: 12px; padding: 14px; margin-bottom: 8px; border-radius: 16px; background: var(--surface); border: 1px solid var(--line); }
+.dr-voce.nuova { border-color: color-mix(in srgb, var(--accent) 50%, var(--line)); background: color-mix(in srgb, var(--accent) 7%, var(--surface)); }
+.dr-ico { flex: none; width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); color: var(--accent); }
+.dr-ico svg { width: 18px; height: 18px; }
+.dr-voce.t-carico .dr-ico, .dr-voce.t-alleggerita .dr-ico { background: color-mix(in srgb, var(--warn) 16%, var(--surface-2)); color: var(--warn); }
+.dr-voce > div { min-width: 0; }
+.dr-voce b { display: inline; font-size: .95rem; }
+.dr-voce small { margin-left: 8px; font-size: .75rem; color: var(--muted); }
+.dr-voce p { margin: 4px 0 0; font-size: .88rem; line-height: 1.45; color: var(--muted); }
+/* Perche' questa FC (nella seduta) */
+.fc-perche { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: .85rem; line-height: 1.45; color: var(--muted); }
+.fc-perche b { color: var(--text); }
