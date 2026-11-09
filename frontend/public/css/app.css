@@ -1791,12 +1791,13 @@ a.pill { text-decoration: none; color: var(--accent); background: color-mix(in s
 .cl-go { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; justify-self: start; }
 
 /* ===================== Rivivi la corsa (replay 3D) ===================== */
-.rv-play { position: absolute; left: 12px; bottom: 12px; z-index: 3; display: grid; place-items: center; width: 52px; height: 52px; padding: 0 0 0 3px; border-radius: 50%;
+.rv-play { position: absolute; left: 14px; bottom: 14px; z-index: 3; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border-radius: 50%;
   border: 1px solid rgba(255,255,255,.35); color: #fff; cursor: pointer;
   background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 38%, rgba(255,255,255,.12)), rgba(12,12,14,.28));
   -webkit-backdrop-filter: blur(10px) saturate(150%); backdrop-filter: blur(10px) saturate(150%);
   box-shadow: 0 6px 20px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.35); transition: transform .12s, background .15s; }
-.rv-play svg { width: 22px; height: 22px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+.rv-play svg { display: block; width: 26px; height: 26px; filter: drop-shadow(0 1px 2px rgba(0,0,0,.45)); }
+.rv-play::after { content: ""; position: absolute; inset: 5px; border-radius: 50%; border: 1px solid rgba(255,255,255,.22); pointer-events: none; }
 .rv-play:hover { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,.12)), rgba(12,12,14,.28)); }
 .rv-play:active { transform: scale(.94); }
 @media (prefers-reduced-motion: reduce) { .rv-play { transition: none; } .rv-play:active { transform: none; } }
@@ -1822,7 +1823,7 @@ body.rivivi-on #tabbar { display: none; }
 .rv-bar { position: absolute; z-index: 3; left: 12px; right: 12px; bottom: calc(14px + env(safe-area-inset-bottom)); display: flex; align-items: center; gap: 10px;
   padding: 8px; border-radius: 999px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 22%, rgba(12,12,14,.18)), rgba(12,12,14,.30)); border: 1px solid rgba(255,255,255,.16); -webkit-backdrop-filter: blur(8px) saturate(140%); backdrop-filter: blur(8px) saturate(140%); text-shadow: 0 1px 3px rgba(0,0,0,.55); }
 .rv-btn { flex: none; width: 42px; height: 42px; border-radius: 50%; border: 0; display: grid; place-items: center; background: rgba(255,255,255,.18); color: #fff; font: inherit; font-weight: 700; font-size: .9rem; cursor: pointer; }
-.rv-btn svg { width: 20px; height: 20px; }
+.rv-btn svg { display: block; width: 22px; height: 22px; }
 #rv-pp { background: var(--accent); color: var(--accent-ink); }
 .rv-prog { flex: 1; padding: 14px 0; cursor: pointer; touch-action: none; }
 .rv-prog i { display: block; height: 8px; border-radius: 999px; background: rgba(255,255,255,.2); overflow: hidden; }

@@ -141,7 +141,7 @@
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     indietro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
     logo: '<svg viewBox="4 6 56 52" aria-hidden="true"><g stroke="currentColor" stroke-width="4.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 26.5A19 19 0 1 1 13.6 37.5"/><path d="M8 32h14l3.5-8 5 16 3.5-8h4"/></g></svg>',
-    play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+    play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M9.2 5.6c-.8-.5-1.7.1-1.7 1v10.8c0 .9.9 1.5 1.7 1l8.6-5.4c.7-.4.7-1.5 0-1.9z" transform="translate(.9 0)"/></svg>',
     pausa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>',
     sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>',
@@ -3509,7 +3509,7 @@
             '<div class="rv-fine-km"><b data-km="' + (corsa.distanza || 0) + '">' + fmt1(corsa.distanza) + '</b><small>km</small></div><i class="rv-fine-l"></i>' +
             '<div class="rv-fine-g">' +
             r(T('Tempo', 'Time'), fmtDurata(corsa.tempo)) +
-            r(corsa.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo', 'Pace'), fmtPasso(corsa.passo_corsa || corsa.passo_medio), '/km') +
+            r(T('Passo', 'Pace'), fmtPasso(corsa.passo_corsa || corsa.passo_medio), '/km') +
             r(T('FC media', 'Avg HR'), corsa.fc_media ? fmt0(corsa.fc_media) : null, 'bpm') +
             r(T('Dislivello', 'Elevation'), corsa.dislivello != null ? fmt0(corsa.dislivello) : null, 'm') +
             '</div></div>');
@@ -3519,7 +3519,7 @@
           if (!lento && kmFin > 0) { const t0k = performance.now(); const conta = (now) => { const q = Math.min(1, (now - t0k) / 1100); kb.textContent = fmt1(kmFin * (1 - Math.pow(1 - q, 3))); if (q < 1 && kb.isConnected) requestAnimationFrame(conta); }; requestAnimationFrame(conta); }
         }
         $w('#rv-pp').innerHTML = ICO.play; $w('#rv-pp').setAttribute('aria-label', T('Rivedi', 'Replay'));
-        map.fitBounds(bounds, { padding: { top: 150, bottom: corsa ? 400 : 120, left: 40, right: 40 }, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
+        map.fitBounds(bounds, { padding: { top: 120, bottom: corsa ? Math.round(el.clientHeight * 0.46) : 120, left: 40, right: 40 }, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
         // poi un giro lento intorno al percorso
         if (!lento) map.once('moveend', () => { if (finito && wrap.classList.contains('rivivi')) map.easeTo({ bearing: map.getBearing() + 40, duration: 16000, easing: (t) => t }); });
       };
