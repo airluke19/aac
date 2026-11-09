@@ -2071,11 +2071,17 @@
     await applicaLivello(sett, fc, obiettivoScelto, intensitaScelta);
   });
 
-  async function riempiLivelloAccount() {
-    const box = $('#acc-livello');
-    if (!box) return;
+  // Scelta manuale della settimana di partenza, dentro la guida del piano (passo "Piano"): alternativa a quella del coach
+  async function riempiLivelloGuida() {
+    const box = $('#gd-liv-box');
+    if (!box || box.dataset.pronto) return;
+    box.dataset.pronto = '1';
+    if (guida && ME.profilo.obiettivo && guida.obiettivo !== ME.profilo.obiettivo) {
+      box.innerHTML = '<p class="gd-nota">' + T('Hai scelto un nuovo obiettivo: conferma prima il piano, poi potrai scegliere da quale settimana partire.', 'You picked a new goal: confirm the plan first, then you can choose which week to start from.') + '</p>';
+      return;
+    }
     let v;
-    try { v = await caricaJson('/api/valutazione'); } catch (e) { box.innerHTML = '<h3>' + T('Livello di partenza', 'Starting level') + '</h3><p class="sub">' + esc(e.message) + '</p>'; return; }
+    try { v = await caricaJson('/api/valutazione'); } catch (e) { box.innerHTML = '<p class="gd-nota">' + esc(e.message) + '</p>'; return; }
     const att = ME.profilo.settimana_iniziale || 1;
     let opz = '', fase = null;
     v.settimane.forEach((w) => {
@@ -2083,14 +2089,21 @@
       opz += '<option value="' + w.n + '"' + (w.n === att ? ' selected' : '') + '>' + T('Sett. ', 'Wk ') + w.n + ' · ' + esc(w.desc) + (w.n === v.settimana_consigliata ? T(' (consigliata)', ' (suggested)') : '') + '</option>';
     });
     opz += '</optgroup>';
-    box.innerHTML = '<h3>' + T('Livello di partenza', 'Starting level') + '</h3>' +
-      '<p class="sub">' + esc(v.motivo) + '</p>' +
-      '<form id="acc-livello-form" class="acc-form">' +
-        '<label class="acc-f"><span>' + T('Il piano parte dalla settimana', 'The plan starts from week') + '</span><select name="settimana_iniziale">' + opz + '</select>' +
-          '<small>' + T('Cambiarla ricalcola il piano dalla data della prima seduta.', 'Changing it recalculates the plan from the first-session date.') + '</small></label>' +
-        '<button type="submit" class="btn-primary">' + T('Applica', 'Apply') + '</button>' +
-      '</form>';
+    box.innerHTML = '<p class="gd-nota">' + esc(v.motivo) + '</p>' +
+      '<label class="acc-f"><span>' + T('Il piano parte dalla settimana', 'The plan starts from week') + '</span><select id="gd-liv-sel">' + opz + '</select>' +
+        '<small>' + T('Cambiarla ricalcola il piano dalla data della prima seduta.', 'Changing it recalculates the plan from the first-session date.') + '</small></label>' +
+      '<button type="button" class="pill-btn" data-gd-livello' + (ME.demo ? ' disabled' : '') + '>' + T('Parti da questa settimana', 'Start from this week') + '</button>';
   }
+  document.addEventListener('toggle', (e) => { if (e.target && e.target.id === 'gd-livello' && e.target.open) riempiLivelloGuida(); }, true);
+  document.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-gd-livello]');
+    if (!b) return;
+    b.disabled = true;
+    const n = parseInt($('#gd-liv-sel').value, 10);
+    guida = null;
+    if (!(await applicaLivello(n))) b.disabled = false;
+  });
+
 
   /* ---- Colore principale ---- */
   // Colori d'accento in ordine di tinta: [id, nome IT, nome EN, tema scuro, tema chiaro] (stessi id di css/accenti.css e COLORI_AMMESSI)
@@ -2231,7 +2244,7 @@
       '<p id="acc-err" class="acc-err" hidden></p>' +
       '<button type="submit" class="btn-primary">' + T('Salva', 'Save') + '</button>' +
     '</form>' + '<section class="card acc-notifiche" id="acc-notifiche"><h3>🔔 ' + T('Notifiche', 'Notifications') + '</h3><div class="skeleton" style="height:60px"></div></section>' + renderColori() + '<section class="card" id="acc-scarpe"><h3>👟 ' + T('Le tue scarpe', 'Your shoes') + '</h3><div class="skeleton" style="height:80px"></div></section>' +
-    (p.ha_chiave ? '<section class="card" id="acc-livello"><h3>' + T('Livello di partenza', 'Starting level') + '</h3><div class="skeleton" style="height:120px"></div></section>' : '');
+    '';
     if (u.login) html += '<button type="button" id="acc-esci" class="btn-secondary acc-logout">' + T('Esci', 'Sign out') + '</button>';
     return html;
   }
@@ -2464,6 +2477,7 @@
           '<li>' + T('<b>Ogni giorno</b> guardo FC a riposo, HRV e sonno: se sei stanco la seduta si alleggerisce.', '<b>Every day</b> I check resting HR, HRV and sleep: if you are tired the session gets lighter.') + '</li>' +
           '<li>' + T('<b>Ogni settimana</b> decido se avanzare, ripetere o tornare indietro, e se aggiungere una seduta.', '<b>Every week</b> I decide whether to move on, repeat or step back, and whether to add a session.') + '</li>' +
           '<li>' + T('<b>Ogni 3 settimane</b> ritocco l’intensità in base a come rispondi.', '<b>Every 3 weeks</b> I fine-tune the intensity based on how you respond.') + '</li></ul></div>' +
+        (ME.profilo && ME.profilo.ha_chiave ? '<details class="more gd-livello" id="gd-livello"><summary>' + T('Preferisci scegliere tu da quale settimana partire?', 'Prefer to choose which week to start from?') + '</summary><div id="gd-liv-box"><div class="skeleton" style="height:90px"></div></div></details>' : '') +
         '<p id="gd-err" class="acc-err" hidden></p>';
     }
     const nav = '<div class="gd-nav">' + (g.passo > 1 ? '<button type="button" class="pill-btn gd-ind" data-guida-vai="-1">' + T('Indietro', 'Back') + '</button>' : '<button type="button" class="pill-btn gd-ind" data-guida-chiudi>' + T('Annulla', 'Cancel') + '</button>') +
@@ -2545,16 +2559,15 @@
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     promptInstalla = e;
-    if (ultimiDati && !$('#inst-card')) render(ultimiDati);
     if ($('#acc-notifiche')) riempiNotifiche();
   });
-  window.addEventListener('appinstalled', () => { promptInstalla = null; const c = $('#inst-card'); if (c) c.remove(); toast(T('AAC è sulla schermata Home', 'AAC is on your Home Screen'), 'ok'); });
+  window.addEventListener('appinstalled', () => { promptInstalla = null; if ($('#acc-notifiche')) riempiNotifiche(); toast(T('AAC è sulla schermata Home', 'AAC is on your Home Screen'), 'ok'); });
   async function installaOra() {
     if (!promptInstalla) return;
     const p = promptInstalla; promptInstalla = null;
     p.prompt();
     try { await p.userChoice; } catch (_) { /* annullato */ }
-    const c = $('#inst-card'); if (c) c.remove();
+    if ($('#acc-notifiche')) riempiNotifiche();
   }
   function registraSW() {
     if (!('serviceWorker' in navigator) || swPronto) return swPronto;
@@ -2575,8 +2588,10 @@
     if (!ME || ME.demo || ME.impersonato_da) { box.remove(); return; }
     const titolo = '<h3>🔔 ' + T('Notifiche', 'Notifications') + '</h3>';
     if (suIOS() && !installata()) {
-      box.innerHTML = titolo + '<p class="sub">' + T('Su iPhone le notifiche arrivano solo se AAC è sulla schermata Home:', 'On iPhone notifications only work when AAC is on your Home Screen:') + '</p>' +
-        '<ol class="nt-passi"><li>' + T('In Safari tocca <b>Condividi</b> (il quadrato con la freccia)', 'In Safari tap <b>Share</b> (the square with the arrow)') + '</li><li>' + T('Scegli <b>Aggiungi alla schermata Home</b>', 'Choose <b>Add to Home Screen</b>') + '</li><li>' + T('Apri AAC dall’icona, accedi e torna qui', 'Open AAC from the icon, sign in and come back here') + '</li></ol>';
+      box.innerHTML = titolo + '<p class="sub">' + T('Su iPhone le notifiche arrivano quando AAC è sulla schermata Home: si apre come un’app e ti manda la seduta del mattino.', 'On iPhone notifications arrive when AAC is on your Home Screen: it opens like an app and sends you your morning session.') + '</p>' +
+        '<ol class="nt-passi"><li>' + T('In Safari tocca <b>Condividi</b> ', 'In Safari tap <b>Share</b> ') + '<span class="inst-ico">' + ICO.share + '</span></li>' +
+          '<li>' + T('Scegli <b>Aggiungi alla schermata Home</b> ', 'Choose <b>Add to Home Screen</b> ') + '<span class="inst-ico">＋</span></li>' +
+          '<li>' + T('Apri AAC dall’icona, accedi e torna qui per attivare le notifiche', 'Open AAC from the icon, sign in and come back here to turn on notifications') + '</li></ol>';
       return;
     }
     if (!pushSupportato()) { box.innerHTML = titolo + '<p class="sub">' + T('Questo browser non supporta le notifiche.', 'This browser does not support notifications.') + '</p>'; return; }
@@ -2636,35 +2651,16 @@
       riempiNotifiche();
       return;
     }
-    if (e.target.closest('#inst-ora') || e.target.closest('#nt-installa')) { installaOra(); return; }
-    if (e.target.closest('#inst-dopo')) {
-      try { localStorage.setItem('coach-installa-dopo', String(Date.now() + 30 * 864e5)); } catch (_) { /* solo comodità */ }
-      const c = $('#inst-card'); if (c) c.remove();
-    }
+    if (e.target.closest('#nt-installa')) { installaOra(); return; }
   });
   document.addEventListener('change', (e) => { if (e.target.closest('#nt-mattina, #nt-domenica, #nt-ora')) salvaPreferenzeNotifiche(); });
 
-  // Invito a installare l'app: solo su iPhone in Safari, mai in demo o "Vedi come", rimandabile di 30 giorni
-  function renderInstalla() {
-    if (installata() || !ME || ME.demo || ME.impersonato_da) return '';
-    const ios = suIOS();
-    if (!ios && !promptInstalla) return '';
-    let dopo = 0; try { dopo = Number(localStorage.getItem('coach-installa-dopo')) || 0; } catch (_) { /* nessuna preferenza */ }
-    if (Date.now() < dopo) return '';
-    return '<section class="avviso inst" id="inst-card"><div class="av-h">' + ICO.share + '<h3>' + T('Metti AAC sulla schermata Home', 'Add AAC to your Home Screen') + '</h3></div>' +
-      (ios
-        ? '<p>' + T('Si apre come un’app e può mandarti la seduta del mattino. Su iPhone bastano due tocchi:', 'It opens like an app and can send you your morning session. On iPhone it takes two taps:') + '</p>' +
-          '<ol class="nt-passi"><li>' + T('Tocca <b>Condividi</b> ', 'Tap <b>Share</b> ') + '<span class="inst-ico">' + ICO.share + '</span>' + T(' nella barra di Safari', ' in the Safari bar') + '</li><li>' + T('Scegli <b>Aggiungi alla schermata Home</b> ', 'Choose <b>Add to Home Screen</b> ') + '<span class="inst-ico">＋</span></li></ol>'
-        : '<p>' + T('Si apre come un’app e può mandarti la seduta del mattino.', 'It opens like an app and can send you your morning session.') + '</p>' +
-          '<button type="button" class="btn-primary inst-btn" id="inst-ora">' + T('Installa l’app', 'Install the app') + '</button>') +
-      '<button type="button" class="link-btn" id="inst-dopo">' + T('Più tardi', 'Later') + '</button></section>';
-  }
+
 
 
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
     mostraSheet(T('Account', 'Account'), renderAccount());
-    riempiLivelloAccount();
     riempiScarpeAccount();
     riempiNotifiche();
   }
@@ -2710,12 +2706,6 @@
         if (chiediInizio()) return;
         apriAccount();
       } catch (_) { /* gestito */ } finally { btn.disabled = false; }
-    } else if (e.target.id === 'acc-livello-form') {
-      e.preventDefault();
-      const f = new FormData(e.target);
-      const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
-      if (await applicaLivello(parseInt(f.get('settimana_iniziale'), 10))) apriAccount();
-      btn.disabled = false;
     } else if (e.target.id === 'acc-invita') {
       e.preventDefault();
       const email = new FormData(e.target).get('email');
@@ -3883,7 +3873,7 @@
       '<div class="pane-head"><h1>' + titolo + '</h1>' + (sotto ? '<span>' + sotto + '</span>' : '') + '</div>' + html + '</div>';
     $('#main').innerHTML =
       pane('oggi', T('Oggi', 'Today'), esc(fmtDataLunga(d.oggi)).replace(/^./, (x) => x.toUpperCase()),
-        renderInstalla() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
+        renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
         renderProgramma(d) + renderGuidaCard()) +
