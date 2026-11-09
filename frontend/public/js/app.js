@@ -140,6 +140,7 @@
     spunta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     indietro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
+    logo: '<svg viewBox="4 6 56 52" aria-hidden="true"><g stroke="currentColor" stroke-width="4.8" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M13.6 26.5A19 19 0 1 1 13.6 37.5"/><path d="M8 32h14l3.5-8 5 16 3.5-8h4"/></g></svg>',
     play: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
     pausa: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.2"/><rect x="14" y="5" width="4" height="14" rx="1.2"/></svg>',
     sync: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/></svg>',
@@ -2859,34 +2860,47 @@
   /* Condividi: immagine della seduta fatta (generata nel browser, nessun   */
   /* servizio esterno). Formato post 4:5 o storia 9:16, colore d'accento.   */
   /* ====================================================================== */
-  const condividi = { id: null, a: null, formato: 'post', percorso: true, sfondo: (() => { try { return localStorage.getItem('coach-cond-sfondo') || 'scuro'; } catch (_) { return 'scuro'; } })(), url: null, file: null };
+  const condividi = { id: null, a: null, tipo: 'immagine', video: null, formato: 'post', percorso: true, sfondo: (() => { try { return localStorage.getItem('coach-cond-sfondo') || 'scuro'; } catch (_) { return 'scuro'; } })(), url: null, file: null };
 
   const puoCondividere = () => Boolean(ME && !ME.impersonato_da);
+
+  const puoRegistrare = () => typeof MediaRecorder !== 'undefined' && typeof HTMLCanvasElement !== 'undefined' && Boolean(HTMLCanvasElement.prototype.captureStream) &&
+    ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].some((t) => MediaRecorder.isTypeSupported(t));
 
   async function apriCondividi(id) {
     if (condividi.id !== id || !condividi.a) {
       mostraSheet(T('Condividi', 'Share'), '<div class="skeleton" style="height:420px"></div>');
-      try { condividi.a = await caricaJson('/api/attivita/' + encodeURIComponent(id)); condividi.id = id; }
+      try { condividi.a = await caricaJson('/api/attivita/' + encodeURIComponent(id)); condividi.id = id; condividi.video = null; }
       catch (e) { mostraSheet(T('Condividi', 'Share'), '<div class="card empty">' + esc(e.message) + '</div>'); return; }
     }
     const haPercorso = Boolean(condividi.a.serie && condividi.a.serie.lat);
+    const conVideo = haPercorso && puoRegistrare();
+    if (!conVideo) condividi.tipo = 'immagine';
+    const video = condividi.tipo === 'video';
     const seg = (k, v, l) => '<button type="button" data-cond-' + k + '="' + v + '" aria-pressed="' + (condividi[k] === v) + '">' + l + '</button>';
     mostraSheet(T('Condividi', 'Share'),
       '<section class="cond">' +
+        (conVideo ? '<div class="cond-seg cond-tipo" role="group" aria-label="' + T('Cosa condividere', 'What to share') + '">' + seg('tipo', 'immagine', T('Immagine', 'Image')) + seg('tipo', 'video', T('Video del percorso', 'Route video')) + '</div>' : '') +
         '<div class="cond-opz"><div class="cond-seg" role="group" aria-label="' + T('Formato', 'Format') + '">' +
           seg('formato', 'post', T('Post 4:5', 'Post 4:5')) + seg('formato', 'storia', T('Storia 9:16', 'Story 9:16')) + '</div>' +
-          (haPercorso ? '<div class="cond-seg" role="group" aria-label="' + T('Percorso', 'Route') + '">' + seg('percorso', true, T('Con percorso', 'With route')) + seg('percorso', false, T('Senza', 'Without')) + '</div>' : '') +
+          (haPercorso && !video ? '<div class="cond-seg" role="group" aria-label="' + T('Percorso', 'Route') + '">' + seg('percorso', true, T('Con percorso', 'With route')) + seg('percorso', false, T('Senza', 'Without')) + '</div>' : '') +
         '</div>' +
-        '<div class="cond-sf" role="group" aria-label="' + T('Sfondo', 'Background') + '">' + SFONDI.map((q) => '<button type="button" data-cond-sfondo="' + q.id + '" class="sf-' + q.id + '"' +
-          (q.c1 ? ' style="background:linear-gradient(160deg,' + q.c1 + ',' + q.c2 + ')"' : '') + ' aria-pressed="' + (condividi.sfondo === q.id) + '" aria-label="' + esc(T(q.it, q.en)) + '" title="' + esc(T(q.it, q.en)) + '"></button>').join('') + '</div>' +
-        '<div class="cond-prev"><img id="cond-img" alt="' + T('Anteprima dell’immagine da condividere', 'Preview of the image to share') + '"></div>' +
+        (video ? '' : '<div class="cond-sf" role="group" aria-label="' + T('Sfondo', 'Background') + '">' + SFONDI.map((q) => '<button type="button" data-cond-sfondo="' + q.id + '" class="sf-' + q.id + '"' +
+          (q.c1 ? ' style="background:linear-gradient(160deg,' + q.c1 + ',' + q.c2 + ')"' : '') + ' aria-pressed="' + (condividi.sfondo === q.id) + '" aria-label="' + esc(T(q.it, q.en)) + '" title="' + esc(T(q.it, q.en)) + '"></button>').join('') + '</div>') +
+        (video
+          ? '<div class="cond-prev cond-vprev"><video id="cond-vid" playsinline muted loop controls hidden></video>' +
+              '<div id="cond-vwait" class="cond-vwait"><button type="button" class="btn-primary" id="cond-crea">' + ICO.play + T('Crea il video', 'Create the video') + '</button><p id="cond-stato"></p></div></div>'
+          : '<div class="cond-prev"><img id="cond-img" alt="' + T('Anteprima dell’immagine da condividere', 'Preview of the image to share') + '"></div>') +
         '<div class="cond-az">' +
           '<button type="button" class="btn-primary" id="cond-share" hidden>' + ICO.share + T('Condividi', 'Share') + '</button>' +
-          '<a class="btn-mini" id="cond-dl" download>' + T('Scarica l’immagine', 'Download image') + '</a>' +
+          '<a class="btn-mini" id="cond-dl" download' + (video ? ' hidden' : '') + '>' + (video ? T('Scarica il video', 'Download video') : T('Scarica l’immagine', 'Download image')) + '</a>' +
         '</div>' +
-        '<p class="g-note">' + T('L’immagine si crea sul tuo dispositivo. Il percorso è solo la forma, senza mappa: toglilo se parte da casa tua.', 'The image is created on your device. The route is only its shape, with no map: remove it if it starts from your home.') + '</p>' +
+        '<p class="g-note">' + (video
+          ? T('Il video si registra sul tuo dispositivo in tempo reale (10–40 secondi): tieni lo schermo acceso e l’app aperta. Mostra il percorso su mappa satellitare: non condividerlo se parte da casa tua.', 'The video is recorded on your device in real time (10–40 seconds): keep the screen on and the app open. It shows the route on a satellite map: do not share it if it starts from your home.')
+          : T('L’immagine si crea sul tuo dispositivo. Il percorso è solo la forma, senza mappa: toglilo se parte da casa tua.', 'The image is created on your device. The route is only its shape, with no map: remove it if it starts from your home.')) + '</p>' +
       '</section>');
-    await generaImmagine();
+    if (video) mostraVideoPronto();
+    else await generaImmagine();
   }
 
   async function generaImmagine() {
@@ -2903,23 +2917,205 @@
     $('#cond-share').hidden = !(navigator.canShare && navigator.canShare({ files: [condividi.file] }));
   }
 
+  // Video gia' creato per questa corsa e questo formato: lo mostra subito
+  function mostraVideoPronto() {
+    const v = condividi.video;
+    if (!v || v.formato !== condividi.formato || !$('#cond-vid')) { condividi.file = null; return; }
+    $('#cond-vid').src = v.url; $('#cond-vid').hidden = false; $('#cond-vwait').hidden = true;
+    condividi.file = v.file;
+    $('#cond-dl').href = v.url; $('#cond-dl').setAttribute('download', v.file.name); $('#cond-dl').hidden = false;
+    $('#cond-share').hidden = !(navigator.canShare && navigator.canShare({ files: [v.file] }));
+    $('#cond-vid').play().catch(() => {});
+  }
+
+  async function avviaVideo() {
+    const btn = $('#cond-crea'), stato = $('#cond-stato');
+    btn.disabled = true;
+    try {
+      const blob = await creaVideo(condividi.a, condividi.formato, (p, txt) => { if (stato) stato.textContent = txt + ' ' + Math.round(p * 100) + '%'; });
+      const est = blob.type.includes('mp4') ? 'mp4' : 'webm';
+      const file = new File([blob], 'aac-' + condividi.a.corsa.data + (condividi.formato === 'storia' ? '-storia' : '') + '.' + est, { type: blob.type });
+      if (condividi.video) URL.revokeObjectURL(condividi.video.url);
+      condividi.video = { formato: condividi.formato, file, url: URL.createObjectURL(blob) };
+      mostraVideoPronto();
+    } catch (e) {
+      if (stato) stato.textContent = e.message || T('Video non riuscito', 'Video failed');
+      if (btn) btn.disabled = false;
+    }
+  }
+
   document.addEventListener('click', async (e) => {
     const b = e.target.closest('[data-condividi]');
     if (b) { apriSheet('#condividi/' + encodeURIComponent(b.dataset.condividi)); return; }
+    const tp = e.target.closest('[data-cond-tipo]');
+    if (tp) { condividi.tipo = tp.dataset.condTipo; apriCondividi(condividi.id); return; }
     const f = e.target.closest('[data-cond-formato],[data-cond-percorso],[data-cond-sfondo]');
     if (f) {
       if (f.dataset.condSfondo) { condividi.sfondo = f.dataset.condSfondo; try { localStorage.setItem('coach-cond-sfondo', condividi.sfondo); } catch (_) { /* solo comodità */ } }
       else if (f.dataset.condFormato) condividi.formato = f.dataset.condFormato;
       else condividi.percorso = f.dataset.condPercorso === 'true';
+      if (condividi.tipo === 'video') { apriCondividi(condividi.id); return; }
       f.parentNode.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === f)));
       generaImmagine();
       return;
     }
+    if (e.target.closest('#cond-crea')) { avviaVideo(); return; }
     if (e.target.closest('#cond-share') && condividi.file) {
-      try { await navigator.share({ files: [condividi.file], title: 'AAC' }); }
+      try { await navigator.share({ files: [condividi.file], title: 'Always Adaptive Coach' }); }
       catch (err) { if (err && err.name !== 'AbortError') toast(T('Condivisione non riuscita: usa “Scarica”.', 'Sharing failed: use “Download”.'), 'err'); }
     }
   });
+
+  /* ---- Video del percorso: stesso volo del replay, registrato sul dispositivo (MediaRecorder) ---- */
+  async function creaVideo(a, formato, avanza) {
+    const s = a.serie, c = a.corsa;
+    const tipo = ['video/mp4;codecs=avc1', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm'].find((t) => MediaRecorder.isTypeSupported(t));
+    await caricaMappa();
+    const ml = window.maplibregl;
+    const W = 1080, H = formato === 'storia' ? 1920 : 1350, PR = 2;
+    const box = document.createElement('div');
+    box.setAttribute('aria-hidden', 'true');
+    box.style.cssText = 'position:fixed;left:0;top:0;width:' + W / PR + 'px;height:' + H / PR + 'px;opacity:0;pointer-events:none;z-index:-1';
+    document.body.appendChild(box);
+    const v = voloPercorso(s);
+    const accent = cssVar('--accent') || '#ff5a36';
+    const FN = 'ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, Inter, "Segoe UI", Roboto, sans-serif';
+    const FT = '-apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, "Segoe UI", Roboto, sans-serif';
+    const nf2 = new Intl.NumberFormat(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const coords = v.pts.map((q) => q.p);
+    const bounds = coords.reduce((bb, p) => bb.extend(p), new ml.LngLatBounds(coords[0], coords[0]));
+    const fermo = (map, ms) => new Promise((ok) => { const t = setTimeout(ok, ms); map.once('idle', () => { clearTimeout(t); ok(); }); });
+    let map = null;
+    try {
+      try { await Promise.all([document.fonts.load('700 40px Inter'), document.fonts.load('800 40px Inter')]); } catch (_) { /* font di sistema */ }
+      map = new ml.Map({ container: box, style: 'https://tiles.openfreemap.org/styles/liberty', center: coords[0], zoom: v.zoom, pitch: 48,
+        interactive: false, attributionControl: false, preserveDrawingBuffer: true, pixelRatio: PR, fadeDuration: 0 });
+      map.on('error', () => {});
+      await new Promise((ok, ko) => { const t = setTimeout(() => ko(new Error(T('Mappa non disponibile', 'Map unavailable'))), 20000); map.once('load', () => { clearTimeout(t); ok(); }); });
+      map.getStyle().layers.filter((l) => /poi|transit|bus|aeroway|airport/i.test(l.id) && l.type === 'symbol').forEach((l) => map.setLayoutProperty(l.id, 'visibility', 'none'));
+      applicaSatellite(map, 128);
+      map.addSource('linea', { type: 'geojson', lineMetrics: true, data: { type: 'Feature', properties: {}, geometry: { type: 'LineString', coordinates: coords } } });
+      map.addLayer({ id: 'base', type: 'line', source: 'linea', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#ffffff', 'line-opacity': 0.4, 'line-width': 5 } });
+      map.addLayer({ id: 'fatto', type: 'line', source: 'linea', layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-width': 8, 'line-gradient': ['step', ['line-progress'], accent, 0.000001, 'rgba(0,0,0,0)'] } });
+      map.addSource('punto', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
+      map.addLayer({ id: 'punto', type: 'circle', source: 'punto', paint: { 'circle-radius': 10, 'circle-color': accent, 'circle-stroke-width': 4, 'circle-stroke-color': '#ffffff', 'circle-pitch-alignment': 'map' } });
+
+      // 1) prepara la mappa: scarica le immagini lungo il percorso e della vista finale
+      const tappe = 10;
+      let bearing = v.dirA(coords[0], v.trova(Math.min(v.tot, v.avanti)).p);
+      for (let k = 0; k <= tappe; k++) {
+        const d = v.tot * k / tappe, p = v.trova(d).p;
+        map.jumpTo({ center: p, zoom: v.zoom, pitch: 48, bearing: v.dirA(v.trova(Math.max(0, d - v.avanti * 0.5)).p, v.trova(Math.min(v.tot, d + v.avanti)).p) });
+        await fermo(map, 6000);
+        avanza(k / (tappe + 1) * 0.3, T('Preparo la mappa…', 'Preparing the map…'));
+      }
+      const padFine = { top: H / PR * 0.2, bottom: H / PR * 0.42, left: 30, right: 30 };
+      map.fitBounds(bounds, { padding: padFine, pitch: 45, duration: 0, maxZoom: 16 });
+      await fermo(map, 6000);
+      map.jumpTo({ center: coords[0], zoom: v.zoom, pitch: 48, bearing });
+      await fermo(map, 6000);
+
+      // 2) registra in tempo reale: mappa + marchio, dati e riepilogo disegnati sopra
+      const comp = document.createElement('canvas'); comp.width = W; comp.height = H;
+      const x = comp.getContext('2d');
+      const rec = new MediaRecorder(comp.captureStream(30), { mimeType: tipo, videoBitsPerSecond: 10000000 });
+      const pezzi = [];
+      rec.ondataavailable = (e) => { if (e.data && e.data.size) pezzi.push(e.data); };
+      const finito = new Promise((ok) => { rec.onstop = ok; });
+      const INTRO = 700, VOLO = 2200, FINE = 3600, TOT = INTRO + v.durata + VOLO + FINE;
+      const testo = (t, px, peso, col, fam, X, Y, al) => { x.font = peso + ' ' + px + 'px ' + fam; x.fillStyle = col; x.textAlign = al || 'left'; x.fillText(t, X, Y); return x.measureText(t).width; };
+      const tondo = (X, Y, w, h, r) => { x.beginPath(); if (x.roundRect) x.roundRect(X, Y, w, h, r); else x.rect(X, Y, w, h); };
+      const vetro = (X, Y, w, h, r) => {
+        tondo(X, Y, w, h, r);
+        const g = x.createLinearGradient(X, Y, X + w, Y + h); g.addColorStop(0, rgba(accent, 0.30)); g.addColorStop(1, 'rgba(12,12,14,0.42)');
+        x.fillStyle = g; x.fill(); x.strokeStyle = 'rgba(255,255,255,0.18)'; x.lineWidth = 2; x.stroke();
+      };
+      const logo = (X, Y, size) => {
+        x.save(); x.translate(X, Y); x.scale(size / 56, size / 56); x.translate(-4, -6);
+        x.strokeStyle = accent; x.lineWidth = 4.8; x.lineCap = 'round'; x.lineJoin = 'round';
+        x.stroke(new Path2D('M13.6 26.5A19 19 0 1 1 13.6 37.5')); x.stroke(new Path2D('M8 32h14l3.5-8 5 16 3.5-8h4'));
+        x.restore();
+      };
+      const pad = 60, top = formato === 'storia' ? 150 : 60, bottom = formato === 'storia' ? 230 : 60;
+      const disegna = (fase, u, alfaFine) => {
+        x.drawImage(map.getCanvas(), 0, 0, W, H);
+        let g = x.createLinearGradient(0, 0, 0, top + 260); g.addColorStop(0, 'rgba(0,0,0,0.55)'); g.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = g; x.fillRect(0, 0, W, top + 260);
+        g = x.createLinearGradient(0, H - bottom - 560, 0, H); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.6)');
+        x.fillStyle = g; x.fillRect(0, H - bottom - 560, W, bottom + 560);
+        x.save(); x.shadowColor = 'rgba(0,0,0,0.55)'; x.shadowBlur = 10;
+        logo(pad, top, 58);
+        testo('Always Adaptive Coach', 42, 700, '#ffffff', FT, pad + 74, top + 44);
+        testo('aac.run', 36, 700, '#ffffff', FT, W - pad, top + 44, 'right');
+        x.restore();
+        testo('© Esri, Maxar · © OpenStreetMap', 18, 500, 'rgba(255,255,255,0.6)', FT, W - 24, H - 18, 'right');
+        if (fase === 'volo') {
+          const { k } = v.trova(u * v.tot), i = v.pts[k].i;
+          const val = [[nf2.format(s.d ? s.d[i] : u * v.tot / 1000), 'km'], [s.t ? fmtDurata(s.t[i]) : '–', T('tempo', 'time')], [fmtPasso(v.passoA(i)), '/km']];
+          if (s.hr) val.push([s.hr[i] ? fmt0(s.hr[i]) : '–', 'bpm']);
+          const hY = H - bottom - 200, hW = W - 2 * pad;
+          vetro(pad, hY, hW, 170, 36);
+          val.forEach(([n, l], j) => { const cx = pad + hW / val.length * (j + 0.5); testo(n, 62, 700, '#ffffff', FN, cx, hY + 92, 'center'); testo(l, 28, 600, 'rgba(255,255,255,0.7)', FT, cx, hY + 136, 'center'); });
+        }
+        if (alfaFine > 0) {
+          x.save(); x.globalAlpha = alfaFine;
+          const cH = 420, cY = H - bottom - cH, cW = W - 2 * pad;
+          vetro(pad, cY, cW, cH, 40);
+          const dataTxt = fmtDataLunga(c.data).toUpperCase();
+          x.letterSpacing = '3px'; testo(dataTxt, 26, 700, accent, FT, pad + 44, cY + 70); x.letterSpacing = '0px';
+          testo(c.nome || T('Corsa', 'Run'), 46, 700, '#ffffff', FT, pad + 44, cY + 128);
+          const kmT = fmt1(c.distanza);
+          x.font = '700 40px ' + FN; const wu = x.measureText('km').width;
+          testo('km', 40, 700, accent, FN, pad + cW - 44, cY + 128, 'right');
+          testo(kmT, 104, 800, '#ffffff', FN, pad + cW - 44 - wu - 10, cY + 128, 'right');
+          const st = [[fmtDurata(c.tempo), T('Tempo', 'Time')], [fmtPasso(c.passo_corsa || c.passo_medio) + '/km', c.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo', 'Pace')]];
+          if (c.fc_media) st.push([fmt0(c.fc_media) + ' bpm', T('FC media', 'Avg HR')]);
+          if (c.dislivello != null) st.push([fmt0(c.dislivello) + ' m', T('Dislivello', 'Elevation')]);
+          const sw = (cW - 88) / st.length;
+          st.forEach(([n, l], j) => { const X = pad + 44 + sw * j; testo(l.toUpperCase(), 22, 600, 'rgba(255,255,255,0.7)', FT, X, cY + 250); testo(n, sw < 230 ? 44 : 52, 700, '#ffffff', FN, X, cY + 310); });
+          x.restore();
+        }
+      };
+      disegna('volo', 0, 0);
+      rec.start(500);
+      const t0 = performance.now();
+      let voloFinale = false;
+      await new Promise((ok) => {
+        const passo = (now) => {
+          const t = now - t0;
+          let fase = 'volo', u = Math.min(1, Math.max(0, (t - INTRO) / v.durata)), alfa = 0;
+          if (t < INTRO + v.durata) {
+            const d = u * v.tot, p = v.trova(d).p;
+            const dietro = v.trova(Math.max(0, d - v.avanti * 0.5)).p, davanti = v.trova(Math.min(v.tot, d + v.avanti)).p;
+            bearing += (((v.dirA(dietro, davanti) - bearing + 540) % 360) - 180) * 0.012;
+            map.setPaintProperty('fatto', 'line-gradient', ['step', ['line-progress'], accent, Math.max(0.000001, u), 'rgba(0,0,0,0)']);
+            map.getSource('punto').setData({ type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: p } }] });
+            map.jumpTo({ center: p, bearing, pitch: 48, zoom: v.zoom });
+          } else {
+            fase = 'fine';
+            if (!voloFinale) {
+              voloFinale = true;
+              map.setPaintProperty('fatto', 'line-gradient', ['step', ['line-progress'], accent, 1, accent]);
+              map.fitBounds(bounds, { padding: padFine, pitch: 45, bearing, duration: VOLO, maxZoom: 16 });
+              map.once('moveend', () => map.easeTo({ bearing: bearing + 25, duration: FINE + 600, easing: (q) => q }));
+            }
+            alfa = Math.min(1, Math.max(0, (t - INTRO - v.durata - VOLO * 0.6) / 600));
+          }
+          disegna(fase, u, alfa);
+          avanza(0.3 + 0.7 * Math.min(1, t / TOT), T('Registro il video…', 'Recording the video…'));
+          if (t >= TOT) { ok(); return; }
+          requestAnimationFrame(passo);
+        };
+        requestAnimationFrame(passo);
+      });
+      rec.stop();
+      await finito;
+      return new Blob(pezzi, { type: tipo.split(';')[0] });
+    } finally {
+      if (map) map.remove();
+      box.remove();
+    }
+  }
 
   // Sfondi dell'immagine: scuro (predefinito), colore del tema, chiaro e qualche tinta sportiva
   const SFONDI = [
@@ -3141,6 +3337,42 @@
   // Disegna il percorso (verde = corsa, grigio = camminata) su una mappa stile "Google Maps"
   // (OpenFreeMap, stile Liberty, vettoriale e senza chiave). Restituisce una funzione che
   // sposta il segnaposto sul punto i della serie, sincronizzata con i grafici.
+  // Vista satellitare (Esri World Imagery Clarity: le immagini più nitide di Esri) con i nomi di strade e luoghi della mappa vettoriale sopra
+  function applicaSatellite(map, tile) {
+    const stile = map.getStyle().layers;
+    const primoSimbolo = stile.find((l) => l.type === 'symbol');
+    map.addSource('satellite', { type: 'raster', tiles: ['https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: tile || (window.devicePixelRatio > 1 ? 64 : 128), maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
+    map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-fade-duration': 150 } }, primoSimbolo && primoSimbolo.id);
+    stile.forEach((l) => {
+      if (['fill', 'line', 'fill-extrusion', 'background', 'hillshade'].includes(l.type)) map.setLayoutProperty(l.id, 'visibility', 'none');
+      else if (l.type === 'symbol') { try { map.setPaintProperty(l.id, 'text-color', '#ffffff'); map.setPaintProperty(l.id, 'text-halo-color', 'rgba(0,0,0,0.75)'); map.setPaintProperty(l.id, 'text-halo-width', 1.4); } catch (_) { /* livello senza testo */ } }
+    });
+  }
+
+  // Percorso da animare (replay nell'app e video da condividere): punti, distanze, durata, zoom e direzione
+  function voloPercorso(s) {
+    const pts = [];
+    for (let i = 0; i < s.lat.length; i++) if (s.lat[i] != null && s.lng[i] != null) pts.push({ p: [s.lng[i], s.lat[i]], i });
+    const cum = [0];
+    const dist = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.hypot((b[0] - a[0]) * k, b[1] - a[1]) * 111320; };
+    for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + dist(pts[k - 1].p, pts[k].p));
+    const tot = cum[cum.length - 1] || 1;
+    const trova = (d) => { let lo = 0, hi = cum.length - 1; while (lo < hi - 1) { const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; } const f = cum[hi] > cum[lo] ? (d - cum[lo]) / (cum[hi] - cum[lo]) : 0; return { k: lo, p: [pts[lo].p[0] + (pts[hi].p[0] - pts[lo].p[0]) * f, pts[lo].p[1] + (pts[hi].p[1] - pts[lo].p[1]) * f] }; };
+    const dirA = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.atan2((b[0] - a[0]) * k, b[1] - a[1]) * 180 / Math.PI; };
+    const passoA = (i) => {
+      if (!s.d || !s.t) return null;
+      const a = Math.max(0, i - 15), b = Math.min(s.t.length - 1, i + 15);
+      const dd = (s.d[b] || 0) - (s.d[a] || 0), dt = s.t[b] - s.t[a];
+      return dd > 0.01 ? dt / dd : null;
+    };
+    return {
+      pts, tot, trova, dirA, passoA,
+      durata: Math.min(30, Math.max(10, 8 + tot / 1000 * 1.2)) * 1000, // "1×" è già veloce: più godibile
+      zoom: tot < 6000 ? 14.9 : tot < 15000 ? 14.4 : 13.9, // vista alta: si vede il percorso intorno, niente giramenti di testa
+      avanti: Math.min(900, Math.max(300, tot * 0.08)), // la direzione guarda lontano: ignora le curve brevi
+    };
+  }
+
   async function disegnaMappa(s, corsa) {
     const el = document.getElementById('dd-map');
     if (!el) return null;
@@ -3181,15 +3413,7 @@
       map.fitBounds(bounds, { padding: { top: 64, bottom: 36, left: 32, right: 32 }, maxZoom: 16, duration: 0 });
       // mappa pulita: niente fermate dei bus e punti di interesse
       map.getStyle().layers.filter((l) => /poi|transit|bus|aeroway|airport/i.test(l.id) && l.type === 'symbol').forEach((l) => map.setLayoutProperty(l.id, 'visibility', 'none'));
-      // vista satellitare (Esri World Imagery Clarity: le immagini più nitide di Esri) con i nomi di strade e luoghi della mappa vettoriale sopra
-      const stile = map.getStyle().layers;
-      const primoSimbolo = stile.find((l) => l.type === 'symbol');
-      map.addSource('satellite', { type: 'raster', tiles: ['https://clarity.maptiles.arcgis.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'], tileSize: window.devicePixelRatio > 1 ? 64 : 128, maxzoom: 19, attribution: 'Imagery © Esri, Maxar, Earthstar Geographics' });
-      map.addLayer({ id: 'satellite', type: 'raster', source: 'satellite', paint: { 'raster-fade-duration': 150 } }, primoSimbolo && primoSimbolo.id);
-      stile.forEach((l) => {
-        if (['fill', 'line', 'fill-extrusion', 'background', 'hillshade'].includes(l.type)) map.setLayoutProperty(l.id, 'visibility', 'none');
-        else if (l.type === 'symbol') { try { map.setPaintProperty(l.id, 'text-color', '#ffffff'); map.setPaintProperty(l.id, 'text-halo-color', 'rgba(0,0,0,0.75)'); map.setPaintProperty(l.id, 'text-halo-width', 1.4); } catch (_) { /* livello senza testo */ } }
-      });
+      applicaSatellite(map);
       // crediti compressi nell'icona "i"
       el.querySelectorAll('.maplibregl-compact-show').forEach((x) => x.classList.remove('maplibregl-compact-show'));
       map.addSource('percorso', { type: 'geojson', data: { type: 'FeatureCollection', features: pezzi.map((x) => ({ type: 'Feature', properties: { c: x.c }, geometry: { type: 'LineString', coordinates: x.pt } })) } });
@@ -3219,24 +3443,7 @@
       history.pushState({ sheet: 1, rivivi: 1 }, '', location.hash);
       const nf2 = new Intl.NumberFormat(LOC, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       const lento = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      // punti del percorso con distanza cumulativa (metri) e indice dello stream
-      const pts = [];
-      for (let i = 0; i < s.lat.length; i++) if (s.lat[i] != null && s.lng[i] != null) pts.push({ p: [s.lng[i], s.lat[i]], i });
-      const cum = [0];
-      const dist = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.hypot((b[0] - a[0]) * k, b[1] - a[1]) * 111320; };
-      for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + dist(pts[k - 1].p, pts[k].p));
-      const tot = cum[cum.length - 1] || 1;
-      const durata = Math.min(30, Math.max(10, 8 + tot / 1000 * 1.2)) * 1000; // "1×" è già il doppio del primo ritmo provato: più godibile
-      const zoom = tot < 6000 ? 14.9 : tot < 15000 ? 14.4 : 13.9; // vista alta: si vede il percorso intorno, niente giramenti di testa
-      const avanti = Math.min(900, Math.max(300, tot * 0.08)); // la direzione guarda lontano: ignora le curve brevi
-      const trova = (d) => { let lo = 0, hi = cum.length - 1; while (lo < hi - 1) { const m = (lo + hi) >> 1; if (cum[m] <= d) lo = m; else hi = m; } const f = cum[hi] > cum[lo] ? (d - cum[lo]) / (cum[hi] - cum[lo]) : 0; return { k: lo, p: [pts[lo].p[0] + (pts[hi].p[0] - pts[lo].p[0]) * f, pts[lo].p[1] + (pts[hi].p[1] - pts[lo].p[1]) * f] }; };
-      const dirA = (a, b) => { const k = Math.cos(a[1] * Math.PI / 180); return Math.atan2((b[0] - a[0]) * k, b[1] - a[1]) * 180 / Math.PI; };
-      const passoA = (i) => {
-        if (!s.d || !s.t) return null;
-        const a = Math.max(0, i - 15), b = Math.min(s.t.length - 1, i + 15);
-        const dd = (s.d[b] || 0) - (s.d[a] || 0), dt = s.t[b] - s.t[a];
-        return dd > 0.01 ? dt / dd : null;
-      };
+      const { pts, tot, durata, zoom, avanti, trova, dirA, passoA } = voloPercorso(s);
 
       wrap.classList.add('rivivi');
       document.body.classList.add('rivivi-on');
@@ -3270,7 +3477,7 @@
         $w('#rv-p').textContent = fmtPasso(passoA(i));
         if (s.hr && $w('#rv-fc')) $w('#rv-fc').textContent = s.hr[i] ? fmt0(s.hr[i]) : '–';
         if (s.alt && $w('#rv-alt')) $w('#rv-alt').textContent = s.alt[i] != null ? fmt0(s.alt[i]) : '–';
-        if (u < 1 && $w('.rv-fine')) { $w('.rv-fine').remove(); $w('.rv-hud').hidden = false; }
+        if (u < 1 && $w('.rv-fine')) { $w('.rv-fine').remove(); if ($w('.rv-marchio')) $w('.rv-marchio').remove(); $w('.rv-hud').hidden = false; }
         $w('#rv-fill').style.width = (u * 100).toFixed(1) + '%';
         $w('#rv-prog').setAttribute('aria-valuenow', String(Math.round(u * 100)));
       };
@@ -3279,18 +3486,25 @@
         // a fine percorso: i dati veri della corsa (gli stessi del dettaglio), non l'ultimo istante
         if (corsa && !$w('.rv-fine')) {
           const r = (l, v, un) => (v == null || v === '–' ? '' : '<div><b>' + v + (un ? '<small>' + un + '</small>' : '') + '</b><span>' + l + '</span></div>');
+          const dataTxt = fmtDataLunga(corsa.data).replace(/^./, (x) => x.toUpperCase());
           $w('.rv-hud').hidden = true;
-          $w('.rv-bar').insertAdjacentHTML('beforebegin', '<div class="rv-fine"><h3>' + esc(corsa.nome || fmtDataLunga(corsa.data).replace(/^./, (x) => x.toUpperCase())) + '</h3><div class="rv-fine-g">' +
-            r(T('Distanza', 'Distance'), fmt1(corsa.distanza), 'km') +
+          // marchio come nell'immagine condivisa: nome intero a sinistra, aac.run a destra
+          $w('.rv-back').insertAdjacentHTML('afterend', '<div class="rv-marchio"><span>' + ICO.logo + 'Always Adaptive Coach</span><b>aac.run</b></div>');
+          $w('.rv-bar').insertAdjacentHTML('beforebegin', '<div class="rv-fine">' +
+            '<div class="rv-fine-top"><div><small>' + esc(dataTxt) + '</small><h3>' + esc(corsa.nome || T('Corsa', 'Run')) + '</h3></div>' +
+              '<b class="rv-fine-km">' + fmt1(corsa.distanza) + '<small>km</small></b></div>' +
+            '<div class="rv-fine-g">' +
             r(T('Tempo', 'Time'), fmtDurata(corsa.tempo)) +
             r(corsa.passo_corsa ? T('Passo di corsa', 'Running pace') : T('Passo medio', 'Avg pace'), fmtPasso(corsa.passo_corsa || corsa.passo_medio), '/km') +
+            r(T('Dislivello', 'Elevation gain'), corsa.dislivello != null ? fmt0(corsa.dislivello) : null, 'm') +
             r(T('FC media', 'Avg HR'), corsa.fc_media ? fmt0(corsa.fc_media) : null, 'bpm') +
             r(T('FC max', 'Max HR'), corsa.fc_max ? fmt0(corsa.fc_max) : null, 'bpm') +
-            r(T('Dislivello', 'Elevation gain'), corsa.dislivello != null ? fmt0(corsa.dislivello) : null, 'm') +
             '</div></div>');
         }
         $w('#rv-pp').innerHTML = ICO.play; $w('#rv-pp').setAttribute('aria-label', T('Rivedi', 'Replay'));
-        map.fitBounds(bounds, { padding: { top: 130, bottom: corsa ? 360 : 120, left: 40, right: 40 }, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
+        map.fitBounds(bounds, { padding: { top: 150, bottom: corsa ? 380 : 120, left: 40, right: 40 }, pitch: lento ? 0 : 45, bearing: lento ? 0 : bearing, duration: lento ? 0 : 2200, maxZoom: 16 });
+        // poi un giro lento intorno al percorso
+        if (!lento) map.once('moveend', () => { if (finito && wrap.classList.contains('rivivi')) map.easeTo({ bearing: map.getBearing() + 40, duration: 16000, easing: (t) => t }); });
       };
       const passo = (ts) => {
         if (!wrap.classList.contains('rivivi')) return;
@@ -3324,7 +3538,7 @@
         chiudiRivivi = null;
         cancelAnimationFrame(raf);
         wrap.classList.remove('rivivi'); document.body.classList.remove('rivivi-on');
-        wrap.querySelectorAll('.rv-hud, .rv-bar, .rv-back, .rv-fine').forEach((x) => x.remove());
+        wrap.querySelectorAll('.rv-hud, .rv-bar, .rv-back, .rv-fine, .rv-marchio').forEach((x) => x.remove());
         map.setLayoutProperty('fatto', 'visibility', 'none');
         ['alone', 'cammino', 'corsa'].forEach((id) => map.setPaintProperty(id, 'line-opacity', 1));
         map.getSource('punto').setData({ type: 'FeatureCollection', features: [] });
