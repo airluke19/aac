@@ -2973,6 +2973,7 @@
     await caricaMappa();
     const ml = window.maplibregl;
     const W = 1080, H = formato === 'storia' ? 1920 : 1350, PR = 2;
+    const pad = 60, top = formato === 'storia' ? 150 : 60, bottom = formato === 'storia' ? 230 : 60; // margini sicuri di Instagram
     const box = document.createElement('div');
     box.setAttribute('aria-hidden', 'true');
     box.style.cssText = 'position:fixed;left:0;top:0;width:' + W / PR + 'px;height:' + H / PR + 'px;opacity:0;pointer-events:none;z-index:-1';
@@ -3036,7 +3037,6 @@
         x.stroke(new Path2D('M13.6 26.5A19 19 0 1 1 13.6 37.5')); x.stroke(new Path2D('M8 32h14l3.5-8 5 16 3.5-8h4'));
         x.restore();
       };
-      const pad = 60, top = formato === 'storia' ? 150 : 60, bottom = formato === 'storia' ? 230 : 60;
       const disegna = (fase, u, tFine) => {
         x.drawImage(map.getCanvas(), 0, 0, W, H);
         let g = x.createLinearGradient(0, 0, 0, top + 260); g.addColorStop(0, 'rgba(0,0,0,0.55)'); g.addColorStop(1, 'rgba(0,0,0,0)');
