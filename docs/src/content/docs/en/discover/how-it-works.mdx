@@ -1,0 +1,67 @@
+---
+title: How it works
+description: The rules of the adaptive coach, explained plainly.
+sidebar:
+  order: 2
+---
+import Telefoni from '../../../../components/Telefoni.astro';
+import Invito from '../../../../components/Invito.astro';
+
+AAC takes the data your watch sends to **Intervals.icu** — runs, heart rate, HRV, sleep, steps — and uses it to decide, day by day, what's best for you. Here's how, level by level.
+
+## 1. Your starting point
+
+On your first visit AAC reads your runs from the last few weeks: how many, how many kilometres, your longest continuous run. From there it **suggests the plan week to start from**. If you haven't run in a while you begin with run-walk; if you already run 30 minutes non-stop you skip the first phase. You can always choose by hand, but the coach tells you what it recommends and why.
+
+## 2. Every day: the session
+
+Every morning AAC compares your values with **your own 28-day average** (at least 5 days of data needed):
+
+| Signal | Threshold |
+|---|---|
+| Resting HR | at least **+5 bpm** over your average |
+| HRV | at least **−15%** below your average |
+| Sleep | under **5 h 30′** |
+| Form (TSB) | below **−25** |
+| Recent load | over **1.5×** your usual |
+
+One signal is enough: the session drops to **about 60%**, and hard sessions become **25 easy minutes**. The reason shows on the session, in the coach's history and, if you've turned them on, in a notification.
+
+## 3. Every week: the plan
+
+At the end of the week the coach decides:
+
+- **Moving forward** — you did at least 2 sessions out of 3 and there are no warnings.
+- **Repeat** — you did 0–1 sessions, or your runs' average heart rate was too high (zones 4–5).
+- **One step back** — overload or poor recovery.
+
+Runs on any day of the week count, even off the calendar. Walks don't, except for "recovery walk" sessions.
+
+## 4. Sessions and days
+
+You start with **3 sessions a week**. The 4th (and the 5th for half and full marathon) **is earned**: three full weeks in a row, no fatigue, load rising safely. Extra sessions are easy runs: more volume, not more intensity (the 80/20 principle).
+
+Pick your days as **suggested** (the coach uses them when it can) or **fixed** (only those). The coach never puts two hard sessions on consecutive days and prefers the long run at the weekend.
+
+## 5. Every three weeks: intensity
+
+Choose *easy-going*, *balanced* or *ambitious*. Then the coach fine-tunes it by ±10%: up if three weeks in a row were too easy, down if two out of three were too hard. No switches: it's automatic.
+
+## 6. Zones, pace and forecasts
+
+Heart-rate zones are **personal**: with enough resting-HR data they use your heart-rate reserve (more in [Heart-rate zones](/en/coach/heart-rate-zones/)). From your runs AAC computes efficiency (speed per heartbeat), the **guide pace** of each session, your **predicted race time** and the **date your goal becomes realistic**.
+
+## The sessions in the plan
+
+| Code | Session | What it's for |
+|---|---|---|
+| RW | Run-walk | short slow running bouts with walking: the base of a restart |
+| E | Easy run | conversational pace, 80% of the work |
+| L | Long run | the key session, preferably at the weekend |
+| Q | Quality | fartlek, Norwegian 4×4, steady or race-pace reps — from phase 2 only |
+| R | Recovery | easy walk |
+| 🏁 | Race | your goal day |
+
+<Telefoni lang="en" voci={[['il-tuo-piano', 'Your plan: review it with the coach any time'], ['info', 'All the rules, in the app too']]} />
+
+<Invito lang="en" />

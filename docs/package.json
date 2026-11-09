@@ -1,0 +1,18 @@
+{
+  "name": "aac-docs",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Documentazione di Always Adaptive Coach (docs.aac.run)",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.42.10",
+    "astro": "^7.4.8",
+    "sharp": "^0.35.5"
+  }
+}

@@ -1,0 +1,73 @@
+---
+title: Always Adaptive Coach
+description: Il coach di corsa che ascolta il tuo corpo e cambia il piano ogni giorno. Dal primo passo alla maratona.
+template: splash
+hero:
+  title: Il piano di corsa che si adatta a te. Ogni giorno.
+  tagline: Always Adaptive Coach legge i dati del tuo orologio — frequenza cardiaca, HRV, sonno, corse — e trasforma una tabella qualunque nel tuo allenamento. Se hai dormito male, alleggerisce. Se vai forte, ti fa avanzare. E ti dice sempre perché.
+  image:
+    file: ../../assets/screens/it/oggi.png
+    alt: La schermata Oggi di AAC con la seduta del giorno
+  actions:
+    - text: Prova la demo
+      link: https://aac.run/demo
+      icon: right-arrow
+      variant: primary
+    - text: Come funziona
+      link: /discover/how-it-works/
+      variant: secondary
+---
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import Telefoni from '../../components/Telefoni.astro';
+import Invito from '../../components/Invito.astro';
+
+## Una tabella fissa non sa come stai. AAC sì.
+
+Le tabelle di allenamento trovate su una rivista o in un PDF sono uguali per tutti e non cambiano mai. Ma la tua vita cambia: una notte corta, una settimana di lavoro pesante, un raffreddore, una giornata in cui voli. **AAC ripete un ciclo semplice e trasparente: valuta, allena, ascolta, adatta.** Ogni giorno e ogni settimana.
+
+<div class="numeri not-content">
+  <div><b>5 km → 42 km</b><span>quattro obiettivi, dal primo passo alla maratona</span></div>
+  <div><b>Ogni giorno</b><span>la seduta si adatta a FC a riposo, HRV e sonno</span></div>
+  <div><b>Ogni settimana</b><span>il piano avanza, si ripete o fa un passo indietro</span></div>
+  <div><b>0 scatole nere</b><span>ogni cambiamento ha un motivo scritto</span></div>
+</div>
+
+<CardGrid stagger>
+  <Card title="Ascolta il tuo corpo" icon="heart">
+    Ogni mattina confronta FC a riposo, HRV e sonno con la tua media degli ultimi 28 giorni. Basta un segnale storto e la seduta si alleggerisce da sola.
+  </Card>
+  <Card title="Zone davvero tue" icon="setting">
+    Le zone cardiache partono dalla tua FC a riposo e massima, non solo dall'età. Ogni seduta ti dice il limite e da dove viene.
+  </Card>
+  <Card title="Ti protegge dagli infortuni" icon="warning">
+    Tiene d'occhio il carico: se aumenti troppo in fretta te lo dice, e se esageri alleggerisce la seduta. Il lungo cresce al massimo del 10%.
+  </Card>
+  <Card title="Sempre trasparente" icon="open-book">
+    Uno storico raccoglie ogni intervento del coach, con il motivo. Le notifiche ti avvisano anche ad app chiusa.
+  </Card>
+</CardGrid>
+
+## Fatta per chi corre davvero
+
+<Telefoni voci={[['piano', 'Il calendario: ogni seduta con il suo perché'], ['corsa', 'Ogni corsa su mappa satellitare'], ['video-finale', 'Il percorso in 3D, da condividere'], ['progressi', 'Obiettivo, previsioni e forma']]} />
+
+Funziona con **qualsiasi orologio** che carica le corse su [Intervals.icu](https://intervals.icu): Garmin, Apple Watch, Coros, Polar, Suunto, Wahoo. Si apre dal browser e si installa sul telefono come un'app, senza App Store.
+
+<Invito />
+
+## Da dove cominciare
+
+<CardGrid>
+  <Card title="Perché AAC" icon="star">
+    Cosa lo rende diverso da una tabella o da un'app qualsiasi. [Leggi →](/discover/why-aac/)
+  </Card>
+  <Card title="Primi passi" icon="rocket">
+    Account, orologio, app sul telefono e notifiche in dieci minuti. [Inizia →](/start/first-steps/)
+  </Card>
+  <Card title="Cosa aspettarti" icon="calendar">
+    Le prime settimane, le prime decisioni del coach, i primi traguardi. [Scopri →](/discover/what-to-expect/)
+  </Card>
+  <Card title="Installalo sul tuo server" icon="laptop">
+    Open source (AGPL-3.0): AAC gira anche a casa tua, con Docker. [Guida →](/self-hosting/install/)
+  </Card>
+</CardGrid>

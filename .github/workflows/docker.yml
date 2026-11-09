@@ -90,6 +90,7 @@ jobs:
           - { service: backend, dir: backend }
           - { service: frontend, dir: frontend }
           - { service: backup, dir: aac-backup }
+          - { service: docs, dir: docs }
     env:
       IMAGE: ghcr.io/${{ github.repository }}-${{ matrix.service }}
     permissions:

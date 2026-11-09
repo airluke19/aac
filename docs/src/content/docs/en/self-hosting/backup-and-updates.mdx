@@ -1,0 +1,42 @@
+---
+title: Backups and updates
+description: Everyday commands, verified backups and restore.
+sidebar:
+  order: 3
+---
+## Everyday commands
+
+| What | Command |
+|---|---|
+| Update to the latest version | `git pull && docker compose pull && docker compose up -d` |
+| Roll back to a known build | `AAC_TAG=sha-<commit>` in `.env`, then `docker compose pull && docker compose up -d` |
+| See the logs | `docker logs aac-backend` |
+| Status | `docker compose ps` |
+| Build the images yourself | `docker compose up -d --build` |
+
+## Backups
+
+Every night at 03:30 the `backup` service saves a verified copy of all databases (integrity check, SHA-256 checksums, row counts) into the `aac-backup` volume. It keeps 7 daily, 4 weekly and 6 monthly copies, and is marked *unhealthy* if the last backup is older than 26 hours.
+
+## Restore
+
+```bash
+docker compose stop backend
+docker compose run --rm backup node restore.js                  # list backups
+docker compose run --rm backup node restore.js 2026-11-08_0330  # restore one
+docker compose start backend
+```
+
+The restore checks everything before touching anything, moves the current data to `/data/pre-restore-<date>/` (never deletes it) and rolls back if something fails.
+
+Backups stay on the same machine: copy the `aac-backup` volume elsewhere to survive a disk failure, and keep `.env` somewhere safe (it isn't in the backup).
+
+## Verify the images
+
+Every image is signed and has its SBOM (the list of its components) in the registry:
+
+```bash
+gh attestation verify oci://ghcr.io/airluke19/aac-backend:latest --owner airluke19
+gh attestation verify oci://ghcr.io/airluke19/aac-backend:latest --owner airluke19 \
+  --predicate-type https://cyclonedx.org/bom
+```

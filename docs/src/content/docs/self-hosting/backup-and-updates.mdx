@@ -1,0 +1,42 @@
+---
+title: Backup e aggiornamenti
+description: Comandi di tutti i giorni, backup verificati e ripristino.
+sidebar:
+  order: 3
+---
+## Comandi di tutti i giorni
+
+| Cosa | Comando |
+|---|---|
+| Aggiornare all'ultima versione | `git pull && docker compose pull && docker compose up -d` |
+| Tornare a una versione precisa | `AAC_TAG=sha-<commit>` nel `.env`, poi `docker compose pull && docker compose up -d` |
+| Vedere i log | `docker logs aac-backend` |
+| Stato | `docker compose ps` |
+| Costruire le immagini in locale | `docker compose up -d --build` |
+
+## Backup
+
+Ogni notte alle 03:30 il servizio `backup` salva una copia verificata di tutti i database (controllo di integrità, impronte SHA-256, conteggio delle righe) nel volume `aac-backup`. Tiene 7 copie giornaliere, 4 settimanali e 6 mensili, e risulta *unhealthy* se l'ultimo backup ha più di 26 ore.
+
+## Ripristino
+
+```bash
+docker compose stop backend
+docker compose run --rm backup node restore.js                  # elenco dei backup
+docker compose run --rm backup node restore.js 2026-11-08_0330  # ripristina
+docker compose start backend
+```
+
+Il ripristino controlla tutto prima di toccare qualcosa, sposta i dati attuali in `/data/pre-restore-<data>/` (non li cancella mai) e torna indietro se qualcosa va storto.
+
+I backup restano sulla stessa macchina: copia il volume `aac-backup` altrove per sopravvivere a un guasto del disco, e conserva il `.env` in un posto sicuro (non è nel backup).
+
+## Verificare le immagini
+
+Ogni immagine è firmata e ha la sua SBOM (l'elenco dei componenti) nel registry:
+
+```bash
+gh attestation verify oci://ghcr.io/airluke19/aac-backend:latest --owner airluke19
+gh attestation verify oci://ghcr.io/airluke19/aac-backend:latest --owner airluke19 \
+  --predicate-type https://cyclonedx.org/bom
+```

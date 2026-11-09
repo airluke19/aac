@@ -1,0 +1,67 @@
+---
+title: Come funziona
+description: Le regole del coach adattivo, spiegate senza giri di parole.
+sidebar:
+  order: 2
+---
+import Telefoni from '../../../components/Telefoni.astro';
+import Invito from '../../../components/Invito.astro';
+
+AAC prende i dati che il tuo orologio manda a **Intervals.icu** — corse, frequenza cardiaca, HRV, sonno, passi — e li usa per decidere, giorno per giorno, cosa ti conviene fare. Ecco come, livello per livello.
+
+## 1. Il punto di partenza
+
+Al primo accesso AAC legge le corse delle ultime settimane: quante ne hai fatte, quanti chilometri, qual è stata la corsa continua più lunga. Da lì **propone la settimana del piano da cui partire**. Se non corri da tempo si comincia con la corsa-cammino; se corri già 30 minuti senza fermarti salti la fase iniziale. Puoi sempre scegliere a mano, ma il coach ti dice cosa consiglia e perché.
+
+## 2. Ogni giorno: la seduta
+
+Ogni mattina AAC confronta i tuoi valori con la **tua media personale degli ultimi 28 giorni** (servono almeno 5 giorni di dati):
+
+| Segnale | Soglia |
+|---|---|
+| FC a riposo | almeno **+5 bpm** sulla tua media |
+| HRV | almeno **−15%** sulla tua media |
+| Sonno | meno di **5 h 30′** |
+| Forma (TSB) | sotto **−25** |
+| Carico recente | oltre **1,5 volte** quello abituale |
+
+Basta un segnale e la seduta scende a **circa il 60%**; le sedute intense diventano **25 minuti facili**. Il motivo compare sulla seduta, nello storico del coach e, se le hai attivate, in una notifica.
+
+## 3. Ogni settimana: il piano
+
+A fine settimana il coach decide:
+
+- **Si avanza** — hai fatto almeno 2 sedute su 3 e non ci sono allarmi.
+- **Si ripete** — hai fatto 0–1 sedute, oppure la frequenza cardiaca media delle corse era troppo alta (zone 4–5).
+- **Un passo indietro** — sovraccarico o recupero scarso.
+
+Contano le corse fatte in qualunque giorno della settimana, anche fuori dal calendario. Le camminate no, tranne per le sedute di "camminata di recupero".
+
+## 4. Sedute e giorni
+
+Si parte da **3 sedute a settimana**. La quarta (e la quinta per mezza e maratona) **si guadagna**: tre settimane di fila tutte fatte, senza fatica e con il carico che cresce in modo sicuro. Le sedute in più sono corse facili: più volume, non più intensità (il principio 80/20).
+
+Scegli i tuoi giorni come **proposti** (il coach li usa quando può) o **obbligatori** (solo quelli). Il coach non mette mai due sedute dure in giorni di fila e preferisce il lungo nel weekend.
+
+## 5. Ogni tre settimane: l'intensità
+
+Scegli tra *tranquilla*, *equilibrata* e *ambiziosa*. Poi è il coach a ritoccarla di ±10%: se tre settimane di fila sono state troppo facili sale, se due su tre sono state troppo dure scende. Senza interruttori: è automatico.
+
+## 6. Zone, passo e previsioni
+
+Le zone cardiache sono **personali**: con abbastanza dati di FC a riposo usano la riserva cardiaca (approfondisci in [Zone e frequenza cardiaca](/coach/heart-rate-zones/)). Dalle tue corse AAC calcola l'efficienza (velocità per battito), il **passo indicativo** di ogni seduta, il **tempo previsto in gara** e la **data in cui l'obiettivo diventa realistico**.
+
+## Le sedute del piano
+
+| Sigla | Seduta | A cosa serve |
+|---|---|---|
+| CC | Corsa e cammino | tratti brevi di corsa lenta alternati a camminata: la base della ripartenza |
+| F | Corsa facile | ritmo da conversazione, l'80% del lavoro |
+| L | Lungo | la seduta chiave, di preferenza nel weekend |
+| Q | Qualità | fartlek, 4×4 norvegese, frazioni a ritmo medio o gara — solo dalla fase 2 |
+| R | Recupero | camminata tranquilla |
+| 🏁 | Gara | il giorno del tuo obiettivo |
+
+<Telefoni voci={[['il-tuo-piano', 'Il tuo piano: rivedilo con il coach quando vuoi'], ['info', 'Tutte le regole, anche nell’app']]} />
+
+<Invito />

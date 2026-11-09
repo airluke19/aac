@@ -1,0 +1,14 @@
+---
+// Galleria di schermate dell'app (generate dalla demo pubblica, dati simulati)
+import { Image } from 'astro:assets';
+const immagini = import.meta.glob<{ default: ImageMetadata }>('../assets/screens/*/*.{png,jpg}', { eager: true });
+interface Props { lang?: 'it' | 'en'; voci: [string, string][] }
+const { lang = 'it', voci } = Astro.props;
+const trova = (nome: string) => immagini[`../assets/screens/${lang}/${nome}.png`] || immagini[`../assets/screens/${lang}/${nome}.jpg`];
+---
+<div class="telefoni not-content">
+  {voci.map(([nome, didascalia]) => {
+    const m = trova(nome);
+    return m ? <figure><Image src={m.default} alt={didascalia} width={560} /><figcaption>{didascalia}</figcaption></figure> : null;
+  })}
+</div>

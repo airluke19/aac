@@ -1,0 +1,47 @@
+---
+title: Heart-rate zones
+description: How AAC computes your zones and each session's limit, and why.
+sidebar:
+  order: 1
+---
+Every AAC session has a **heart rate to respect**. It isn't a number from a table: it comes from your data, and the session always tells you where it comes from ("Why this HR").
+
+## The five zones
+
+| Zone | % | What it is |
+|---|---|---|
+| Z1 | 50–60% | recovery and warm-up |
+| Z2 | 60–70% | easy aerobic: easy runs and long runs |
+| Z3 | 70–80% | steady aerobic: steady pace |
+| Z4 | 80–90% | threshold: quality sessions |
+| Z5 | 90–100% | maximal |
+
+## Heart-rate reserve: zones that are truly yours
+
+With at least **5 resting-HR readings in the last 28 days**, AAC computes your zones on your **heart-rate reserve** (Karvonen method), the same approach used by Garmin, Polar and serious coaches:
+
+> **Zone HR = resting HR + % × (max HR − resting HR)**
+
+So two people of the same age but with different fitness get different zones. The fitter one has a lower resting HR and a wider margin.
+
+**A real example.** With max HR 184 and resting HR 45, easy running goes up to **142 bpm**. With the old calculation, 70% of max HR alone, the limit would have been 128: a fit runner would have had to walk when they could jog comfortably.
+
+## The safeguards
+
+- **Easy running never goes above 80% of max HR**, whatever your resting HR.
+- **Run-walk is more cautious**: 65% of the reserve, because that's where the base is built.
+- **Resting HR is robust**: 28-day median, only values between 40 and 90 bpm. One bad night doesn't move your zones.
+- **Without resting data** the standard zones as % of max HR are used.
+- The **Norwegian 4×4** stays at 85–95% of max HR, as in the original protocol; **race zones** are specific to your goal.
+
+## Max heart rate
+
+If you know it (from a test or a race), enter it in your profile. Otherwise AAC estimates it with the **Tanaka formula: 208 − 0.7 × age**, more accurate than the classic 220 − age. The estimate can be off by ±10 bpm: that's why **your body counts too**.
+
+## The talk test
+
+The number is a guide, your body is the judge. **If you can speak in full sentences you're in the easy zone**, even if your watch shows a few beats more. If you're out of breath, slow down or walk.
+
+## When they change
+
+Zones update on their own when your resting HR or max HR changes. Every change shows up in the coach's history and, with notifications on, on your phone: *"Heart-rate zones updated: easy running up to 142 bpm…"*.

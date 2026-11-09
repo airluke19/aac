@@ -2,14 +2,14 @@
 version: 2
 updates:
   - package-ecosystem: npm
-    directories: [/backend, /aac-backup]
+    directories: [/backend, /aac-backup, /docs]
     target-branch: staging
     schedule: { interval: weekly, day: monday }
     groups:
       npm-minor-patch: { update-types: [minor, patch] }
 
   - package-ecosystem: docker
-    directories: [/backend, /frontend, /aac-backup]
+    directories: [/backend, /frontend, /aac-backup, /docs]
     target-branch: staging
     schedule: { interval: weekly, day: monday }
     # Node: niente salti di versione maggiore automatici (le dispari non sono LTS); si passa a mano alla LTS successiva

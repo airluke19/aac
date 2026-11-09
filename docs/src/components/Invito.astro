@@ -1,0 +1,11 @@
+---
+// Invito a provare l'app: la demo non richiede account
+interface Props { lang?: 'it' | 'en' }
+const { lang = 'it' } = Astro.props;
+const it = lang === 'it';
+---
+<div class="invito not-content">
+  <p>{it ? 'Vuoi vederlo dal vivo? La demo è aperta a tutti: un atleta simulato alla sesta settimana, con piano, dati e adattamenti veri del motore.' : 'Want to see it live? The demo is open to everyone: a simulated athlete in week six, with the real engine’s plan, data and adaptations.'}</p>
+  <a href="https://aac.run/demo">{it ? 'Apri la demo' : 'Open the demo'}</a>
+  <a class="secondario" href="https://aac.run">{it ? 'Accedi ad AAC' : 'Sign in to AAC'}</a>
+</div>

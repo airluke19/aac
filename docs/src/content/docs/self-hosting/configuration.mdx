@@ -1,0 +1,25 @@
+---
+title: Configurazione
+description: Tutte le opzioni del file .env.
+sidebar:
+  order: 2
+---
+| Variabile | Descrizione |
+|---|---|
+| `PUBLIC_URL` | URL pubblico HTTPS, senza barra finale |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Client OAuth di Google (Web application), redirect `<PUBLIC_URL>/auth/google/callback` |
+| `ADMIN_EMAIL` | Account Google dell'amministratore |
+| `APP_SECRET` | Segreto che cifra le chiavi Intervals.icu (`openssl rand -base64 32`); non cambiarlo mai. Se vuoto, viene creato un file chiave nel volume dei dati, incluso nei backup |
+| `ATHLETE_AGE` | Età iniziale dell'amministratore per stimare la FC max (default `33`); poi si cambia dal profilo |
+| `SYNC_CRON` | Frequenza di sincronizzazione (default `*/30 * * * *`); l'app sincronizza anche all'apertura e con il pulsante |
+| `BIND_ADDR` / `HOST_PORT` | Indirizzo e porta dell'app sull'host (default `127.0.0.1:3000`) |
+| `AAC_TAG` | Versione delle immagini: `latest` (default), `staging` o `sha-<commit>` |
+| `COMPOSE_PROFILES` | `backup` attiva i backup notturni; `docs` anche questa documentazione. Togli `backup` solo su un'istanza di prova |
+| `DOCS_PORT` | Porta della documentazione sull'host, se attiva (default `3001`) |
+| `BACKUP_CRON` / `BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY` / `BACKUP_KEEP_MONTHLY` | Ora e conservazione dei backup (default `30 3 * * *`, 7 / 4 / 6) |
+| `LOGIN_GOOGLE` | `off` forza la modalità utente singolo; il backend rifiuta allora le richieste da internet |
+| `AAC_AMBIENTE` | `staging` mostra un badge **BETA**, così un'istanza di prova non si confonde con la produzione |
+| `COMPOSE_PROJECT_NAME` / `AAC_PREFIX` | Più istanze sulla stessa macchina (container e volumi `<AAC_PREFIX>-backend`, `<AAC_PREFIX>-db`…) |
+| `INTERVALS_API_KEY` / `INTERVALS_ATHLETE_ID` | Solo modalità utente singolo: credenziali Intervals.icu (si possono inserire anche nel profilo) |
+
+Le **notifiche push** non richiedono configurazione: le chiavi VAPID si generano al primo avvio e restano cifrate nel database di sistema, incluso nei backup.

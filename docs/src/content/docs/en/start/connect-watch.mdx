@@ -1,0 +1,47 @@
+---
+title: Connect your watch
+description: How to bring your watch data to Intervals.icu, the bridge between your wrist and AAC.
+sidebar:
+  order: 2
+---
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+AAC reads your data from **Intervals.icu**. Activities must reach Intervals **directly from your watch**: those imported from Strava stay invisible to AAC. If that happens, AAC warns you and brings you to this guide.
+
+<Tabs syncKey="watch">
+  <TabItem label="Garmin">
+    1. Open **intervals.icu** and sign in.
+    2. Go to **Settings** and find the **Garmin** section.
+    3. Tap **Connect**, sign in with Garmin Connect and allow everything (activities and health data).
+    4. Keep **wellness** download on: resting HR, HRV and sleep come from there.
+  </TabItem>
+  <TabItem label="Apple Watch">
+    1. On your iPhone install the **Intervals.icu Companion** app from the App Store.
+    2. Open it, sign in with your Intervals.icu account and allow access to **Health** (workouts, heart rate, HRV, sleep).
+    3. Runs recorded with the Workout app arrive on their own. Resting HR and HRV may arrive a few hours later: that's normal.
+  </TabItem>
+  <TabItem label="Coros">
+    1. Open **intervals.icu → Settings** and find **Coros**.
+    2. Tap **Connect**, sign in with your Coros account and allow access.
+  </TabItem>
+  <TabItem label="Polar">
+    1. Open **intervals.icu → Settings** and find **Polar**.
+    2. Tap **Connect**, sign in with Polar Flow and allow access, including sleep and Nightly Recharge.
+  </TabItem>
+  <TabItem label="Suunto">
+    1. Open **intervals.icu → Settings** and find **Suunto**.
+    2. Tap **Connect**, sign in with your Suunto account and allow access.
+  </TabItem>
+  <TabItem label="Other">
+    1. In **intervals.icu → Settings** check the list of direct connections: if your watch is there, connect it from there.
+    2. If it isn't, look in your watch app for an export to Intervals.icu or automatic upload of **.FIT** files.
+    3. Otherwise you can upload each run's .FIT file by hand.
+  </TabItem>
+</Tabs>
+
+## Good to know
+
+- **Strava can stay connected**: Intervals merges duplicates, but AAC only uses activities that arrive directly.
+- **Old runs** that came only from Strava can't be recovered that way: if Intervals offers it, import your history directly from the watch.
+- **After connecting** tap *Sync* in AAC: new runs show up within minutes.
+- **More data, more precision**: with resting HR, HRV and sleep the coach also adapts the session of the day and personalises your heart-rate zones.

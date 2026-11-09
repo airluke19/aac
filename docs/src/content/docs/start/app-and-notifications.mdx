@@ -1,0 +1,42 @@
+---
+title: App e notifiche
+description: Installa AAC sul telefono e ricevi la seduta ogni mattina.
+sidebar:
+  order: 3
+---
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+AAC è un'app web: si apre dal browser e **si installa sul telefono senza App Store**. Una volta installata si apre a tutto schermo, come un'app vera, e può mandarti le notifiche.
+
+<Tabs syncKey="telefono">
+  <TabItem label="iPhone">
+    1. Apri **aac.run** in **Safari**.
+    2. Tocca **Condividi** (il quadrato con la freccia) e scegli **Aggiungi alla schermata Home**.
+    3. Apri AAC dall'icona e accedi (l'app installata ha i suoi cookie: il login va rifatto una volta).
+    4. In Oggi tocca **Attiva** nel riquadro delle notifiche, oppure vai in **Profilo → Notifiche**.
+
+    Su iPhone le notifiche funzionano solo con l'app sulla schermata Home (iOS 16.4 o successivo): è una regola di Apple.
+  </TabItem>
+  <TabItem label="Android">
+    1. Apri **aac.run** in Chrome (o Samsung Internet, Edge).
+    2. Tocca **Installa l'app** in Profilo → Notifiche, oppure dal menu del browser **Installa app**.
+    3. Tocca **Attiva le notifiche** e conferma il permesso.
+  </TabItem>
+  <TabItem label="Computer">
+    Le notifiche funzionano anche nel browser del computer: vai in **Profilo → Notifiche** e tocca **Attiva**.
+  </TabItem>
+</Tabs>
+
+## Cosa ricevi
+
+Le notifiche sono **attive di default**: devi solo dare il permesso al telefono, con un tocco.
+
+| Notifica | Quando | Esempio |
+|---|---|---|
+| **Seduta del mattino** | all'ora che scegli, solo nei giorni con una seduta | *Oggi si corre — Corsa facile · 40′ · FC < 149* |
+| **Avvisi del coach** | ogni volta che il coach cambia qualcosa | *Seduta alleggerita — sonno di 4 h 50′* |
+| **Riepilogo della domenica** | alle 19:00 | *2 corse e 12,4 km negli ultimi 7 giorni. Prossima: martedì, Lungo 50′* |
+
+Arrivano nella lingua che usi nell'app. Puoi spegnerle una per una in **Profilo → Notifiche**, e ogni avviso finisce anche nello [storico del coach](/coach/coach-history/).
+
+Le notifiche contengono solo la seduta e i chilometri, **mai dati di salute**.

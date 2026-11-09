@@ -1,0 +1,73 @@
+---
+title: Always Adaptive Coach
+description: The running coach that listens to your body and changes your plan every day. From your first step to the marathon.
+template: splash
+hero:
+  title: The running plan that adapts to you. Every day.
+  tagline: Always Adaptive Coach reads your watch data — heart rate, HRV, sleep, runs — and turns a generic plan into your training. Slept badly? It eases off. Flying? It moves you forward. And it always tells you why.
+  image:
+    file: ../../../assets/screens/en/oggi.png
+    alt: The AAC Today screen with the session of the day
+  actions:
+    - text: Try the demo
+      link: https://aac.run/demo
+      icon: right-arrow
+      variant: primary
+    - text: How it works
+      link: /en/discover/how-it-works/
+      variant: secondary
+---
+import { Card, CardGrid } from '@astrojs/starlight/components';
+import Telefoni from '../../../components/Telefoni.astro';
+import Invito from '../../../components/Invito.astro';
+
+## A fixed plan doesn't know how you feel. AAC does.
+
+Training plans from a magazine or a PDF are the same for everyone and never change. But your life does: a short night, a heavy week at work, a cold, a day when you fly. **AAC repeats a simple, transparent cycle: assess, train, listen, adapt.** Every day and every week.
+
+<div class="numeri not-content">
+  <div><b>5K → 42K</b><span>four goals, from your first step to the marathon</span></div>
+  <div><b>Every day</b><span>your session adapts to resting HR, HRV and sleep</span></div>
+  <div><b>Every week</b><span>the plan moves forward, repeats or steps back</span></div>
+  <div><b>0 black boxes</b><span>every change comes with a written reason</span></div>
+</div>
+
+<CardGrid stagger>
+  <Card title="Listens to your body" icon="heart">
+    Every morning it compares resting HR, HRV and sleep with your own 28-day average. One bad signal and the session gets lighter on its own.
+  </Card>
+  <Card title="Zones that are truly yours" icon="setting">
+    Heart-rate zones start from your resting and max HR, not just your age. Every session shows its limit and where it comes from.
+  </Card>
+  <Card title="Keeps you injury-free" icon="warning">
+    It watches your load: if you build up too fast it tells you, and if you overdo it it lightens the session. The long run grows by 10% at most.
+  </Card>
+  <Card title="Always transparent" icon="open-book">
+    A history collects every intervention by the coach, with the reason. Notifications reach you even when the app is closed.
+  </Card>
+</CardGrid>
+
+## Made for people who actually run
+
+<Telefoni lang="en" voci={[['piano', 'The calendar: every session with its reason'], ['corsa', 'Every run on a satellite map'], ['video-finale', 'Your route in 3D, ready to share'], ['progressi', 'Goal, forecasts and form']]} />
+
+It works with **any watch** that uploads runs to [Intervals.icu](https://intervals.icu): Garmin, Apple Watch, Coros, Polar, Suunto, Wahoo. It opens in the browser and installs on your phone like an app, no app store needed.
+
+<Invito lang="en" />
+
+## Where to start
+
+<CardGrid>
+  <Card title="Why AAC" icon="star">
+    What makes it different from a plan or any other app. [Read →](/en/discover/why-aac/)
+  </Card>
+  <Card title="Getting started" icon="rocket">
+    Account, watch, app on your phone and notifications in ten minutes. [Start →](/en/start/first-steps/)
+  </Card>
+  <Card title="What to expect" icon="calendar">
+    Your first weeks, the coach's first decisions, your first milestones. [Discover →](/en/discover/what-to-expect/)
+  </Card>
+  <Card title="Run it on your server" icon="laptop">
+    Open source (AGPL-3.0): AAC also runs at home, with Docker. [Guide →](/en/self-hosting/install/)
+  </Card>
+</CardGrid>

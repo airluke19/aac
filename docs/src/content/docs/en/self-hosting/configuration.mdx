@@ -1,0 +1,25 @@
+---
+title: Configuration
+description: Every option in the .env file.
+sidebar:
+  order: 2
+---
+| Variable | Description |
+|---|---|
+| `PUBLIC_URL` | Public HTTPS URL, no trailing slash |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth client (Web application), redirect URI `<PUBLIC_URL>/auth/google/callback` |
+| `ADMIN_EMAIL` | Google account of the administrator |
+| `APP_SECRET` | Secret that encrypts the Intervals.icu keys (`openssl rand -base64 32`); never change it. If empty, a key file is generated in the data volume and included in backups |
+| `ATHLETE_AGE` | Initial age of the admin for the max-HR estimate (default `33`); editable later in the profile |
+| `SYNC_CRON` | Sync schedule (default `*/30 * * * *`); the app also syncs when opened and with the Sync button |
+| `BIND_ADDR` / `HOST_PORT` | Host address and port of the app (default `127.0.0.1:3000`) |
+| `AAC_TAG` | Image tag: `latest` (default), `staging` or `sha-<commit>` |
+| `COMPOSE_PROFILES` | `backup` runs the nightly backups; `docs` also serves this documentation. Remove `backup` only on a test instance |
+| `DOCS_PORT` | Host port of the documentation, when enabled (default `3001`) |
+| `BACKUP_CRON` / `BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY` / `BACKUP_KEEP_MONTHLY` | Backup time and retention (defaults `30 3 * * *`, 7 / 4 / 6) |
+| `LOGIN_GOOGLE` | `off` forces single-user mode; the backend then refuses requests coming from the internet |
+| `AAC_AMBIENTE` | `staging` shows a **BETA** badge, so a test instance is never mistaken for production |
+| `COMPOSE_PROJECT_NAME` / `AAC_PREFIX` | Several instances on one host (containers and volumes named `<AAC_PREFIX>-backend`, `<AAC_PREFIX>-db`…) |
+| `INTERVALS_API_KEY` / `INTERVALS_ATHLETE_ID` | Single-user mode only: Intervals.icu credentials (they can also be entered in the profile) |
+
+**Push notifications** need no configuration: the VAPID keys are generated on first start and stored encrypted in the system database, which is included in backups.

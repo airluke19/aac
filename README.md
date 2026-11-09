@@ -6,6 +6,8 @@
 
 ---
 
+> 📖 **Documentation:** [docs.aac.run](https://docs.aac.run) (Italian and English) · **Live demo:** [aac.run/demo](https://aac.run/demo)
+
 ## What it is
 
 AAC is a web app (mobile‑first, works on any phone or computer) that acts as your personal running coach:
@@ -205,7 +207,8 @@ The restore checks everything before touching anything, moves the current data t
 | `SYNC_CRON` | Sync schedule (default `*/30 * * * *`); the app also syncs when opened and with the Sync button |
 | `BIND_ADDR` / `HOST_PORT` | Host address and port of the app (default `127.0.0.1:3000`) |
 | `AAC_TAG` | Image tag: `latest` (default, branch `main`), `staging`, or `sha-<commit>` |
-| `COMPOSE_PROFILES` | `backup` runs the nightly backups; remove it only on a test instance |
+| `COMPOSE_PROFILES` | `backup` runs the nightly backups (remove it only on a test instance); add `docs` to also serve the documentation site |
+| `DOCS_PORT` | Host port of the documentation site when the `docs` profile is on (default `3001`) |
 | `BACKUP_CRON` / `BACKUP_KEEP_DAILY` / `BACKUP_KEEP_WEEKLY` / `BACKUP_KEEP_MONTHLY` | Backup time and retention (defaults `30 3 * * *`, 7 / 4 / 6) |
 | `LOGIN_GOOGLE` | `off` forces single‑user mode; the backend then refuses requests coming from the internet |
 | `AAC_AMBIENTE` | `staging` shows a **BETA** badge, so a test instance is never mistaken for production |

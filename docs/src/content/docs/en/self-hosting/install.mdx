@@ -1,0 +1,89 @@
+---
+title: Installation
+description: AAC on your own server in six steps, with Docker.
+sidebar:
+  order: 1
+---
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+AAC is **open source** (AGPL-3.0 licence) and runs wherever you like: a mini PC at home, a VPS, a Raspberry Pi with Docker. Your data stays on your disk.
+
+## What you need
+
+- A Linux machine (or Mac/Windows) with **Docker** and **Docker Compose** (`docker compose version` must work)
+- A **domain** with HTTPS in front of it (Caddy, Nginx, Traefik or a Cloudflare Tunnel)
+- A **Google account** to create the sign-in client (free)
+- For each user, a free **Intervals.icu** account with their watch syncing to it
+
+<Steps>
+
+1. **Download**
+
+   ```bash
+   git clone https://github.com/airluke19/aac.git
+   cd aac
+   cp .env.example .env
+   chmod 600 .env
+   ```
+
+2. **Create the Google sign-in client**
+
+   1. Open [Google Cloud Console → Credentials](https://console.cloud.google.com/apis/credentials) (create a project if asked).
+   2. **Create credentials → OAuth client ID → Web application.**
+   3. Under **Authorized redirect URIs** add `https://YOUR-DOMAIN/auth/google/callback`.
+   4. Copy the **Client ID** and **Client secret**.
+
+3. **Fill in `.env`**
+
+   ```bash
+   PUBLIC_URL=https://YOUR-DOMAIN           # no trailing slash
+   GOOGLE_CLIENT_ID=...                     # from step 2
+   GOOGLE_CLIENT_SECRET=...                 # from step 2
+   ADMIN_EMAIL=you@gmail.com                # your Google account: you approve new users
+   APP_SECRET=...                           # openssl rand -base64 32  (never change it afterwards)
+   ```
+
+   Leave `COMPOSE_PROFILES=backup` as it is: it turns on the nightly backups.
+
+4. **Start**
+
+   ```bash
+   docker compose pull      # download the ready-made images
+   docker compose up -d     # start
+   docker compose ps        # wait until every service says (healthy), about 30 seconds
+   ```
+
+   The app now answers on `http://127.0.0.1:3000` on that machine.
+
+5. **Put HTTPS in front of it**
+
+   - **Caddy** (gets the certificate on its own): `caddy reverse-proxy --from YOUR-DOMAIN --to 127.0.0.1:3000`
+   - **Cloudflare Tunnel**: create a tunnel for `YOUR-DOMAIN` with service `http://127.0.0.1:3000`
+
+   If the proxy runs on *another* machine, set `BIND_ADDR=0.0.0.0` in `.env` and run `docker compose up -d` again.
+
+6. **First sign-in**
+
+   1. Open `https://YOUR-DOMAIN` and sign in with the `ADMIN_EMAIL` account.
+   2. In your profile paste your Intervals.icu **Athlete ID** and **API key**. The key is stored encrypted.
+   3. Choose your goal: AAC reads your history and suggests where to start.
+
+   New users sign in with Google and wait for your approval (gear icon next to your avatar).
+
+</Steps>
+
+<Aside type="caution" title="Just trying it on your computer?">
+Leave the Google variables empty: AAC starts in single-user mode **without sign-in**, on `http://127.0.0.1:3000` only. Never expose that mode to the internet.
+</Aside>
+
+## How it's built
+
+Three Docker services, each with its own image (signed, with an SBOM and a Trivy vulnerability scan):
+
+| Service | What it does |
+|---|---|
+| `frontend` | unprivileged nginx: app files, access control, security headers (strict CSP) |
+| `backend` | Node.js: API, Intervals.icu sync, coach engine, notifications |
+| `backup` | verified nightly backups of the SQLite databases |
+
+All containers run without root, with a read-only file system and no capabilities. One SQLite database per user, Intervals keys encrypted with AES-256-GCM.

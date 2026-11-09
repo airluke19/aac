@@ -1,0 +1,76 @@
+/* Stile di aac.run: SF Pro / Inter, nero profondo, verde d'accento, card arrotondate. */
+@font-face { font-family: "Inter"; font-style: normal; font-display: swap; font-weight: 100 900; src: url(/fonts/inter-5.3.0-latin-opsz.woff2) format("woff2");
+  unicode-range: U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U+0304,U+0308,U+0329,U+2000-206F,U+20AC,U+2122,U+2191,U+2193,U+2212,U+2215,U+FEFF,U+FFFD; }
+@font-face { font-family: "Inter"; font-style: normal; font-display: swap; font-weight: 100 900; src: url(/fonts/inter-5.3.0-latin-ext-opsz.woff2) format("woff2");
+  unicode-range: U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF; }
+
+:root {
+  --sl-font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --sl-font-system: var(--sl-font);
+  --aac-disp: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Inter", "Segoe UI", Roboto, sans-serif;
+  --aac-num: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, "Inter", sans-serif;
+  --sl-color-accent-low: #0b2a15;
+  --sl-color-accent: #30d158;
+  --sl-color-accent-high: #c4f7d1;
+  --sl-color-black: #000000;
+  --sl-color-bg: #000000;
+  --sl-color-bg-nav: #000000;
+  --sl-color-bg-sidebar: #000000;
+  --sl-color-gray-6: #1c1c1e;
+  --sl-color-gray-5: #2c2c2e;
+  --sl-color-hairline: #2c2c2e;
+  --sl-color-hairline-light: #3a3a3c;
+  --aac-card: #1c1c1e;
+  --aac-glow: rgba(48, 209, 88, 0.16);
+  --sl-content-width: 46rem;
+}
+:root[data-theme='light'] {
+  --sl-color-accent-low: #d9f6e1;
+  --sl-color-accent: #248a3d;
+  --sl-color-accent-high: #0d3b1a;
+  --sl-color-white: #000000;
+  --sl-color-bg: #f2f2f7;
+  --sl-color-bg-nav: #ffffff;
+  --sl-color-bg-sidebar: #f2f2f7;
+  --aac-card: #ffffff;
+  --aac-glow: rgba(36, 138, 61, 0.12);
+}
+
+h1, h2, h3, h4, .hero h1, .site-title { font-family: var(--aac-disp); letter-spacing: -0.022em; }
+.sl-markdown-content h2 { font-weight: 700; }
+.site-title { font-weight: 700; }
+.site-title img { height: 1.9rem; }
+
+/* Hero */
+.hero { padding-block: 2.5rem 1rem; }
+.hero h1 { font-size: clamp(2.4rem, 7vw, 4rem); line-height: 1.02; font-weight: 800; }
+.hero .tagline { font-size: clamp(1.05rem, 2.4vw, 1.3rem); color: var(--sl-color-gray-2); }
+.hero > img, .hero .hero-html img { max-width: 300px; border-radius: 38px; box-shadow: 0 30px 80px var(--aac-glow), 0 10px 40px rgba(0,0,0,.45); border: 1px solid var(--sl-color-hairline-light); }
+.sl-link-button { border-radius: 999px !important; font-weight: 700; }
+
+/* Card in stile app */
+.card { border-radius: 20px !important; background: var(--aac-card) !important; border: 1px solid var(--sl-color-hairline) !important; }
+.card .icon { border-radius: 12px !important; }
+
+/* Telefoni affiancati */
+.telefoni { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 1.25rem; margin-block: 1.5rem; }
+.telefoni figure { margin: 0; text-align: center; }
+.telefoni img, .sl-markdown-content img.telefono { width: 100%; max-width: 280px; height: auto; border-radius: 26px; border: 1px solid var(--sl-color-hairline-light); box-shadow: 0 18px 50px rgba(0,0,0,.35); }
+.telefoni figcaption { margin-top: .6rem; font-size: .88rem; color: var(--sl-color-gray-3); }
+.sl-markdown-content > p > img { border-radius: 22px; }
+
+/* Numeri grandi come nell'app */
+.numeri { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1rem; margin-block: 1.5rem; }
+.numeri div { padding: 1rem 1.1rem; border-radius: 20px; background: var(--aac-card); border: 1px solid var(--sl-color-hairline); }
+.numeri b { display: block; font-family: var(--aac-num); font-size: 2rem; font-weight: 800; line-height: 1; color: var(--sl-color-accent); }
+.numeri span { font-size: .9rem; color: var(--sl-color-gray-3); }
+
+/* Invito alla demo */
+.invito { margin-block: 2rem; padding: 1.4rem 1.5rem; border-radius: 24px; background: linear-gradient(135deg, var(--sl-color-accent-low), var(--aac-card)); border: 1px solid color-mix(in srgb, var(--sl-color-accent) 40%, transparent); }
+.invito p { margin: 0 0 .9rem; font-size: 1.05rem; }
+.invito a { display: inline-block; margin-right: .6rem; padding: .55rem 1.1rem; border-radius: 999px; font-weight: 700; text-decoration: none; background: var(--sl-color-accent); color: #000; }
+.invito a.secondario { background: transparent; color: var(--sl-color-text-accent); border: 1px solid var(--sl-color-accent); }
+:root[data-theme='light'] .invito a { color: #fff; }
+:root[data-theme='light'] .invito a.secondario { color: var(--sl-color-accent); }
+
+@media (prefers-reduced-motion: no-preference) { .telefoni img { transition: transform .25s ease; } .telefoni img:hover { transform: translateY(-4px); } }
