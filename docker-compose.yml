@@ -39,7 +39,24 @@ services:
     container_name: ${AAC_PREFIX:-aac}-frontend
     restart: unless-stopped
     depends_on:
-      # Documentazione pubblica (docs.aac.run): sito statico, nessun login. Solo con COMPOSE_PROFILES=...,docs
+      backend:
+        condition: service_healthy
+    ports:
+      # Di default solo 127.0.0.1 (es. tunnel Cloudflare sullo stesso host). BIND_ADDR=0.0.0.0
+      # nel .env serve solo se il reverse proxy e' su un'altra macchina.
+      - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:8080"
+    logging: *logging
+    mem_limit: 128m
+    pids_limit: 64
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+
+  # Documentazione pubblica (docs.aac.run): sito statico, nessun login. Solo con COMPOSE_PROFILES=...,docs
   docs:
     profiles: ["docs"]
     image: ghcr.io/airluke19/aac-docs:${AAC_TAG:-latest}
@@ -52,23 +69,6 @@ services:
     logging: *logging
     mem_limit: 64m
     pids_limit: 32
-    read_only: true
-    tmpfs:
-      - /tmp
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-
-  backend:
-        condition: service_healthy
-    ports:
-      # Di default solo 127.0.0.1 (es. tunnel Cloudflare sullo stesso host). BIND_ADDR=0.0.0.0
-      # nel .env serve solo se il reverse proxy e' su un'altra macchina.
-      - "${BIND_ADDR:-127.0.0.1}:${HOST_PORT:-3000}:8080"
-    logging: *logging
-    mem_limit: 128m
-    pids_limit: 64
     read_only: true
     tmpfs:
       - /tmp
