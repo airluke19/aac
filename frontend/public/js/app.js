@@ -514,13 +514,15 @@
       'Senza la tua FC massima usa la stima dall’età.',
       'Non sostituisce il medico: se senti dolore, fermati.',
       'Dati su un server privato, un database per utente, chiave Intervals cifrata.',
-      'L’amministratore vede quando usi l’app (giorni e minuti, finché hai l’account), mai cosa guardi.'
+      'L’amministratore vede quando usi l’app (giorni e minuti, finché hai l’account), mai cosa guardi.',
+      'Notifiche (se le attivi): solo la seduta del giorno e il riepilogo della settimana, niente dati di salute. Passano dal servizio di notifiche del tuo telefono (Apple o Google).'
     ], [
       '<b>Tailored plan</b>: it adapts to your data and every change comes with a written reason.',
       'Without your max HR it uses the age-based estimate.',
       'It does not replace a doctor: if you feel pain, stop.',
       'Data on a private server, one database per user, encrypted Intervals key.',
-      'The administrator sees when you use the app (days and minutes, while you have an account), never what you look at.'
+      'The administrator sees when you use the app (days and minutes, while you have an account), never what you look at.',
+      'Notifications (if you turn them on): only your session for the day and your weekly recap, no health data. They go through your phone’s notification service (Apple or Google).'
     ]));
 
     const elenco = '<div class="sec-title"><h2>' + T('Approfondisci', 'Learn more') + '</h2></div><section class="nf-list">' +
@@ -1810,6 +1812,7 @@
     try { ME = await caricaJson('/api/me'); } catch (_) { return; }
     segnaAmbiente(ME.ambiente);
     battito();
+    if (!ME.demo) registraSW(); // app installabile e notifiche push
     if (ME.profilo && ME.profilo.colore && ME.profilo.colore !== document.documentElement.getAttribute('data-accent')) applicaColore(ME.profilo.colore);
     // i dati arrivano prima del profilo: si ridisegna per mostrare cio' che dipende da ME (es. la card "Il tuo piano" sotto Adattamenti)
     if (ultimiDati) render(ultimiDati);
@@ -2227,7 +2230,7 @@
       })() +
       '<p id="acc-err" class="acc-err" hidden></p>' +
       '<button type="submit" class="btn-primary">' + T('Salva', 'Save') + '</button>' +
-    '</form>' + renderColori() + '<section class="card" id="acc-scarpe"><h3>👟 ' + T('Le tue scarpe', 'Your shoes') + '</h3><div class="skeleton" style="height:80px"></div></section>' +
+    '</form>' + '<section class="card acc-notifiche" id="acc-notifiche"><h3>🔔 ' + T('Notifiche', 'Notifications') + '</h3><div class="skeleton" style="height:60px"></div></section>' + renderColori() + '<section class="card" id="acc-scarpe"><h3>👟 ' + T('Le tue scarpe', 'Your shoes') + '</h3><div class="skeleton" style="height:80px"></div></section>' +
     (p.ha_chiave ? '<section class="card" id="acc-livello"><h3>' + T('Livello di partenza', 'Starting level') + '</h3><div class="skeleton" style="height:120px"></div></section>' : '');
     if (u.login) html += '<button type="button" id="acc-esci" class="btn-secondary acc-logout">' + T('Esci', 'Sign out') + '</button>';
     return html;
@@ -2530,11 +2533,115 @@
     } catch (_) { b.disabled = false; }
   });
 
+  /* ====================================================================== */
+  /* App installabile e notifiche push                                      */
+  /* ====================================================================== */
+  const suIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const installata = () => window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+  const pushSupportato = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+  let swPronto = null;
+  function registraSW() {
+    if (!('serviceWorker' in navigator) || swPronto) return swPronto;
+    swPronto = navigator.serviceWorker.register('/sw.js').then(() => navigator.serviceWorker.ready).catch(() => null);
+    return swPronto;
+  }
+  const b64uInBytes = (b) => { const p = '='.repeat((4 - (b.length % 4)) % 4); const r = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, (c) => c.charCodeAt(0)); };
+
+  async function iscrizioneAttuale() {
+    if (!pushSupportato()) return null;
+    const reg = await registraSW();
+    return reg ? reg.pushManager.getSubscription() : null;
+  }
+
+  async function riempiNotifiche() {
+    const box = $('#acc-notifiche');
+    if (!box) return;
+    if (!ME || ME.demo || ME.impersonato_da) { box.remove(); return; }
+    const titolo = '<h3>🔔 ' + T('Notifiche', 'Notifications') + '</h3>';
+    if (suIOS() && !installata()) {
+      box.innerHTML = titolo + '<p class="sub">' + T('Su iPhone le notifiche arrivano solo se AAC è sulla schermata Home:', 'On iPhone notifications only work when AAC is on your Home Screen:') + '</p>' +
+        '<ol class="nt-passi"><li>' + T('In Safari tocca <b>Condividi</b> (il quadrato con la freccia)', 'In Safari tap <b>Share</b> (the square with the arrow)') + '</li><li>' + T('Scegli <b>Aggiungi alla schermata Home</b>', 'Choose <b>Add to Home Screen</b>') + '</li><li>' + T('Apri AAC dall’icona, accedi e torna qui', 'Open AAC from the icon, sign in and come back here') + '</li></ol>';
+      return;
+    }
+    if (!pushSupportato()) { box.innerHTML = titolo + '<p class="sub">' + T('Questo browser non supporta le notifiche.', 'This browser does not support notifications.') + '</p>'; return; }
+    let st;
+    try { st = await caricaJson('/api/push/stato'); } catch (_) { box.remove(); return; }
+    if (!st.disponibile) { box.remove(); return; }
+    const sub = await iscrizioneAttuale();
+    const negato = Notification.permission === 'denied';
+    if (!sub) {
+      box.innerHTML = titolo + '<p class="sub">' + T('Ogni mattina la seduta del giorno (anche quando il coach la alleggerisce) e la domenica sera il riepilogo della settimana.', 'Every morning your session for the day (also when the coach lightens it) and on Sunday evening your weekly recap.') + '</p>' +
+        (negato ? '<p class="nt-nota">' + T('Le notifiche sono bloccate: riattivale nelle impostazioni del telefono o del browser per questo sito.', 'Notifications are blocked: turn them back on in your phone or browser settings for this site.') + '</p>'
+          : '<button type="button" class="btn-primary nt-attiva" id="nt-attiva">' + T('Attiva le notifiche', 'Turn on notifications') + '</button>');
+      return;
+    }
+    const ore = []; for (let h = 5; h <= 11; h++) for (const m of ['00', '30']) ore.push(String(h).padStart(2, '0') + ':' + m);
+    if (!ore.includes(st.ora)) ore.push(st.ora);
+    box.innerHTML = titolo +
+      '<label class="nt-riga"><span><b>' + T('Seduta del mattino', 'Morning session') + '</b><small>' + T('solo nei giorni con una seduta', 'only on days with a session') + '</small></span>' +
+        '<select id="nt-ora" aria-label="' + T('Ora della notifica', 'Notification time') + '">' + ore.sort().map((o) => '<option' + (o === st.ora ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' +
+        '<input type="checkbox" id="nt-mattina" class="nt-sw"' + (st.mattina ? ' checked' : '') + '></label>' +
+      '<label class="nt-riga"><span><b>' + T('Riepilogo della domenica', 'Sunday recap') + '</b><small>' + T('alle 19:00: com’è andata e la prossima seduta', 'at 7 pm: how it went and your next session') + '</small></span>' +
+        '<input type="checkbox" id="nt-domenica" class="nt-sw"' + (st.domenica ? ' checked' : '') + '></label>' +
+      '<div class="nt-az"><button type="button" class="btn-mini" id="nt-prova">' + T('Invia una prova', 'Send a test') + '</button>' +
+        '<button type="button" class="link-btn" id="nt-spegni">' + T('Disattiva su questo dispositivo', 'Turn off on this device') + '</button></div>';
+  }
+
+  async function attivaNotifiche() {
+    try {
+      const st = await caricaJson('/api/push/stato');
+      const perm = await Notification.requestPermission();
+      if (perm !== 'granted') { toast(T('Permesso non concesso', 'Permission not granted'), 'err'); riempiNotifiche(); return; }
+      const reg = await registraSW();
+      if (!reg) throw new Error('sw');
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uInBytes(st.chiave) });
+      const r = await inviaJson('POST', '/api/push/iscrizione', { iscrizione: sub.toJSON(), lingua: LANG });
+      if (!r.ok) throw new Error(r.out.errore || '');
+      toast(T('Notifiche attive', 'Notifications on'), 'ok');
+    } catch (e) { toast(T('Non è stato possibile attivare le notifiche', 'Could not turn on notifications'), 'err'); }
+    riempiNotifiche();
+  }
+  async function salvaPreferenzeNotifiche() {
+    const r = await inviaJson('PUT', '/api/push/preferenze', { mattina: $('#nt-mattina').checked, domenica: $('#nt-domenica').checked, ora: $('#nt-ora').value });
+    toast(r.ok ? T('Preferenze salvate', 'Preferences saved') : T('Valori non validi', 'Invalid values'), r.ok ? 'ok' : 'err');
+  }
+  document.addEventListener('click', async (e) => {
+    if (e.target.closest('#nt-attiva')) { e.target.closest('#nt-attiva').disabled = true; attivaNotifiche(); return; }
+    if (e.target.closest('#nt-prova')) {
+      const r = await inviaJson('POST', '/api/push/prova');
+      toast(r.ok ? T('Notifica di prova inviata', 'Test notification sent') : (r.out.errore || T('Invio non riuscito', 'Sending failed')), r.ok ? 'ok' : 'err');
+      return;
+    }
+    if (e.target.closest('#nt-spegni')) {
+      const sub = await iscrizioneAttuale();
+      if (sub) { await inviaJson('DELETE', '/api/push/iscrizione', { endpoint: sub.endpoint }); await sub.unsubscribe().catch(() => {}); }
+      toast(T('Notifiche disattivate su questo dispositivo', 'Notifications turned off on this device'), 'ok');
+      riempiNotifiche();
+      return;
+    }
+    if (e.target.closest('#inst-dopo')) {
+      try { localStorage.setItem('coach-installa-dopo', String(Date.now() + 30 * 864e5)); } catch (_) { /* solo comodità */ }
+      const c = $('#inst-card'); if (c) c.remove();
+    }
+  });
+  document.addEventListener('change', (e) => { if (e.target.closest('#nt-mattina, #nt-domenica, #nt-ora')) salvaPreferenzeNotifiche(); });
+
+  // Invito a installare l'app: solo su iPhone in Safari, mai in demo o "Vedi come", rimandabile di 30 giorni
+  function renderInstalla() {
+    if (!suIOS() || installata() || !ME || ME.demo || ME.impersonato_da) return '';
+    let dopo = 0; try { dopo = Number(localStorage.getItem('coach-installa-dopo')) || 0; } catch (_) { /* nessuna preferenza */ }
+    if (Date.now() < dopo) return '';
+    return '<section class="avviso inst" id="inst-card"><div class="av-h">' + ICO.share + '<h3>' + T('Metti AAC sulla schermata Home', 'Add AAC to your Home Screen') + '</h3></div>' +
+      '<p>' + T('Tocca <b>Condividi</b> in Safari e poi <b>Aggiungi alla schermata Home</b>: AAC si apre come un’app e può mandarti la seduta del mattino.', 'Tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>: AAC opens like an app and can send you your morning session.') + '</p>' +
+      '<button type="button" class="link-btn" id="inst-dopo">' + T('Più tardi', 'Later') + '</button></section>';
+  }
+
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
     mostraSheet(T('Account', 'Account'), renderAccount());
     riempiLivelloAccount();
     riempiScarpeAccount();
+    riempiNotifiche();
   }
 
   const inviaJson = async (metodo, url, corpo) => {
@@ -3751,7 +3858,7 @@
       '<div class="pane-head"><h1>' + titolo + '</h1>' + (sotto ? '<span>' + sotto + '</span>' : '') + '</div>' + html + '</div>';
     $('#main').innerHTML =
       pane('oggi', T('Oggi', 'Today'), esc(fmtDataLunga(d.oggi)).replace(/^./, (x) => x.toUpperCase()),
-        renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
+        renderInstalla() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
         renderProgramma(d) + renderGuidaCard()) +

@@ -495,6 +495,7 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
     if (!u || u.ruolo === 'admin') return false;
     sis.prepare('DELETE FROM sessioni WHERE utente_id = ?').run(id);
     sis.prepare('DELETE FROM uso WHERE utente_id = ?').run(id);
+    try { sis.prepare('DELETE FROM push_iscrizioni WHERE utente_id = ?').run(id); } catch (_) { /* tabella creata dal modulo notifiche */ }
     sis.prepare('DELETE FROM utenti WHERE id = ?').run(id);
     dimentica(id);
     // solo il file di quell'utente: dentro <data>/utenti e con il nome u<id>-<hex>.db (mai corse.db o altro)
@@ -711,7 +712,7 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
     });
   }
 
-  return { attivo, inizializza, admin, utentiAttivi, contestoDi, monta, sistema: sis };
+  return { attivo, inizializza, admin, utentiAttivi, contestoDi, monta, sistema: sis, cifra, decifra };
 }
 
 module.exports = { creaAccount, etaDa };

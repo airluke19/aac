@@ -310,6 +310,57 @@ function dbPer(file) {
 }
 const { creaAccount, etaDa } = require('./account');
 const account = creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo: (ctx, nuovo) => mappaCambioObiettivo(ctx, nuovo) });
+
+// Notifiche push (seduta del mattino, riepilogo della domenica): vedi notifiche.js
+const { creaNotifiche } = require('./notifiche');
+const notifiche = creaNotifiche({
+  sis: account.sistema, cifra: account.cifra, decifra: account.decifra,
+  soggetto: /^https:\/\//.test(BASE.publicUrl || '') ? BASE.publicUrl : 'https://aac.run',
+  testo: (u, tipo, lingua) => testoNotifica(u, tipo, lingua),
+  oraLocale: () => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: CONFIG.timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'short', hourCycle: 'h23' })
+      .formatToParts(new Date()).map((x) => [x.type, x.value]));
+    return { giorno: `${p.year}-${p.month}-${p.day}`, hhmm: `${p.hour}:${p.minute}`, giornoSett: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(p.weekday) };
+  },
+});
+
+// Testo delle notifiche (solo seduta o settimana, niente dati di salute). Sincrono: LINGUA torna com'era.
+function testoNotifica(u, tipo, lingua) {
+  const prima = LINGUA;
+  LINGUA = lingua === 'en' ? 'en' : 'it';
+  try {
+    if (tipo === 'prova') return { title: 'Always Adaptive Coach', body: L('Notifiche attive: ogni mattina la tua seduta, la domenica il riepilogo della settimana.', 'Notifications on: your session every morning, your weekly recap on Sunday.'), tag: 'prova', url: '/' };
+    return contesto.run(account.contestoDi(u), () => {
+      const oggiStr = oggi();
+      const p = costruisciProgramma(oggiStr);
+      if (!p || !p.attivo) return null;
+      const nome = (s) => s.titolo.replace(/^(Sett\.|Wk) \d+ · /, '');
+      if (tipo === 'mattina') {
+        const s = p.prossime[0];
+        if (!s || s.data !== oggiStr || s.fatta) return null; // oggi niente seduta: nessuna notifica
+        const corpo = `${nome(s)} · ${s.durata_min}′` + (s.fc_target ? L(` · FC ${s.fc_target}`, ` · HR ${s.fc_target}`) : '');
+        return s.adattata
+          ? { title: L('Oggi seduta alleggerita', 'Lighter session today'), body: `${corpo}. ${L('Motivo', 'Why')}: ${s.adattata.motivi.join(', ')}.`, tag: 'mattina', url: '/' }
+          : { title: L('Oggi si corre', 'Run today'), body: corpo, tag: 'mattina', url: '/' };
+      }
+      if (tipo === 'domenica') {
+        const st = p.settimana;
+        const km = db.prepare("SELECT COALESCE(SUM(distanza), 0) AS km FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ?").get(addDays(oggiStr, -6), oggiStr).km;
+        const prox = p.prossime.find((x) => x.data > oggiStr);
+        const kmTxt = String(round(km, 1)).replace('.', LINGUA === 'en' ? '.' : ',');
+        return {
+          title: L('La tua settimana', 'Your week'),
+          body: L(`${st.fatte} sedute su ${st.sedute} · ${kmTxt} km negli ultimi 7 giorni.`, `${st.fatte} of ${st.sedute} sessions · ${kmTxt} km in the last 7 days.`) +
+            (prox ? L(` Prossima: ${giornoSettimana(prox.data)}, ${nome(prox)} ${prox.durata_min}′.`, ` Next: ${giornoSettimana(prox.data)}, ${nome(prox)} ${prox.durata_min}′.`) : ''),
+          tag: 'domenica', url: '/',
+        };
+      }
+      return null;
+    });
+  } finally {
+    LINGUA = prima;
+  }
+}
 function chiudiDb(file) {
   const d = dbAperti.get(file);
   if (d) {
@@ -1174,6 +1225,8 @@ function avviaScheduler() {
     { timezone: CONFIG.timezone }
   );
   console.log(`[cron] Sincronizzazione automatica attiva: "${CONFIG.syncCron}" (${CONFIG.timezone}).`);
+  // notifiche: ogni 5 minuti si controlla chi deve riceverle (mattina all'ora scelta, domenica alle 19:00)
+  cron.schedule('*/5 * * * *', () => { notifiche.giro(account.utentiAttivi()).catch((e) => console.warn('[notifiche]', e.message)); }, { timezone: CONFIG.timezone });
   if (CONFIG.syncOnStart) {
     const t = setTimeout(() => syncTutti('avvio'), 10000);
     if (t.unref) t.unref();
@@ -3663,6 +3716,7 @@ function creaApp() {
 
   // Login con Google, sessioni, profilo e amministrazione utenti; da qui in poi ogni richiesta ha il suo utente
   account.monta(app, { L, demo });
+  notifiche.monta(app, { L });
 
   // Statistiche di utilizzo di un utente (solo amministratore, non durante il "Vedi come"):
   // ultimi 35 giorni, fascia oraria (30 giorni) e allenamento rispetto al piano (4 settimane).
