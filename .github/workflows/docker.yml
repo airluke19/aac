@@ -21,6 +21,7 @@ on:
       - "backend/**"
       - "frontend/**"
       - "aac-backup/**"
+      - "docs/**"
       - "docker-compose.yml"
       - ".github/workflows/docker.yml"
   pull_request:
