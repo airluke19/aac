@@ -1846,12 +1846,14 @@ function statoCollegamento(oggiStr) {
  *  - ACWR (ATL/CTL): 0,8–1,3 zona sicura; > 1,3 attenzione; > 1,5 alto (la prossima seduta viene alleggerita).
  *  - km degli ultimi 7 giorni oltre +30% sulla media delle 4 settimane prima (e almeno +5 km).
  *  - corsa singola oltre il 110% della piu' lunga dei 30 giorni prima (Frandsen et al., BJSM 2025); oltre il 130% = alto.
+ *    Le corse dello stesso giorno si sommano (uscita interrotta o doppia seduta): e' il carico di quel giorno che conta.
  * Il limite consigliato per il prossimo lungo e' il 110% della corsa piu' lunga degli ultimi 30 giorni.
  */
 const CARICO = { acwrAttenzione: 1.3, acwrAlto: 1.5, aumentoKm: 0.3, aumentoKmMin: 5, salto: 1.1, saltoAlto: 1.3 };
 function valutaCarico(oggiStr, acwrMappa) {
   const corse = db
-    .prepare("SELECT data, distanza FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ? AND distanza > 0 ORDER BY data ASC")
+    // per giorno: piu' corse nello stesso giorno (es. orologio interrotto) contano come un'unica uscita
+    .prepare("SELECT data, SUM(distanza) AS distanza, COUNT(*) AS n FROM attivita WHERE origine = 'intervals' AND data >= ? AND data <= ? AND distanza > 0 GROUP BY data ORDER BY data ASC")
     .all(addDays(oggiStr, -64), oggiStr);
   const km = (da, a) => corse.filter((c) => c.data >= da && c.data <= a).reduce((t, c) => t + c.distanza, 0);
   const segnali = [];
@@ -1880,11 +1882,12 @@ function valutaCarico(oggiStr, acwrMappa) {
     if (prima.length < 2) continue;
     const max = Math.max(...prima.map((x) => x.distanza));
     const r = c.distanza / max;
-    if (r > CARICO.salto && c.distanza - max >= 1 && (!salto || r > salto.rapporto)) salto = { data: c.data, km: round(c.distanza, 1), precedente: round(max, 1), rapporto: round(r, 2) };
+    if (r > CARICO.salto && c.distanza - max >= 1 && (!salto || r > salto.rapporto)) salto = { data: c.data, km: round(c.distanza, 1), precedente: round(max, 1), rapporto: round(r, 2), corse: c.n };
   }
   if (salto) {
     alza(salto.rapporto > CARICO.saltoAlto ? 'alto' : 'attenzione');
-    segnali.push(L(`corsa del ${salto.data.slice(8)}/${salto.data.slice(5, 7)} di ${it1(salto.km)} km: +${Math.round((salto.rapporto - 1) * 100)}% sulla più lunga del mese prima (${it1(salto.precedente)} km)`, `run on ${salto.data.slice(5, 7)}/${salto.data.slice(8)} of ${round(salto.km, 1)} km: +${Math.round((salto.rapporto - 1) * 100)}% over the longest of the month before (${round(salto.precedente, 1)} km)`));
+    const cosa = salto.corse > 1 ? L(`${salto.corse} corse del ${salto.data.slice(8)}/${salto.data.slice(5, 7)}, in tutto`, `${salto.corse} runs on ${salto.data.slice(5, 7)}/${salto.data.slice(8)}, in total`) : L(`corsa del ${salto.data.slice(8)}/${salto.data.slice(5, 7)} di`, `run on ${salto.data.slice(5, 7)}/${salto.data.slice(8)} of`);
+    segnali.push(L(`${cosa} ${it1(salto.km)} km: +${Math.round((salto.rapporto - 1) * 100)}% sulla più lunga del mese prima (${it1(salto.precedente)} km)`, `${cosa} ${round(salto.km, 1)} km: +${Math.round((salto.rapporto - 1) * 100)}% over the longest of the month before (${round(salto.precedente, 1)} km)`));
   }
 
   const ult30 = corse.filter((x) => x.data >= addDays(oggiStr, -29));
