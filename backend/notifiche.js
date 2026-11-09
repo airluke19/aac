@@ -59,11 +59,10 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota
   const iscrizioni = (id) => sis.prepare('SELECT * FROM push_iscrizioni WHERE utente_id = ?').all(id);
 
   async function inviaA(utenteId, crea, opz = {}) {
-    let inviate = 0, ultima = null;
+    let inviate = 0;
     for (const s of iscrizioni(utenteId)) {
       const dati = crea(s.lingua);
       if (!dati) continue;
-      ultima = dati;
       try {
         await webpush.sendNotification({ endpoint: s.endpoint, keys: { p256dh: s.p256dh, auth: s.auth } }, JSON.stringify(dati), { TTL: 6 * 3600, urgency: 'normal' });
         if (s.errori) sis.prepare('UPDATE push_iscrizioni SET errori = 0 WHERE id = ?').run(s.id);
@@ -77,7 +76,7 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota
       }
     }
     // ogni notifica arrivata finisce anche nel diario del coach dell'utente
-    if (inviate && annota && opz.annota !== false) { try { annota(utenteId, ultima); } catch (e) { console.warn('[notifiche] diario', e.message); } }
+    if (inviate && annota && opz.annota !== false) { try { annota(utenteId, crea); } catch (e) { console.warn('[notifiche] diario', e.message); } }
     return inviate;
   }
 
@@ -170,10 +169,10 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota
   }
 
   // Avvisi del coach: ogni nuova voce del diario arriva anche sul telefono (se l'utente non li ha spenti)
-  async function avvisa(utenteId, dati) {
+  async function avvisa(utenteId, crea) {
     const u = sis.prepare('SELECT notifica_avvisi FROM utenti WHERE id = ?').get(utenteId);
     if (!u || u.notifica_avvisi === 0) return 0;
-    return inviaA(utenteId, () => dati, { annota: false }); // e' gia' nel diario
+    return inviaA(utenteId, crea, { annota: false }); // e' gia' nel diario
   }
   const haIscrizioni = (id) => Boolean(sis.prepare('SELECT 1 FROM push_iscrizioni WHERE utente_id = ? LIMIT 1').get(id));
   const preferenzeDi = (id) => { const u = sis.prepare('SELECT * FROM utenti WHERE id = ?').get(id); return u ? { ...preferenze(u), ultima: String(u.notifica_ultima || '') } : null; };

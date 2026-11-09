@@ -232,6 +232,13 @@ function apriDbUtente(file) {
     );
   `);
 
+  // Migrazione: diario in due lingue (titolo/testo = italiano, *_en = inglese)
+  {
+    const cd = new Set(db.prepare('PRAGMA table_info(diario)').all().map((c) => c.name));
+    if (!cd.has('titolo_en')) db.exec('ALTER TABLE diario ADD COLUMN titolo_en TEXT');
+    if (!cd.has('testo_en')) db.exec('ALTER TABLE diario ADD COLUMN testo_en TEXT');
+  }
+
   // Migrazione: dettagli delle corse per lo storico e le statistiche
   {
     const esistenti = new Set(db.prepare('PRAGMA table_info(attivita)').all().map((c) => c.name));
@@ -327,13 +334,14 @@ const notifiche = creaNotifiche({
   sis: account.sistema, cifra: account.cifra, decifra: account.decifra,
   soggetto: /^https:\/\//.test(BASE.publicUrl || '') ? BASE.publicUrl : 'https://aac.run',
   testo: (u, tipo, lingua) => testoNotifica(u, tipo, lingua),
-  annota: (utenteId, dati) => {
-    if (!dati || dati.tag === 'prova') return;
+  annota: (utenteId, crea) => {
+    const it = crea('it'), en = crea('en') || it;
+    if (!it || it.tag === 'prova') return;
     const u = account.utentiAttivi().find((x) => x.id === utenteId);
     if (!u) return;
     const quando = new Date().toISOString();
-    account.contestoDi(u).db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo) VALUES (?, ?, ?, ?, ?)')
-      .run(quando, 'notifica', `notifica:${dati.tag}:${quando.slice(0, 16)}`, dati.title, dati.body);
+    account.contestoDi(u).db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo, titolo_en, testo_en) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(quando, 'notifica', `notifica:${it.tag}:${quando.slice(0, 16)}`, it.title, it.body, en.title, en.body);
   },
   oraLocale: () => {
     const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { timeZone: CONFIG.timezone, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', weekday: 'short', hourCycle: 'h23' })
@@ -342,43 +350,65 @@ const notifiche = creaNotifiche({
   },
 });
 
-// Diario del coach: si annota ogni intervento, una volta sola (chiave unica). Testi nella lingua in uso in quel momento.
-function registraDiario(cd) {
+// Diario del coach: ogni intervento, una volta sola (chiave unica), salvato in italiano e in inglese.
+// vociDiario e' pura (testi nella lingua corrente, nessuna scrittura); registraDiario scrive solo le voci nuove
+// e, solo se ce ne sono, ricalcola i testi nell'altra lingua.
+function vociDiario(cd) {
   const p = cd.programma;
   if (!p) return [];
-  const insert = db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo) VALUES (?, ?, ?, ?, ?)');
-  const nuove = [];
-  const ins = { run: (quando, tipo, chiave, titolo, testo) => { if (insert.run(quando, tipo, chiave, titolo, testo).changes) nuove.push({ quando, tipo, titolo, testo }); } };
+  const voci = [];
   const ora = new Date().toISOString();
+  const add = (quando, tipo, chiave, titolo, testo) => voci.push({ quando, tipo, chiave, titolo, testo });
   const gm = (d) => `${giornoSettimana(d)} ${Number(d.slice(8))}/${Number(d.slice(5, 7))}`;
+  for (const w of p.storia || []) {
+    const t = { avanti: L('si avanza', 'moving forward'), ripeti: L('la ripetiamo', 'we repeat it'), indietro: L('un passo indietro', 'one step back') }[w.esito];
+    if (t) add(`${w.a}T21:00:00`, 'settimana', `settimana:${w.da}`, L(`Settimana ${w.numero}: ${t}`, `Week ${w.numero}: ${t}`), w.motivi.join(', '));
+  }
+  const s0 = p.prossime && p.prossime[0];
+  if (s0 && s0.adattata) add(ora, 'alleggerita', `alleggerita:${s0.data}`, L('Seduta alleggerita', 'Session lightened'),
+    L(`${gm(s0.data)}: ${s0.adattata.motivi.join(', ')}. Prevista: ${s0.adattata.originale}.`, `${gm(s0.data)}: ${s0.adattata.motivi.join(', ')}. Planned: ${s0.adattata.originale}.`));
+  const im = p.intensita && p.intensita.ultima_modifica;
+  if (im) add(`${im.data}T21:00:00`, 'intensita', `intensita:${im.data}`, L('Intensità ritoccata', 'Intensity adjusted'), im.motivo);
+  const fm = p.frequenza && p.frequenza.ultima_modifica;
+  if (fm) add(`${fm.data}T21:00:00`, 'frequenza', `frequenza:${fm.data}`, L('Sedute a settimana', 'Sessions per week'), fm.motivo);
+  const c = p.carico;
+  if (c && c.livello !== 'ok') add(ora, 'carico', `carico:${cd.oggi}:${c.livello}`, c.livello === 'alto' ? L('Carico troppo alto', 'Load too high') : L('Carico in crescita rapida', 'Load rising fast'), c.segnali.join('; '));
+  // zone: quando cambiano (prima volta: confronto con il vecchio calcolo in % della FC max)
+  const z = limitiZone(), mz = metodoZone();
+  const firma = `${mz.metodo}:${mz.fc_riposo || ''}:${z[2].da}:${z[3].da}`;
+  const prima = getMeta('zone_firma') || `fcmax::${Math.floor(CONFIG.fcMax * 0.7) + 1}:${Math.floor(CONFIG.fcMax * 0.8) + 1}`;
+  if (prima !== firma) {
+    const fac = z[2].da - 1, q = `${z[3].da}–${z[3].a}`;
+    add(ora, 'zone', `zone:${firma}:${cd.oggi}`, L('Zone cardiache aggiornate', 'Heart-rate zones updated'), mz.metodo === 'riserva'
+      ? L(`Corsa facile fino a ${fac} bpm, qualità ${q} bpm: calcolate sulla tua FC a riposo (${mz.fc_riposo} bpm, mediana di 28 giorni) e sulla FC max (${CONFIG.fcMax} bpm), con la riserva cardiaca. La corsa facile non supera mai l’80% della FC max.`,
+        `Easy running up to ${fac} bpm, quality ${q} bpm: based on your resting HR (${mz.fc_riposo} bpm, 28-day median) and max HR (${CONFIG.fcMax} bpm), using heart-rate reserve. Easy running never exceeds 80% of max HR.`)
+      : L(`Corsa facile fino a ${fac} bpm, qualità ${q} bpm: in % della FC max (${CONFIG.fcMax} bpm).`, `Easy running up to ${fac} bpm, quality ${q} bpm: as % of max HR (${CONFIG.fcMax} bpm).`));
+    voci[voci.length - 1].firma = firma;
+  }
+  return voci;
+}
+function registraDiario(cd) {
+  const voci = vociDiario(cd);
+  const esiste = db.prepare('SELECT 1 FROM diario WHERE chiave = ?');
+  const nuove = voci.filter((v) => !esiste.get(v.chiave));
+  const zona = voci.find((v) => v.firma);
+  if (!nuove.length) { if (zona) setMeta('zone_firma', zona.firma); return []; }
+  // stesse voci nell'altra lingua (stessa chiave)
+  const qui = LINGUA, altra = LINGUA === 'en' ? 'it' : 'en';
+  let tradotte = new Map();
+  LINGUA = altra;
+  try { tradotte = new Map(vociDiario(costruisciCoachData()).map((v) => [v.chiave, v])); } catch (e) { console.warn('[diario] traduzione', e.message); } finally { LINGUA = qui; }
+  const ins = db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo, titolo_en, testo_en) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const scritte = [];
   db.transaction(() => {
-    for (const w of p.storia || []) {
-      const t = { avanti: L('si avanza', 'moving forward'), ripeti: L('la ripetiamo', 'we repeat it'), indietro: L('un passo indietro', 'one step back') }[w.esito];
-      if (t) ins.run(`${w.a}T21:00:00`, 'settimana', `settimana:${w.da}`, L(`Settimana ${w.numero}: ${t}`, `Week ${w.numero}: ${t}`), w.motivi.join(', '));
+    for (const v of nuove) {
+      const t = tradotte.get(v.chiave) || v;
+      const it = qui === 'it' ? v : t, en = qui === 'en' ? v : t;
+      if (ins.run(v.quando, v.tipo, v.chiave, it.titolo, it.testo, en.titolo, en.testo).changes) scritte.push({ quando: v.quando, tipo: v.tipo, titolo: it.titolo, testo: it.testo, titolo_en: en.titolo, testo_en: en.testo });
     }
-    const s0 = p.prossime && p.prossime[0];
-    if (s0 && s0.adattata) ins.run(ora, 'alleggerita', `alleggerita:${s0.data}`, L('Seduta alleggerita', 'Session lightened'),
-      L(`${gm(s0.data)}: ${s0.adattata.motivi.join(', ')}. Prevista: ${s0.adattata.originale}.`, `${gm(s0.data)}: ${s0.adattata.motivi.join(', ')}. Planned: ${s0.adattata.originale}.`));
-    const im = p.intensita && p.intensita.ultima_modifica;
-    if (im) ins.run(`${im.data}T21:00:00`, 'intensita', `intensita:${im.data}`, L('Intensità ritoccata', 'Intensity adjusted'), im.motivo);
-    const fm = p.frequenza && p.frequenza.ultima_modifica;
-    if (fm) ins.run(`${fm.data}T21:00:00`, 'frequenza', `frequenza:${fm.data}`, L('Sedute a settimana', 'Sessions per week'), fm.motivo);
-    const c = p.carico;
-    if (c && c.livello !== 'ok') ins.run(ora, 'carico', `carico:${cd.oggi}:${c.livello}`, c.livello === 'alto' ? L('Carico troppo alto', 'Load too high') : L('Carico in crescita rapida', 'Load rising fast'), c.segnali.join('; '));
-    // zone: si annota quando cambiano (prima volta: confronto con il vecchio calcolo in % della FC max)
-    const z = limitiZone(), mz = metodoZone();
-    const firma = `${mz.metodo}:${mz.fc_riposo || ''}:${z[2].da}:${z[3].da}`;
-    const prima = getMeta('zone_firma') || `fcmax::${Math.floor(CONFIG.fcMax * 0.7) + 1}:${Math.floor(CONFIG.fcMax * 0.8) + 1}`;
-    if (prima !== firma) {
-      setMeta('zone_firma', firma);
-      const fac = z[2].da - 1, q = `${z[3].da}–${z[3].a}`;
-      ins.run(ora, 'zone', `zone:${firma}:${cd.oggi}`, L('Zone cardiache aggiornate', 'Heart-rate zones updated'), mz.metodo === 'riserva'
-        ? L(`Corsa facile fino a ${fac} bpm, qualità ${q} bpm: calcolate sulla tua FC a riposo (${mz.fc_riposo} bpm, mediana di 28 giorni) e sulla FC max (${CONFIG.fcMax} bpm), con la riserva cardiaca. La corsa facile non supera mai l’80% della FC max.`,
-          `Easy running up to ${fac} bpm, quality ${q} bpm: based on your resting HR (${mz.fc_riposo} bpm, 28-day median) and max HR (${CONFIG.fcMax} bpm), using heart-rate reserve. Easy running never exceeds 80% of max HR.`)
-        : L(`Corsa facile fino a ${fac} bpm, qualità ${q} bpm: in % della FC max (${CONFIG.fcMax} bpm).`, `Easy running up to ${fac} bpm, quality ${q} bpm: as % of max HR (${CONFIG.fcMax} bpm).`));
-    }
+    if (zona) setMeta('zone_firma', zona.firma);
   })();
-  return nuove;
+  return scritte;
 }
 
 // Ogni nuova voce del diario arriva anche sul telefono: solo le voci recenti (niente storico ricostruito),
@@ -390,7 +420,9 @@ function notificaVoci(utenteId, nuove) {
   const oggiStr = oggi();
   const da = nuove.filter((v) => v.quando >= limite).filter((v) => !(v.tipo === 'alleggerita' && pref && pref.mattina && !pref.ultima.includes(`mattina:${oggiStr}`)));
   for (const v of da.slice(0, 3)) {
-    notifiche.avvisa(utenteId, { title: v.titolo, body: v.testo || '', tag: `diario-${v.tipo}`, url: '/#diario' }).catch((e) => console.warn('[notifiche] diario', e.message));
+    notifiche.avvisa(utenteId, (lingua) => (lingua === 'en'
+      ? { title: v.titolo_en || v.titolo, body: v.testo_en || v.testo || '', tag: `diario-${v.tipo}`, url: '/#diario' }
+      : { title: v.titolo, body: v.testo || '', tag: `diario-${v.tipo}`, url: '/#diario' })).catch((e) => console.warn('[notifiche] diario', e.message));
   }
 }
 // Dopo ogni sincronizzazione automatica il coach rivede i dati di tutti: cosi' gli avvisi arrivano anche ad app chiusa
@@ -399,7 +431,7 @@ function aggiornaDiariTutti() {
     if (!notifiche.haIscrizioni(u.id)) continue;
     try {
       contesto.run(account.contestoDi(u), () => {
-        const prima = LINGUA; LINGUA = 'it';
+        const prima = LINGUA; LINGUA = 'it'; // i testi si salvano comunque in entrambe le lingue
         try { notificaVoci(u.id, registraDiario(costruisciCoachData())); } finally { LINGUA = prima; }
       });
     } catch (e) { console.warn(`[diario] u${u.id}`, e.message); }
@@ -3894,7 +3926,8 @@ function creaApp() {
 
   app.get('/api/diario', (req, res) => {
     res.set('Cache-Control', 'no-store');
-    try { res.json({ voci: db.prepare('SELECT quando, tipo, titolo, testo FROM diario ORDER BY quando DESC, id DESC LIMIT 200').all() }); }
+    const en = LINGUA === 'en';
+    try { res.json({ voci: db.prepare(`SELECT quando, tipo, ${en ? 'COALESCE(titolo_en, titolo)' : 'titolo'} AS titolo, ${en ? 'COALESCE(testo_en, testo)' : 'testo'} AS testo FROM diario ORDER BY quando DESC, id DESC LIMIT 200`).all() }); }
     catch (_) { res.json({ voci: [] }); }
   });
 
