@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.10@sha256:865e5dd094beca432e8c0a1d5e1c465db5f998dca4e439981029b3b81fb39ed5
 # Documentazione di Always Adaptive Coach (docs.aac.run): Astro + Starlight, sito statico senza login.
 # Build con Node, poi solo i file statici serviti da nginx non privilegiato.
 FROM node:22-bookworm-slim AS build
@@ -9,7 +10,12 @@ COPY . .
 RUN npm run build
 
 FROM nginxinc/nginx-unprivileged:1.31.7-alpine
+LABEL org.opencontainers.image.source=https://github.com/airluke19/aac \
+      org.opencontainers.image.description="AAC docs (static documentation site, docs.aac.run)"
+ENV NGINX_ENTRYPOINT_QUIET_LOGS=1
 USER root
+# Patch di sicurezza di Alpine uscite dopo l'immagine base; curl non serve (healthcheck con wget di busybox)
+RUN apk upgrade --no-cache && apk del --no-cache curl
 RUN rm -rf /usr/share/nginx/html/* /etc/nginx/conf.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/docs.conf
 COPY --from=build /docs/dist /usr/share/nginx/html
