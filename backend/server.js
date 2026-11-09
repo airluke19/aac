@@ -345,8 +345,10 @@ const notifiche = creaNotifiche({
 // Diario del coach: si annota ogni intervento, una volta sola (chiave unica). Testi nella lingua in uso in quel momento.
 function registraDiario(cd) {
   const p = cd.programma;
-  if (!p) return;
-  const ins = db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo) VALUES (?, ?, ?, ?, ?)');
+  if (!p) return [];
+  const insert = db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo) VALUES (?, ?, ?, ?, ?)');
+  const nuove = [];
+  const ins = { run: (quando, tipo, chiave, titolo, testo) => { if (insert.run(quando, tipo, chiave, titolo, testo).changes) nuove.push({ quando, tipo, titolo, testo }); } };
   const ora = new Date().toISOString();
   const gm = (d) => `${giornoSettimana(d)} ${Number(d.slice(8))}/${Number(d.slice(5, 7))}`;
   db.transaction(() => {
@@ -376,6 +378,32 @@ function registraDiario(cd) {
         : L(`Corsa facile fino a ${fac} bpm, qualità ${q} bpm: in % della FC max (${CONFIG.fcMax} bpm).`, `Easy running up to ${fac} bpm, quality ${q} bpm: as % of max HR (${CONFIG.fcMax} bpm).`));
     }
   })();
+  return nuove;
+}
+
+// Ogni nuova voce del diario arriva anche sul telefono: solo le voci recenti (niente storico ricostruito),
+// al massimo 3 per volta. La seduta alleggerita prima della notifica del mattino viaggia con quella.
+function notificaVoci(utenteId, nuove) {
+  if (!nuove.length || !notifiche.haIscrizioni(utenteId)) return;
+  const pref = notifiche.preferenzeDi(utenteId);
+  const limite = new Date(Date.now() - 3 * 864e5).toISOString();
+  const oggiStr = oggi();
+  const da = nuove.filter((v) => v.quando >= limite).filter((v) => !(v.tipo === 'alleggerita' && pref && pref.mattina && !pref.ultima.includes(`mattina:${oggiStr}`)));
+  for (const v of da.slice(0, 3)) {
+    notifiche.avvisa(utenteId, { title: v.titolo, body: v.testo || '', tag: `diario-${v.tipo}`, url: '/#diario' }).catch((e) => console.warn('[notifiche] diario', e.message));
+  }
+}
+// Dopo ogni sincronizzazione automatica il coach rivede i dati di tutti: cosi' gli avvisi arrivano anche ad app chiusa
+function aggiornaDiariTutti() {
+  for (const u of account.utentiAttivi()) {
+    if (!notifiche.haIscrizioni(u.id)) continue;
+    try {
+      contesto.run(account.contestoDi(u), () => {
+        const prima = LINGUA; LINGUA = 'it';
+        try { notificaVoci(u.id, registraDiario(costruisciCoachData())); } finally { LINGUA = prima; }
+      });
+    } catch (e) { console.warn(`[diario] u${u.id}`, e.message); }
+  }
 }
 
 // L'amministratore riceve una notifica a ogni nuova richiesta di accesso (tocco = pannello di amministrazione)
@@ -1285,7 +1313,7 @@ function avviaScheduler() {
   cron.schedule(
     CONFIG.syncCron,
     () => {
-      syncTutti('cron');
+      syncTutti('cron').then(aggiornaDiariTutti).catch(() => {});
     },
     { timezone: CONFIG.timezone }
   );
@@ -3886,7 +3914,7 @@ function creaApp() {
     }
     try {
       const cd = costruisciCoachData();
-      if (!req.demo) { try { registraDiario(cd); } catch (e) { console.warn('[diario]', e.message); } }
+      if (!req.demo) { try { notificaVoci(req.vero && req.vero === req.utente ? req.vero.id : null, registraDiario(cd)); } catch (e) { console.warn('[diario]', e.message); } }
       try { cd.diario_ultimo = db.prepare('SELECT MAX(quando) AS q FROM diario').get().q; } catch (_) { cd.diario_ultimo = null; }
       res.json(cd);
     } catch (e) {
@@ -4124,6 +4152,7 @@ if (require.main === module) {
 module.exports = {
   analizzaStream,
   testoNotifica, // testi delle notifiche (verifiche)
+  aggiornaDiariTutti, // diario e avvisi dopo la sincronizzazione (verifiche)
   // zone cardiache (usate anche nei test)
   fcMaxTanaka,
   soglieZone,

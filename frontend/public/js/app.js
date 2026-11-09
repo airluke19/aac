@@ -1862,7 +1862,7 @@
     try { ME = await caricaJson('/api/me'); } catch (_) { return; }
     segnaAmbiente(ME.ambiente);
     battito();
-    if (!ME.demo) registraSW(); // app installabile e notifiche push
+    if (!ME.demo) { registraSW(); rinnovaIscrizione(); } // app installabile e notifiche push
     if (ME.profilo && ME.profilo.colore && ME.profilo.colore !== document.documentElement.getAttribute('data-accent')) applicaColore(ME.profilo.colore);
     // i dati arrivano prima del profilo: si ridisegna per mostrare cio' che dipende da ME (es. la card "Il tuo piano" sotto Adattamenti)
     if (ultimiDati) render(ultimiDati);
@@ -2627,6 +2627,29 @@
   }
   const b64uInBytes = (b) => { const p = '='.repeat((4 - (b.length % 4)) % 4); const r = atob((b + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from(r, (c) => c.charCodeAt(0)); };
 
+  // Notifiche attive di default: chi non le ha ancora attivate su questo dispositivo trova in Oggi il pulsante (un tocco).
+  // Il permesso lo concede solo l'utente (regola di Apple e Google); se l'ha gia' concesso, l'iscrizione si rinnova da sola.
+  const ntRimandata = () => { try { return Date.now() < (Number(localStorage.getItem('coach-notifiche-dopo')) || 0); } catch (_) { return false; } };
+  function renderAttivaNotifiche() {
+    if (!ME || ME.demo || ME.impersonato_da || !pushSupportato() || (suIOS() && !installata())) return '';
+    if (Notification.permission !== 'default' || ntRimandata()) return '';
+    return '<section class="avviso inst" id="nt-card"><div class="av-h">' + ICO.campana + '<h3>' + T('Attiva le notifiche', 'Turn on notifications') + '</h3></div>' +
+      '<p>' + T('Ogni mattina la seduta del giorno e un avviso ogni volta che il coach cambia qualcosa, con il motivo. Puoi scegliere cosa ricevere nel profilo.', 'Your session every morning and an alert every time the coach changes something, with the reason. You can choose what to receive in your profile.') + '</p>' +
+      '<button type="button" class="btn-primary inst-btn" id="nt-attiva">' + T('Attiva', 'Turn on') + '</button>' +
+      '<button type="button" class="link-btn" id="nt-dopo">' + T('Più tardi', 'Later') + '</button></section>';
+  }
+  async function rinnovaIscrizione() {
+    if (!ME || ME.demo || ME.impersonato_da || !pushSupportato() || Notification.permission !== 'granted') return;
+    try {
+      const reg = await registraSW();
+      if (!reg || await reg.pushManager.getSubscription()) return;
+      const st = await caricaJson('/api/push/stato');
+      if (!st.disponibile) return;
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64uInBytes(st.chiave) });
+      await inviaJson('POST', '/api/push/iscrizione', { iscrizione: sub.toJSON(), lingua: LANG });
+    } catch (_) { /* si riprova alla prossima apertura */ }
+  }
+
   async function iscrizioneAttuale() {
     if (!pushSupportato()) return null;
     const reg = await registraSW();
@@ -2653,7 +2676,7 @@
     const sub = await iscrizioneAttuale();
     const negato = Notification.permission === 'denied';
     if (!sub) {
-      box.innerHTML = titolo + '<p class="sub">' + T('Ogni mattina la seduta del giorno (anche quando il coach la alleggerisce) e la domenica sera il riepilogo della settimana.', 'Every morning your session for the day (also when the coach lightens it) and on Sunday evening your weekly recap.') + '</p>' +
+      box.innerHTML = titolo + '<p class="sub">' + T('Ogni mattina la seduta del giorno, un avviso ogni volta che il coach cambia qualcosa e la domenica sera il riepilogo della settimana.', 'Every morning your session for the day, an alert every time the coach changes something and on Sunday evening your weekly recap.') + '</p>' +
         (negato ? '<p class="nt-nota">' + T('Le notifiche sono bloccate: riattivale nelle impostazioni del telefono o del browser per questo sito.', 'Notifications are blocked: turn them back on in your phone or browser settings for this site.') + '</p>'
           : '<button type="button" class="btn-primary nt-attiva" id="nt-attiva">' + T('Attiva le notifiche', 'Turn on notifications') + '</button>') + installa;
       return;
@@ -2664,6 +2687,8 @@
       '<label class="nt-riga"><span><b>' + T('Seduta del mattino', 'Morning session') + '</b><small>' + T('solo nei giorni con una seduta', 'only on days with a session') + '</small></span>' +
         '<select id="nt-ora" aria-label="' + T('Ora della notifica', 'Notification time') + '">' + ore.sort().map((o) => '<option' + (o === st.ora ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' +
         '<input type="checkbox" id="nt-mattina" class="nt-sw"' + (st.mattina ? ' checked' : '') + '></label>' +
+      '<label class="nt-riga"><span><b>' + T('Avvisi del coach', 'Coach alerts') + '</b><small>' + T('ogni volta che il coach cambia qualcosa, con il motivo', 'every time the coach changes something, with the reason') + '</small></span>' +
+        '<input type="checkbox" id="nt-avvisi" class="nt-sw"' + (st.avvisi !== false ? ' checked' : '') + '></label>' +
       '<label class="nt-riga"><span><b>' + T('Riepilogo della domenica', 'Sunday recap') + '</b><small>' + T('alle 19:00: com’è andata e la prossima seduta', 'at 7 pm: how it went and your next session') + '</small></span>' +
         '<input type="checkbox" id="nt-domenica" class="nt-sw"' + (st.domenica ? ' checked' : '') + '></label>' +
       '<div class="nt-az"><button type="button" class="btn-mini" id="nt-prova">' + T('Invia una prova', 'Send a test') + '</button>' +
@@ -2682,10 +2707,11 @@
       if (!r.ok) throw new Error(r.out.errore || '');
       toast(T('Notifiche attive', 'Notifications on'), 'ok');
     } catch (e) { toast(T('Non è stato possibile attivare le notifiche', 'Could not turn on notifications'), 'err'); }
+    const card = $('#nt-card'); if (card) card.remove();
     riempiNotifiche();
   }
   async function salvaPreferenzeNotifiche() {
-    const r = await inviaJson('PUT', '/api/push/preferenze', { mattina: $('#nt-mattina').checked, domenica: $('#nt-domenica').checked, ora: $('#nt-ora').value });
+    const r = await inviaJson('PUT', '/api/push/preferenze', { mattina: $('#nt-mattina').checked, domenica: $('#nt-domenica').checked, avvisi: $('#nt-avvisi').checked, ora: $('#nt-ora').value });
     toast(r.ok ? T('Preferenze salvate', 'Preferences saved') : T('Valori non validi', 'Invalid values'), r.ok ? 'ok' : 'err');
   }
   document.addEventListener('click', async (e) => {
@@ -2703,8 +2729,13 @@
       return;
     }
     if (e.target.closest('#nt-installa')) { installaOra(); return; }
+    if (e.target.closest('#nt-dopo')) {
+      try { localStorage.setItem('coach-notifiche-dopo', String(Date.now() + 14 * 864e5)); } catch (_) { /* solo comodità */ }
+      const c = $('#nt-card'); if (c) c.remove();
+      return;
+    }
   });
-  document.addEventListener('change', (e) => { if (e.target.closest('#nt-mattina, #nt-domenica, #nt-ora')) salvaPreferenzeNotifiche(); });
+  document.addEventListener('change', (e) => { if (e.target.closest('#nt-mattina, #nt-domenica, #nt-avvisi, #nt-ora')) salvaPreferenzeNotifiche(); });
 
 
 
@@ -3956,7 +3987,7 @@
       '<div class="pane-head"><h1>' + titolo + '</h1>' + (sotto ? '<span>' + sotto + '</span>' : '') + '</div>' + html + '</div>';
     $('#main').innerHTML =
       pane('oggi', T('Oggi', 'Today'), esc(fmtDataLunga(d.oggi)).replace(/^./, (x) => x.toUpperCase()),
-        renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
+        renderAttivaNotifiche() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
         renderProgramma(d) + renderGuidaCard()) +

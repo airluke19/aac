@@ -34,6 +34,7 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota
   if (!col.has('notifica_mattina')) sis.exec('ALTER TABLE utenti ADD COLUMN notifica_mattina INTEGER'); // 1 = seduta del mattino
   if (!col.has('notifica_domenica')) sis.exec('ALTER TABLE utenti ADD COLUMN notifica_domenica INTEGER'); // 1 = riepilogo della domenica
   if (!col.has('notifica_ora')) sis.exec('ALTER TABLE utenti ADD COLUMN notifica_ora TEXT'); // HH:MM della seduta del mattino
+  if (!col.has('notifica_avvisi')) sis.exec('ALTER TABLE utenti ADD COLUMN notifica_avvisi INTEGER'); // 1 = avvisi del coach (ogni voce del diario)
   if (!col.has('notifica_ultima')) sis.exec('ALTER TABLE utenti ADD COLUMN notifica_ultima TEXT'); // "mattina:AAAA-MM-GG|domenica:AAAA-MM-GG"
 
   // ---- chiavi VAPID ----
@@ -52,11 +53,12 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota
   const preferenze = (u) => ({
     mattina: u.notifica_mattina !== 0,
     domenica: u.notifica_domenica !== 0,
+    avvisi: u.notifica_avvisi !== 0, // tutte attive di default (anche per i nuovi account)
     ora: ORA.test(u.notifica_ora || '') ? u.notifica_ora : '07:00',
   });
   const iscrizioni = (id) => sis.prepare('SELECT * FROM push_iscrizioni WHERE utente_id = ?').all(id);
 
-  async function inviaA(utenteId, crea) {
+  async function inviaA(utenteId, crea, opz = {}) {
     let inviate = 0, ultima = null;
     for (const s of iscrizioni(utenteId)) {
       const dati = crea(s.lingua);
@@ -75,7 +77,7 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota
       }
     }
     // ogni notifica arrivata finisce anche nel diario del coach dell'utente
-    if (inviate && annota) { try { annota(utenteId, ultima); } catch (e) { console.warn('[notifiche] diario', e.message); } }
+    if (inviate && annota && opz.annota !== false) { try { annota(utenteId, ultima); } catch (e) { console.warn('[notifiche] diario', e.message); } }
     return inviate;
   }
 
@@ -143,8 +145,9 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota
 
     app.put('/api/push/preferenze', csrf, json, proprio, (req, res) => {
       const b = req.body || {};
-      if (typeof b.mattina !== 'boolean' || typeof b.domenica !== 'boolean' || !ORA.test(String(b.ora || ''))) return res.status(400).json({ errore: L('Valori non validi', 'Invalid values') });
-      sis.prepare('UPDATE utenti SET notifica_mattina = ?, notifica_domenica = ?, notifica_ora = ? WHERE id = ?').run(b.mattina ? 1 : 0, b.domenica ? 1 : 0, b.ora, req.vero.id);
+      if (typeof b.mattina !== 'boolean' || typeof b.domenica !== 'boolean' || (b.avvisi !== undefined && typeof b.avvisi !== 'boolean') || !ORA.test(String(b.ora || ''))) return res.status(400).json({ errore: L('Valori non validi', 'Invalid values') });
+      sis.prepare('UPDATE utenti SET notifica_mattina = ?, notifica_domenica = ?, notifica_ora = ?, notifica_avvisi = COALESCE(?, notifica_avvisi) WHERE id = ?')
+        .run(b.mattina ? 1 : 0, b.domenica ? 1 : 0, b.ora, b.avvisi === undefined ? null : (b.avvisi ? 1 : 0), req.vero.id);
       res.json({ ok: true });
     });
 
@@ -166,10 +169,19 @@ function creaNotifiche({ sis, cifra, decifra, soggetto, testo, oraLocale, annota
     return n;
   }
 
+  // Avvisi del coach: ogni nuova voce del diario arriva anche sul telefono (se l'utente non li ha spenti)
+  async function avvisa(utenteId, dati) {
+    const u = sis.prepare('SELECT notifica_avvisi FROM utenti WHERE id = ?').get(utenteId);
+    if (!u || u.notifica_avvisi === 0) return 0;
+    return inviaA(utenteId, () => dati, { annota: false }); // e' gia' nel diario
+  }
+  const haIscrizioni = (id) => Boolean(sis.prepare('SELECT 1 FROM push_iscrizioni WHERE utente_id = ? LIMIT 1').get(id));
+  const preferenzeDi = (id) => { const u = sis.prepare('SELECT * FROM utenti WHERE id = ?').get(id); return u ? { ...preferenze(u), ultima: String(u.notifica_ultima || '') } : null; };
+
   // all'eliminazione dell'account
   const rimuoviUtente = (id) => sis.prepare('DELETE FROM push_iscrizioni WHERE utente_id = ?').run(id);
 
-  return { monta, giro, rimuoviUtente, avvisaAdmin };
+  return { monta, giro, rimuoviUtente, avvisaAdmin, avvisa, haIscrizioni, preferenzeDi };
 }
 
 module.exports = { creaNotifiche };
