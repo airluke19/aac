@@ -1941,3 +1941,5 @@ body.rivivi-on #tabbar { display: none; }
 /* Perche' questa FC (nella seduta) */
 .fc-perche { margin: 10px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: .85rem; line-height: 1.45; color: var(--muted); }
 .fc-perche b { color: var(--text); }
+/* Schermi stretti (es. iPhone SE) con tutte le icone dell'amministratore: icone e spazi un po' più piccoli */
+@media (max-width: 360px) { .top { gap: 5px; } .top .icon-btn { width: 33px; height: 33px; } .top .icon-btn svg { width: 18px; height: 18px; } .lang-btn { font-size: .78rem; } }
