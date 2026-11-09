@@ -45,7 +45,8 @@ h1, h2, h3, h4, .hero h1, .site-title { font-family: var(--aac-disp); letter-spa
 .hero { padding-block: 2.5rem 1rem; }
 .hero h1 { font-size: clamp(2.4rem, 7vw, 4rem); line-height: 1.02; font-weight: 800; }
 .hero .tagline { font-size: clamp(1.05rem, 2.4vw, 1.3rem); color: var(--sl-color-gray-2); }
-.hero > img, .hero .hero-html img { max-width: 300px; border-radius: 38px; box-shadow: 0 30px 80px var(--aac-glow), 0 10px 40px rgba(0,0,0,.45); border: 1px solid var(--sl-color-hairline-light); }
+.hero > img { width: min(100%, 34rem); height: auto; object-fit: contain; }
+.site-title { color: var(--sl-color-white) !important; }
 .sl-link-button { border-radius: 999px !important; font-weight: 700; }
 
 /* Card in stile app */
