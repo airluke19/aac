@@ -3,7 +3,7 @@
 import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
-const gruppo = (it, en, dir) => ({ label: it, translations: { en }, autogenerate: { directory: dir } });
+const gruppo = (it, en, dir) => ({ label: it, translations: { en }, items: [{ autogenerate: { directory: dir } }] });
 
 export default defineConfig({
   site: 'https://docs.aac.run',
