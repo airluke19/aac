@@ -27,7 +27,7 @@ sidebar:
 
 ## Strava
 
-To offer your users the Strava connection (optional):
+To offer your users the direct Strava connection (optional). Since 2026 Strava requires a paid **Strava subscription** to create an API app and limits how many athletes can connect until the app is approved: decide whether you need it. Without it, Strava users connect the same watch to Intervals.icu too and everything works.
 
 1. At [strava.com/settings/api](https://www.strava.com/settings/api) create an application: name (e.g. *AAC*), category *Training*, website and, under **Authorization Callback Domain**, the domain of `PUBLIC_URL` without `https://` (e.g. `aac.run`).
 2. Copy the **Client ID** and **Client Secret** into `.env`:

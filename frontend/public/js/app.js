@@ -780,7 +780,9 @@
     let h = '';
     if (d.collegamento && d.collegamento.avviso && !(ME && ME.demo)) {
       h += '<section class="avviso warn"><div class="av-h">' + ICO.sync + '<h3>' + T('Le tue corse arrivano da Strava', 'Your runs come from Strava') + '</h3></div>' +
-        '<p>' + T('Intervals.icu non può passare ad AAC le attività importate da Strava: lo vietano i termini di Strava. Puoi collegare Strava direttamente ad AAC, oppure l’orologio direttamente a Intervals.icu.', 'Intervals.icu cannot pass activities imported from Strava to AAC: Strava’s terms forbid it. You can connect Strava directly to AAC, or your watch directly to Intervals.icu.') + '</p>' +
+        (ME && ME.profilo && ME.profilo.strava && ME.profilo.strava.disponibile
+          ? '<p>' + T('Intervals.icu non può passare ad AAC le attività importate da Strava: lo vietano i termini di Strava. Puoi collegare Strava direttamente ad AAC, oppure l’orologio direttamente a Intervals.icu.', 'Intervals.icu cannot pass activities imported from Strava to AAC: Strava’s terms forbid it. You can connect Strava directly to AAC, or your watch directly to Intervals.icu.') + '</p>'
+          : '<p>' + T('Intervals.icu non può passare ad AAC le attività importate da Strava: lo vietano i termini di Strava. Collega lo stesso orologio anche direttamente a Intervals.icu: bastano due minuti e Strava continua a funzionare come prima.', 'Intervals.icu cannot pass activities imported from Strava to AAC: Strava’s terms forbid it. Connect the same watch directly to Intervals.icu too: it takes two minutes and Strava keeps working as before.') + '</p>') +
         (ME && ME.profilo && ME.profilo.strava && ME.profilo.strava.disponibile
           ? '<a class="btn-strava av-strava" href="/api/strava/collega">' + T('Connetti Strava direttamente: un tocco', 'Connect Strava directly: one tap') + '</a>' : '') +
         '<button type="button" class="gc-cta" data-apri-sheet="#collega"><span>' + T('Oppure collega l’orologio a Intervals', 'Or connect your watch to Intervals') + '</span>' + FRECCIA + '</button></section>';
@@ -2298,6 +2300,7 @@
         : '') +
       '<div class="fonte fonte-int"><div class="fonte-top"><b>Intervals.icu</b>' + statoF(haInt, haInt ? T('collegato', 'connected') : T('non collegato', 'not connected')) + (sv.disponibile ? '<span class="fonte-cons">' + T('consigliato', 'recommended') + '</span>' : '') + '</div>' +
         '<p>' + T('Corse <b>e dati di salute</b>: FC a riposo, HRV e sonno. Servono al coach per adattare la seduta ogni mattina e per le tue zone cardiache personali.', 'Runs <b>and health data</b>: resting HR, HRV and sleep. The coach uses them to adapt your session every morning and for your personal heart-rate zones.') + '</p>' +
+        (sv.disponibile ? '' : '<p class="fonte-no">' + T('Usi Strava? Collega lo stesso orologio anche a Intervals.icu: le corse arrivano a tutti e due e Strava non cambia. Le corse che Intervals importa da Strava, invece, ad AAC non arrivano (regole di Strava).', 'Using Strava? Connect the same watch to Intervals.icu too: runs reach both and Strava doesn’t change. Runs that Intervals imports from Strava, though, don’t reach AAC (Strava’s rules).') + '</p>') +
         '<div class="fonte-az"><button type="button" class="acc-guida" data-apri-sheet="#collega">' + ICO.share + '<span>' + T('Collega l’orologio a Intervals', 'Connect your watch to Intervals') + '</span></button></div>' +
         '<details class="more fonte-chiave"' + (haInt ? '' : ' open') + '><summary>' + (haInt ? T('Athlete ID e API key', 'Athlete ID and API key') : T('Inserisci Athlete ID e API key', 'Enter Athlete ID and API key')) + '</summary>' +
           '<form id="acc-int-form" class="acc-form" autocomplete="off">' +

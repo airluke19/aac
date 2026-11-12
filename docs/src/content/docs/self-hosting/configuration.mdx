@@ -27,7 +27,7 @@ Le **notifiche push** non richiedono configurazione: le chiavi VAPID si generano
 
 ## Strava
 
-Per offrire ai tuoi utenti il collegamento con Strava (facoltativo):
+Per offrire ai tuoi utenti il collegamento diretto con Strava (facoltativo). Dal 2026 Strava chiede a chi crea un'app API un **abbonamento Strava** a pagamento e limita il numero di atleti collegabili finché l'app non viene approvata: valuta se ti serve. Senza, gli utenti di Strava collegano lo stesso orologio anche a Intervals.icu e tutto funziona.
 
 1. Su [strava.com/settings/api](https://www.strava.com/settings/api) crea un'applicazione: nome (per esempio *AAC*), categoria *Training*, sito web e, in **Authorization Callback Domain**, il dominio di `PUBLIC_URL` senza `https://` (per esempio `aac.run`).
 2. Copia **Client ID** e **Client Secret** nel `.env`:

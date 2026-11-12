@@ -1,51 +1,45 @@
 ---
-title: Connect Strava
-description: The quickest way to bring your runs into AAC. One tap, no keys.
+title: Using Strava?
+description: Keep Strava as it is and bring your runs into AAC in two minutes, by connecting the same watch to Intervals.icu.
 sidebar:
   order: 3
 ---
 import { Steps, Aside } from '@astrojs/starlight/components';
 
-If your watch already uploads runs to **Strava**, it's the quickest way to use AAC: **one tap**, no keys to copy. Your runs arrive on their own, every 15 minutes.
+Great: **leave Strava as it is**. Just connect the same watch to **Intervals.icu** too (free). From there every run reaches AAC and, alongside Strava, keeps going wherever it went before.
+
+## Why not from Strava?
+
+Strava forbids Intervals.icu from passing on to other apps the activities it imported from Strava: if your runs reach Intervals **only** through Strava, they don't reach AAC. And to read directly from Strava, since 2026 Strava requires app developers to pay for a subscription and limits how many athletes can connect.
+
+The fix is the simplest one: runs go **from the watch to both**.
 
 <Steps>
 
-1. **Open your profile**
+1. **Connect your watch to Intervals.icu**
 
-   In AAC tap your avatar at the top: the first section is *Where your data comes from*.
+   Garmin, Coros, Polar, Suunto: one link in the Intervals settings. Apple Watch: an app that uploads your workouts. The steps for each watch are in [Connect your watch](/en/start/connect-watch/).
 
-2. **Tap "Connect with Strava"**
+2. **Keep Strava connected to your watch**
 
-   Strava opens. Sign in if needed.
+   Nothing changes: runs keep reaching Strava too, with kudos and segments.
 
-3. **Keep "View data about your activities" ticked and tap Authorize**
+3. **Paste your Athlete ID and API key into your AAC profile**
 
-   It's the only permission needed: AAC reads your activities, never writes or posts anything.
-
-4. **Done**
-
-   You're back in AAC: within minutes your runs from the last 12 months arrive, with map, heart rate, pace, cadence and elevation.
+   On intervals.icu open **Settings → Developer Settings**. Only once.
 
 </Steps>
 
-## Strava, Intervals.icu or both?
+## What you gain
 
-| | Strava | Intervals.icu |
-|---|---|---|
-| Connection | one tap | Athlete ID and API key |
-| Runs with map, heart rate and pace | ✓ | ✓ |
-| Resting HR, HRV, sleep | — | ✓ |
-| Session adapted every morning | from load and form only | ✓ full |
-| Heart-rate-reserve zones | — | ✓ |
-
-**The coach's advice:** if you can, connect **both**. Strava brings your runs effortlessly, Intervals.icu the recovery data that lets the coach adapt every session. If the same run arrives from both sources, AAC keeps it **only once**.
+Intervals.icu doesn't bring only runs: it also brings **resting HR, HRV and sleep**. That's what the coach uses every morning to decide whether to lighten the session, and to work out your personal heart-rate zones.
 
 ## Good to know
 
-- **Load** for Strava runs (Strava doesn't provide it) is estimated by AAC from heart rate: that's how form, load and injuries keep working.
-- **Disconnecting** is always possible from your profile: AAC revokes access and deletes the runs that came from Strava.
-- **Runs imported into Intervals from Strava** don't reach AAC because of Strava's terms: connecting Strava directly solves it.
+- **Duplicates**: Intervals merges the same run coming from the watch and from Strava; AAC uses the one that arrived directly.
+- **Old history** that reached Intervals only from Strava can't be recovered that way: if Intervals offers it, import your history directly from the watch.
+- If runs still arrive only from Strava, AAC tells you in **Today** with a notice and the guide to fix it.
 
 <Aside type="note" title="Self-hosting">
-On an instance you host yourself, the Strava option appears only after you create a Strava app: see [Configuration](/en/self-hosting/configuration/#strava).
+AAC can also read runs directly from Strava, with one tap ("Connect with Strava"). On an instance you host yourself you can enable it by creating a Strava app, which requires a Strava subscription: see [Configuration](/en/self-hosting/configuration/#strava). It's not active on aac.run today.
 </Aside>

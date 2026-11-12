@@ -1,51 +1,45 @@
 ---
-title: Collega Strava
-description: Il modo più veloce per portare le tue corse in AAC. Un tocco, niente chiavi.
+title: Usi Strava?
+description: Tieni Strava com'è e porta le tue corse in AAC in due minuti, collegando lo stesso orologio a Intervals.icu.
 sidebar:
   order: 3
 ---
 import { Steps, Aside } from '@astrojs/starlight/components';
 
-Se il tuo orologio carica già le corse su **Strava**, è il modo più veloce per usare AAC: **un tocco**, nessuna chiave da copiare. Le corse arrivano da sole, ogni 15 minuti.
+Perfetto: **Strava non si tocca**. Ti basta collegare lo stesso orologio anche a **Intervals.icu** (gratuito). Da lì ogni corsa arriva ad AAC e, insieme a Strava, continua ad andare dove andava prima.
+
+## Perché non da Strava?
+
+Strava vieta a Intervals.icu di passare ad altre app le attività che ha importato da Strava: se le tue corse arrivano a Intervals **solo** tramite Strava, ad AAC non arrivano. E per leggere direttamente da Strava, dal 2026 Strava chiede a chi sviluppa un'app un abbonamento a pagamento e limita il numero di atleti collegabili.
+
+La soluzione è la più semplice: le corse partono **dall'orologio verso tutti e due**.
 
 <Steps>
 
-1. **Apri il profilo**
+1. **Collega l'orologio a Intervals.icu**
 
-   In AAC tocca il tuo avatar in alto: la prima sezione è *Da dove arrivano i tuoi dati*.
+   Garmin, Coros, Polar, Suunto: un collegamento nelle impostazioni di Intervals. Apple Watch: un'app che carica gli allenamenti. I passi per ogni orologio sono in [Collega l'orologio](/start/connect-watch/).
 
-2. **Tocca "Connetti con Strava"**
+2. **Lascia Strava collegato all'orologio**
 
-   Si apre Strava. Accedi, se serve.
+   Non cambia niente: le corse continuano ad arrivare anche su Strava, con kudos e segmenti.
 
-3. **Lascia la spunta su "Visualizza dati sulle tue attività" e tocca Autorizza**
+3. **Incolla Athlete ID e API key nel profilo di AAC**
 
-   È l'unico permesso che serve: AAC legge le attività, non scrive e non pubblica nulla.
-
-4. **Fatto**
-
-   Torni in AAC: in pochi minuti arrivano le corse degli ultimi 12 mesi, con mappa, cardio, passo, cadenza e dislivello.
+   Su intervals.icu apri **Settings → Developer Settings**. Una volta sola.
 
 </Steps>
 
-## Strava, Intervals.icu o entrambi?
+## Cosa ci guadagni
 
-| | Strava | Intervals.icu |
-|---|---|---|
-| Collegamento | un tocco | Athlete ID e API key |
-| Corse con mappa, cardio e passo | ✓ | ✓ |
-| FC a riposo, HRV, sonno | — | ✓ |
-| Seduta adattata ogni mattina | solo da carico e forma | ✓ completa |
-| Zone cardiache sulla riserva | — | ✓ |
-
-**Il consiglio del coach:** se puoi, collegali **entrambi**. Strava porta le corse senza fatica, Intervals.icu i dati di recupero che permettono al coach di adattare ogni seduta. Se la stessa corsa arriva da tutte e due le fonti, AAC la tiene **una volta sola**.
+Con Intervals.icu non arrivano solo le corse: arrivano anche **FC a riposo, HRV e sonno**. Sono i dati con cui il coach ogni mattina decide se alleggerire la seduta e calcola le tue zone cardiache personali.
 
 ## Da sapere
 
-- **Il carico** delle corse di Strava (che Strava non fornisce) lo stima AAC dalla frequenza cardiaca: così funzionano anche forma, carico e infortuni.
-- **Scollegare** si può sempre, dal profilo: AAC revoca l'accesso e cancella le corse arrivate da Strava.
-- **Le corse importate su Intervals da Strava** non arrivano ad AAC per via dei termini di Strava: collegando Strava direttamente il problema sparisce.
+- **Doppioni**: Intervals unisce da solo la stessa corsa arrivata da orologio e da Strava; per AAC conta quella arrivata direttamente.
+- **Lo storico vecchio** arrivato su Intervals solo da Strava non si recupera da lì: se Intervals te lo propone, importa lo storico direttamente dall'orologio.
+- Se le corse arrivano ancora solo da Strava, AAC te lo dice in **Oggi** con un avviso e la guida per sistemarlo.
 
 <Aside type="note" title="Self-hosting">
-Su un'istanza installata da te, l'opzione Strava compare solo dopo aver creato un'app Strava: vedi [Configurazione](/self-hosting/configuration/#strava).
+AAC sa anche leggere le corse direttamente da Strava, con un tocco ("Connetti con Strava"). Su un'istanza installata da te puoi attivarlo creando un'app Strava, che richiede un abbonamento Strava: vedi [Configurazione](/self-hosting/configuration/#strava). Su aac.run oggi non è attivo.
 </Aside>
