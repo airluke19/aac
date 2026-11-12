@@ -9,7 +9,10 @@ ENV NGINX_ENTRYPOINT_QUIET_LOGS=1
 
 USER root
 # Patch di sicurezza di Alpine uscite dopo l'immagine base; curl non serve (healthcheck con wget di busybox)
-RUN apk upgrade --no-cache && apk del --no-cache curl
+# AGGIORNA_PACCHETTI cambia a ogni build della CI: questo passaggio non resta in cache, cosi' le patch di Alpine
+# uscite dopo l'ultima build entrano subito (altrimenti Trivy blocca, giustamente, su versioni vecchie)
+ARG AGGIORNA_PACCHETTI=locale
+RUN echo "pacchetti: $AGGIORNA_PACCHETTI" && apk upgrade --no-cache && apk del --no-cache curl
 
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY security-headers.conf proxy-headers.conf /etc/nginx/snippets/

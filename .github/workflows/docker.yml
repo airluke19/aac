@@ -120,6 +120,7 @@ jobs:
         with:
           context: ./${{ matrix.dir }}
           platforms: linux/amd64
+          build-args: AGGIORNA_PACCHETTI=${{ github.run_id }}
           load: true
           tags: aac-${{ matrix.service }}:scan
           pull: true
@@ -170,6 +171,7 @@ jobs:
         with:
           context: ./${{ matrix.dir }}
           platforms: linux/amd64
+          build-args: AGGIORNA_PACCHETTI=${{ github.run_id }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
