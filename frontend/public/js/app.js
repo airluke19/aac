@@ -1752,12 +1752,14 @@
   let chiudiRivivi = null; // replay aperto: "Indietro" lo chiude invece di uscire dal dettaglio corsa
   function rotta() {
     if (chiudiRivivi) { const f = chiudiRivivi; chiudiRivivi = null; f(); return; }
+    document.body.classList.toggle('chat-open', location.hash === '#coach');
     const sh = $('#sheet');
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
     if (location.hash === '#collega') { apriCollega(); return; }
     if (location.hash === '#guida-strava') { apriGuidaStrava(); return; }
     if (location.hash === '#diario') { apriDiario(); return; }
+    if (location.hash === '#coach') { apriChat(); return; }
     const mu = location.hash.match(/^#uso\/(\d+)$/);
     if (mu) { apriUso(mu[1]); return; }
     const mc = location.hash.match(/^#condividi\/(.+)$/);
@@ -1987,6 +1989,7 @@
   }
   $('#btn-account').addEventListener('click', () => apriSheet('#account'));
   $('#btn-diario').addEventListener('click', () => apriSheet('#diario'));
+  $('#btn-chat').addEventListener('click', () => apriSheet('#coach'));
   $('#btn-admin').addEventListener('click', () => apriSheet('#admin'));
   // il conteggio si aggiorna quando torni sull'app
   document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) caricaJson('/api/me').then((m) => { ME = m; aggiornaAvatar(); }).catch(() => {}); });
@@ -2814,6 +2817,8 @@
     const b = $('#btn-diario');
     if (!b) return;
     b.hidden = !ME || Boolean(ME.demo);
+    const bc = $('#btn-chat');
+    if (bc) { bc.hidden = !ME; bc.title = T('Chiedi al coach', 'Ask the coach'); bc.setAttribute('aria-label', bc.title); }
     const ultimo = ultimiDati && ultimiDati.diario_ultimo;
     b.querySelector('.diario-dot').hidden = !ultimo || ultimo <= leggiVisto();
   }
@@ -2838,6 +2843,59 @@
     if (voci[0]) { try { localStorage.setItem('coach-diario-visto', voci[0].quando); } catch (_) { /* solo comodità */ } }
     aggiornaPallinoDiario();
   }
+
+  /* ---- Chiedi al coach: chat a regole (il server sceglie l'argomento e risponde con i tuoi dati) ---- */
+  const CHAT = { msg: [], sugg: [], attesa: false, tema: null };
+  const bolla = (m) => m.da === 'io'
+    ? '<div class="ch-m ch-io"><p>' + esc(m.testo) + '</p></div>'
+    : '<div class="ch-m ch-coach"><span class="ch-av" aria-hidden="true">' + ICO.logo + '</span><div class="ch-b">' + m.testo.map((x) => '<p>' + esc(x) + '</p>').join('') + '</div></div>';
+  function disegnaChat() {
+    const log = $('#ch-log');
+    if (!log) return;
+    log.innerHTML = CHAT.msg.map(bolla).join('') + (CHAT.attesa ? '<div class="ch-m ch-coach"><span class="ch-av" aria-hidden="true">' + ICO.logo + '</span><div class="ch-b ch-dots" aria-label="' + T('Il coach sta scrivendo', 'The coach is typing') + '"><i></i><i></i><i></i></div></div>' : '');
+    $('#ch-sugg').innerHTML = CHAT.attesa ? '' : CHAT.sugg.map((s) => '<button type="button" class="ch-chip" data-chat-tema="' + esc(s.tema) + '">' + esc(s.label) + '</button>').join('');
+    const ultimo = log.lastElementChild;
+    if (ultimo) ultimo.scrollIntoView({ block: 'end', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }
+  async function chiediCoach(corpo, mio) {
+    if (CHAT.attesa) return;
+    if (mio) CHAT.msg.push({ da: 'io', testo: mio });
+    CHAT.attesa = true; disegnaChat();
+    let r;
+    try { r = await inviaJson('POST', '/api/coach/chat', corpo); } catch (_) { r = { ok: false, out: {} }; }
+    // una piccola pausa: la risposta arriva come da una persona, non a scatto
+    await new Promise((ok) => setTimeout(ok, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 450));
+    CHAT.attesa = false;
+    if (r.ok && r.out && Array.isArray(r.out.testo)) { CHAT.msg.push({ da: 'coach', testo: r.out.testo }); CHAT.sugg = r.out.suggerimenti || []; }
+    else CHAT.msg.push({ da: 'coach', testo: [r.out && r.out.errore ? r.out.errore : T('Non riesco a risponderti ora: riprova tra poco.', 'I can’t answer right now: try again shortly.')] });
+    if (CHAT.msg.length > 60) CHAT.msg.splice(0, CHAT.msg.length - 60);
+    disegnaChat();
+  }
+  function apriChat() {
+    mostraSheet(T('Chiedi al coach', 'Ask the coach'),
+      '<div class="ch-wrap"><p class="ch-nota">' + T('Il coach risponde con le regole di AAC e i tuoi dati. Non sostituisce il parere di un medico.', 'The coach answers with AAC’s rules and your data. It doesn’t replace a doctor’s advice.') + '</p>' +
+      '<div id="ch-log" class="ch-log" role="log" aria-live="polite"></div>' +
+      '<div id="ch-sugg" class="ch-sugg"></div>' +
+      '<form id="ch-form" class="ch-form" autocomplete="off"><input id="ch-in" type="text" maxlength="300" enterkeyhint="send" placeholder="' + T('Scrivi al coach…', 'Message the coach…') + '" aria-label="' + T('Messaggio al coach', 'Message to the coach') + '">' +
+      '<button type="submit" class="ch-send" aria-label="' + T('Invia', 'Send') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></form></div>');
+    const tema = CHAT.tema; CHAT.tema = null;
+    if (!CHAT.msg.length) chiediCoach({ tema: 'benvenuto' }).then(() => { if (tema) chiediCoach({ tema }, (CHAT.sugg.find((s) => s.tema === tema) || {}).label || null); });
+    else { disegnaChat(); if (tema) chiediCoach({ tema }, null); }
+  }
+  $('#sheet-body').addEventListener('submit', (e) => {
+    if (e.target.id !== 'ch-form') return;
+    e.preventDefault();
+    const inp = $('#ch-in'), t = inp.value.trim().slice(0, 300);
+    if (!t || CHAT.attesa) return;
+    inp.value = '';
+    chiediCoach({ testo: t }, t);
+  });
+  document.addEventListener('click', (e) => {
+    const c = e.target.closest('[data-chat-tema]');
+    if (c && $('#ch-log')) { chiediCoach({ tema: c.dataset.chatTema }, c.textContent); return; }
+    const a = e.target.closest('[data-apri-chat]');
+    if (a) { CHAT.tema = a.dataset.apriChat || null; apriSheet('#coach'); }
+  });
 
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
@@ -2985,6 +3043,7 @@
       '<ul class="pc-list">' + pc.punti.map((x) => '<li class="pc-' + esc(x.tono) + '"><i aria-hidden="true">' + (ico[x.tono] || '•') + '</i><p>' + esc(x.testo) + '</p></li>').join('') + '</ul>' +
       (pc.consiglio ? '<div class="pc-tip"><b>' + T('Il consiglio del coach', 'Coach’s tip') + '</b><p>' + esc(pc.consiglio) + '</p></div>' : '') +
       (pc.chiusa ? '<p class="pc-chiusa">' + esc(pc.chiusa) + '</p>' : '') +
+      '<button type="button" class="pc-chat" data-apri-chat>' + T('Chiedi al coach ›', 'Ask the coach ›') + '</button>' +
     '</section>';
   }
 
