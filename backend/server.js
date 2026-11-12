@@ -3253,7 +3253,19 @@ function costruisciSalute(oggiStr) {
     }
   }
 
-  return { disponibile, metriche, serie_30g: serie, recupero, corpo: corpoEBmi(oggiStr) };
+  // Giorni con recupero incompleto negli ultimi 30 giorni (stesse regole della seduta del giorno)
+  const nonRecuperati = [];
+  let basePronta = false;
+  for (let d = addDays(oggiStr, -29); d <= oggiStr; d = addDays(d, 1)) {
+    const r = perGiorno.get(d);
+    if (!r || (r.fc_riposo == null && r.hrv == null && r.sonno_sec == null)) continue;
+    if (mediaBase(perGiorno, 'fc_riposo', d) != null || mediaBase(perGiorno, 'hrv', d) != null) basePronta = true;
+    const sg = segnaliRecupero(perGiorno, d);
+    if (sg.length) nonRecuperati.push({ data: d, segnali: sg });
+  }
+  const recupero_30g = { giorni: nonRecuperati.reverse(), base_pronta: basePronta };
+
+  return { disponibile, metriche, serie_30g: serie, recupero, recupero_30g, corpo: corpoEBmi(oggiStr) };
 }
 
 // BMI = peso (kg) / altezza (m)². Peso: sempre il dato piu' recente tra bilancia/Intervals e profilo

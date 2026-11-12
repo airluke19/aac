@@ -88,7 +88,7 @@ Goal, intensity and days are set with a **step-by-step guide that opens inside t
 ### What you see in the app
 
 - **Today:** next session, how you are today, last run, this week
-- **Health:** resting HR, HRV, sleep, steps, BMI and more
+- **Health:** resting HR, HRV, sleep, steps, BMI and more, plus the days with incomplete recovery in the last 30 days; each metric has a detail page with collapsible deep dives
 - **Load and injuries:** three declared signals (recent vs usual load ACWR, weekly km jump, single-run jump over the month's longest); a warning on Today, a section in Progress, the next session lightened when ACWR goes above 1.5 and a cap for the next long run (+10%)
 - **Data sources:** the profile shows where your data comes from — **Intervals.icu** (runs plus resting HR, HRV and sleep) and, when the instance has Strava keys, **Strava** (one tap, runs only) — with status, sync now and a step-by-step guide for each. Runs arriving from both are kept once; for Strava-only users AAC estimates load from heart rate so form and injury checks keep working. If runs reach Intervals only through Strava, the app warns you and offers both fixes
 - **Install and notifications:** add AAC to your Home Screen (on iPhone: Safari → Share → Add to Home Screen) and turn on notifications in your profile: your session every morning at the time you choose (including when the coach lightens it) and a weekly recap on Sunday at 7 pm; an alert every time the coach changes something (the same entries as the coach's history); the administrator is also notified of every new access request. All notifications are on by default; the phone's permission is given with one tap. Standard Web Push, no app store; the VAPID keys are generated on first start and stored encrypted in `sistema.db` (nothing to add to `.env`)
@@ -96,7 +96,7 @@ Goal, intensity and days are set with a **step-by-step guide that opens inside t
 - **Plan:** calendar with every change explained; copy a finished session as Markdown to discuss it with any AI assistant; download the calendar (.ics); share a finished session as an image or as a **route video** (the 3D fly-over recorded on your device) for a post (4:5) or a story (9:16), drawn on your device in your accent colour on a background you pick (dark, theme colour, light and a few sporty tints), with the route shape (no map) or without it
 - **Runs:** history, filters, shoes; **Play** your run as a full-screen 3D fly-over of the route on satellite imagery (camera follows you, live km/time/pace/HR, pause, drag to seek, Back closes it); run detail with satellite GPS map (Esri World Imagery), heart rate, pace, cadence, power, elevation, running dynamics, laps, effort (RPE) and weather
 - **Progress:** goal, predictions, training load
-- **Info:** every rule explained in plain language
+- **Info:** how the coach follows you, starting from your own heart (max HR by Tanaka or measured, resting HR, your easy limit worked out with Karvonen on your numbers), then every rule in plain language
 
 Light and dark theme, Italian and English, 26 sporty accent colours. Multi‑user with Google sign‑in, invitations and admin approval.
 

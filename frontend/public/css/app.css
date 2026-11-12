@@ -1961,10 +1961,19 @@ body.rivivi-on #tabbar { display: none; }
 .adapt-x .ax-more { margin-top: 2px; }
 .adapt-x .ax-more .fine { margin-top: 6px; }
 /* Salute: approfondimenti per parametro */
-.dd-dett .dd-dv { padding: 10px 0; border-top: 1px solid var(--line); }
-.dd-dett .dd-dv:first-of-type { border-top: 0; padding-top: 4px; }
-.dd-dett .dd-dv b { display: block; font-size: .9rem; }
-.dd-dett .dd-dv p { margin: 4px 0 0; font-size: .9rem; line-height: 1.5; color: var(--text-2, var(--muted)); }
+.dd-dett .dd-dv { border-top: 1px solid var(--line); }
+.dd-dett .dd-dv:first-of-type { border-top: 0; }
+.dd-dett .dd-dv > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 0; font-size: .92rem; font-weight: 600; }
+.dd-dett .dd-dv > summary::-webkit-details-marker { display: none; }
+.dd-dett .dd-dv > summary::after { content: ''; flex: none; width: 7px; height: 7px; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .2s; margin-right: 4px; }
+.dd-dett .dd-dv[open] > summary::after { transform: rotate(-135deg); }
+.dd-dett .dd-dv > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.dd-dett .dd-dv p { margin: 0 0 12px; font-size: .9rem; line-height: 1.5; color: var(--text-2, var(--muted)); }
+.rec-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.rec-n { font-family: var(--f-num); font-size: 1.6rem; font-weight: 700; color: var(--ok, var(--accent)); }
+.rec-n.warn { color: var(--warn); }
+.rec-n small { font-size: .8rem; color: var(--muted); font-weight: 500; margin-left: 2px; }
+@media (prefers-reduced-motion: reduce) { .dd-dett .dd-dv > summary::after { transition: none; } }
 
 /* Profilo: fonti dei dati (Strava, Intervals.icu) */
 .acc-fonti .sub { margin: 6px 0 0; }
@@ -1988,3 +1997,21 @@ body.rivivi-on #tabbar { display: none; }
 .link-strava { color: #fc4c02 !important; }
 .powered-strava { font-size: .72rem; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
 .dd-actions .powered-strava { align-self: center; }
+
+/* Info: "Il tuo cuore, non una tabella" (Tanaka + Karvonen sui numeri dell'utente) e diario */
+.nf-cuore { margin-bottom: 12px; }
+.nf-lead { margin: 0 0 14px; font-size: .95rem; line-height: 1.5; color: var(--text-2); }
+.nf-hcs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+.nf-hc { min-width: 0; padding: 12px 10px 10px; border-radius: 14px; background: var(--surface-2); display: flex; flex-direction: column; gap: 2px; }
+.nf-hc b { font-family: var(--f-num); font-size: 1.6rem; font-weight: 700; letter-spacing: -0.03em; line-height: 1.05; color: var(--c-cuore, var(--accent)); white-space: nowrap; }
+.nf-hc:last-child { background: color-mix(in srgb, var(--accent) 14%, var(--surface-2)); }
+.nf-hc:last-child b { color: var(--accent); }
+.nf-hc span { font-size: .8rem; font-weight: 600; color: var(--text); }
+.nf-hc small { font-size: .72rem; color: var(--muted); line-height: 1.3; }
+.nf-formula { margin: 12px 0 4px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-family: var(--f-num); font-size: .95rem; text-align: center; font-variant-numeric: tabular-nums; color: var(--text-2); }
+.nf-formula b { color: var(--accent); }
+.nf-garanzie { margin: 12px 0 0; padding: 12px 0 0 18px; border-top: .5px solid var(--line-strong); display: grid; gap: 6px; font-size: .84rem; line-height: 1.45; color: var(--text-2); }
+.nf-diario { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.nf-diario b { font-size: 1rem; }
+.nf-diario p { margin: 4px 0 0; font-size: .875rem; line-height: 1.45; color: var(--text-2); }
+@media (max-width: 360px) { .nf-hc b { font-size: 1.3rem; } }

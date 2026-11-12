@@ -445,7 +445,7 @@
     const step = (ico, t, s) => '<li><span class="nf-ic">' + ico + '</span><b>' + t + '</b><small>' + s + '</small></li>';
     const hero = '<section class="nf-hero">' +
       '<h2>' + T('Un piano che si adatta a te', 'A plan that adapts to you') + '</h2>' +
-      '<p>' + T('Guarda cosa fai e come stai, poi cambia il piano.', 'It looks at what you do and how you feel, then changes the plan.') + '</p>' +
+      '<p>' + T('Una tabella non sa come hai dormito, quanto sei allenato o se la settimana è andata storta. AAC sì: ogni giorno guarda cosa fai e come stai, e cambia il piano per te.', 'A fixed plan doesn’t know how you slept, how fit you are or whether your week went wrong. AAC does: every day it looks at what you do and how you feel, and changes the plan for you.') + '</p>' +
       '<ol class="nf-loop">' +
         step(G.target, T('Valuta', 'Assess'), T('da dove parti', 'where you start')) +
         step(G.run, T('Allena', 'Train'), T('3 sedute a settimana', '3 sessions a week')) +
@@ -453,14 +453,38 @@
         step(G.adapt, T('Adatta', 'Adapt'), T('giorno e settimana', 'day and week')) +
       '</ol></section>';
 
-    // ---- le regole, con i numeri ----
+    // ---- 1. il tuo cuore: FC max (misurata o Tanaka) + FC a riposo (Karvonen) = i tuoi limiti ----
+    const fmiC = d.atleta && d.atleta.fc_max_info;
+    const eta = d.atleta && d.atleta.eta;
+    const riposo = fmiC && fmiC.metodo === 'riserva' ? fmiC.fc_riposo : null;
+    const generico = Math.round(fcMax * 0.7);
+    const nCuore = (v, l, n) => '<div class="nf-hc"><b>' + v + '</b><span>' + l + '</span>' + (n ? '<small>' + n + '</small>' : '') + '</div>';
+    const cuore = '<section class="card nf-card nf-cuore"><div class="nf-when">' + T('Prima di tutto', 'First of all') + '</div>' +
+      '<h3>' + T('Il tuo cuore, non una tabella', 'Your heart, not a table') + '</h3>' +
+      '<p class="nf-lead">' + T('Ogni seduta ha un limite di battiti da rispettare. Non lo prendiamo da una tabella uguale per l’età: lo costruiamo sul <b>tuo</b> cuore, con due numeri.', 'Every session has a heart-rate limit to respect. We don’t take it from a one-size-fits-all age table: we build it on <b>your</b> heart, from two numbers.') + '</p>' +
+      '<div class="nf-hcs">' +
+        nCuore(fcMax, T('FC massima', 'Max HR'), fmiC && fmiC.fonte === 'misurata' ? T('misurata da te', 'measured by you') : T('Tanaka: 208 − 0,7 × ', 'Tanaka: 208 − 0.7 × ') + (eta || 33)) +
+        nCuore(riposo || '–', T('FC a riposo', 'Resting HR'), riposo ? T('mediana di 28 giorni', '28-day median') : T('in arrivo dall’orologio', 'coming from your watch')) +
+        nCuore('&lt; ' + facile, T('il tuo limite facile', 'your easy limit'), riposo ? T('riposo + 70% della riserva', 'resting + 70% of reserve') : T('70% della FC max', '70% of max HR')) +
+      '</div>' +
+      (riposo
+        ? '<div class="nf-formula">' + riposo + ' + 70% × (' + fcMax + ' − ' + riposo + ') → <b>' + facile + ' bpm</b></div>' +
+          '<p class="nf-foot">' + T('Una tabella generica ti darebbe il 70% della FC max, <b>' + generico + ' bpm</b>, uguale per tutti quelli della tua età. Ma un cuore allenato batte più piano a riposo e ha più margine: con il metodo di <b>Karvonen</b> (la riserva cardiaca, la differenza tra massima e riposo) le zone si spostano con la tua forma. Più ti alleni, più la FC a riposo scende, e il coach lo vede da solo.', 'A generic table would give you 70% of max HR, <b>' + generico + ' bpm</b>, the same for everyone your age. But a trained heart beats slower at rest and has more room: with the <b>Karvonen</b> method (heart-rate reserve, the gap between max and resting) your zones move with your fitness. The fitter you get, the lower your resting HR, and the coach sees it on its own.') + '</p>'
+        : '<p class="nf-foot">' + T('Per ora le zone sono in % della FC max. Appena l’orologio registra almeno 5 valori di FC a riposo in 28 giorni, passano alla tua <b>riserva cardiaca</b> (metodo di <b>Karvonen</b>): limiti costruiti sul tuo cuore, che si spostano con la tua forma.', 'For now zones are a % of max HR. As soon as your watch records at least 5 resting HR values in 28 days, they switch to your <b>heart-rate reserve</b> (the <b>Karvonen</b> method): limits built on your heart, moving with your fitness.') + '</p>') +
+      '<ul class="nf-garanzie">' +
+        '<li>' + T('<b>Tanaka</b> (208 − 0,7 × età) è più precisa del vecchio 220 − età, che sottostima la FC max dopo i 40 anni. Se fai un test, inserisci il valore nel profilo: tutto si ricalcola, anche le corse passate.', '<b>Tanaka</b> (208 − 0.7 × age) is more accurate than the old 220 − age, which underestimates max HR after 40. If you do a test, enter it in your profile: everything updates, past runs included.') + '</li>' +
+        '<li>' + T('Protezione: la corsa facile non supera mai l’80% della FC max; nella corsa-cammino il limite è più basso.', 'Safety net: easy running never goes above 80% of max HR; run-walk has a lower limit.') + '</li>' +
+        '<li>' + T('Verifica da strada: se riesci a parlare a frasi intere, sei nella zona giusta.', 'Road check: if you can talk in full sentences, you’re in the right zone.') + '</li>' +
+      '</ul></section>';
+
+    // ---- 2-4. le regole dell'adattamento, con i numeri ----
     const sig = (v, l, cat) => '<div class="nf-sig cat-' + cat + '"><b>' + v + '</b><span>' + l + '</span></div>';
     const esito = (cls, ico, tit, v) => '<li class="' + cls + '"><span class="nf-e">' + ico + '</span><b>' + tit + '</b><small>' + v + '</small></li>';
     const regole = '<div class="nf-grid">' +
-      '<section class="card nf-card"><div class="nf-when">' + T('Ogni giorno', 'Every day') + '</div><h3>' + T('La seduta segue come stai', 'The session follows how you feel') + '</h3>' +
+      '<section class="card nf-card"><div class="nf-when">' + T('Ogni mattina', 'Every morning') + '</div><h3>' + T('La seduta segue come stai', 'The session follows how you feel') + '</h3>' +
         '<div class="nf-sigs">' + sig('+5', T('FC riposo', 'Resting HR'), 'cuore') + sig('−15%', 'HRV', 'cuore') + sig('&lt;5h30′', T('Sonno', 'Sleep'), 'sonno') + sig('&lt;−25', T('Forma', 'Form'), 'attivita') + '</div>' +
         '<div class="nf-then"><span>' + T('Basta un segnale', 'One signal is enough') + '</span><b>60%</b></div>' +
-        '<p class="nf-foot">' + T('Confronto con la tua media di 28 giorni. La qualità diventa 25′ facili.', 'Compared with your 28-day average. Quality becomes 25′ easy.') + '</p></section>' +
+        '<p class="nf-foot">' + T('Confronto con la <b>tua</b> media di 28 giorni, non con quella di altri. La qualità diventa 25′ facili; il piano non cambia: è solo oggi.', 'Compared with <b>your</b> 28-day average, not anyone else’s. Quality becomes 25′ easy; the plan doesn’t change: it’s just today.') + '</p></section>' +
       '<section class="card nf-card"><div class="nf-when">' + T('Ogni settimana', 'Every week') + '</div><h3>' + T('Il piano decide il passo successivo', 'The plan picks the next step') + '</h3>' +
         '<ul class="nf-esiti">' +
           esito('ok', '↗', T('Avanza', 'Forward'), T('2 corse su 3, nessun allarme', '2 runs of 3, no warnings')) +
@@ -470,7 +494,9 @@
       '<section class="card nf-card"><div class="nf-when">' + T('Ogni 3 settimane', 'Every 3 weeks') + '</div><h3>' + T('L’intensità si regola da sola', 'Intensity tunes itself') + '</h3>' +
         '<div class="nf-int"><b>±10%</b><span>' + T('3 settimane troppo facili o 2 su 3 troppo dure', '3 weeks too easy or 2 of 3 too hard') + '</span></div>' +
         '<div class="in-int">' + [['Tranquilla', 'Easy-going', '−15%'], ['Equilibrata', 'Balanced', '0%'], ['Ambiziosa', 'Ambitious', '+15%']].map((x) => '<div><b>' + T(x[0], x[1]) + '</b><span>' + x[2] + '</span></div>').join('') + '</div></section>' +
-    '</div>';
+    '</div>' +
+    '<section class="card nf-diario"><div><b>' + T('Ogni decisione ha un motivo scritto', 'Every decision comes with a written reason') + '</b><p>' + T('Nessuna scatola nera: ogni volta che il coach cambia qualcosa te lo dice, con i dati che l’hanno convinto. Ricevi una notifica e trovi tutto in “Cosa ha fatto il coach”, l’icona con l’orologio in alto.', 'No black box: every time the coach changes something it tells you, with the data behind it. You get a notification and find it all in “What the coach did”, the clock icon at the top.') + '</p></div>' +
+      '<button type="button" class="gc-cta" data-apri-sheet="#diario"><span>' + T('Apri il diario', 'Open the log') + '</span>' + FRECCIA + '</button></section>';
 
     // ---- approfondimenti: elenco stile Impostazioni, si apre con un tocco ----
     const voce = (id, ico, col, tit, sotto, corpo) => '<details class="nf-row" id="info-' + id + '"><summary><span class="nf-sq' + (col === 'var(--accent)' ? ' acc' : '') + '" style="--c:' + col + '">' + ico + '</span><span class="nf-t"><b>' + tit + '</b><small>' + sotto + '</small></span></summary><div class="nf-body">' + corpo + '</div></details>';
@@ -481,7 +507,8 @@
       vs(T('Partenza', 'Start'), T('uguale per tutti', 'same for all'), T('dalle tue corse', 'from your runs')) +
       vs(T('Giorno storto', 'Off day'), T('seduta uguale', 'same session'), T('ridotta al 60%', 'cut to 60%')) +
       vs(T('Settimana saltata', 'Missed week'), T('vai avanti', 'move on'), T('la ripeti', 'repeat it')) +
-      vs(T('Zone e passo', 'Zones & pace'), T('generici', 'generic'), T('personali', 'personal')) +
+      vs(T('Zone cardiache', 'HR zones'), T('% dell’età', '% of age'), T('sul tuo cuore', 'on your heart')) +
+      vs(T('Passo', 'Pace'), T('generico', 'generic'), T('dalle tue corse', 'from your runs')) +
       vs(T('Data gara', 'Race date'), T('fissa', 'fixed'), T('ricalcolata', 'recalculated')) + '</div>';
 
     const partenza = '<p>' + T('Dalla tua corsa continua più lunga delle ultime 6 settimane:', 'From your longest continuous run in the last 6 weeks:') + '</p>' +
@@ -518,11 +545,8 @@
       kv(T('FC massima', 'Max HR'), fcMax + ' bpm · ' + (fmi && fmi.fonte === 'misurata' ? T('misurata', 'measured') : T('stimata dall’età', 'age-based estimate'))) +
       kv(T('FC di sicurezza', 'Safety HR'), T('non superare ', 'do not exceed ') + fcMax + ' bpm') +
       kv(T('Corse facili', 'Easy runs'), T('sotto ', 'below ') + facile + ' bpm') + kv(T('Passo indicativo', 'Guide pace'), T('dopo 3 corse, dalla tua efficienza', 'after 3 runs, from your efficiency')) +
-      '<p class="in-p">' + T(
-        'Con almeno 5 misure di <b>FC a riposo</b> negli ultimi 28 giorni le zone usano la <b>riserva cardiaca</b> (metodo di Karvonen): FC a riposo + % × (FC max − FC a riposo). Così le zone sono tue, non solo della tua età: chi è più allenato ha il riposo più basso e zone diverse. La corsa facile non supera mai l’80% della FC max e la corsa-cammino resta un po’ più bassa (65% della riserva). Verifica semplice: se riesci a parlare a frasi intere sei in zona facile. '+
-        'Senza un test sul campo la FC max si stima con <b>208 − 0,7 × età</b> (Tanaka): è più precisa di <b>220 − età</b>, che la sottostima dopo i 40 anni. La stima può sbagliare di ±10 bpm: se fai un test, inserisci il valore nel profilo e zone e limiti si ricalcolano da soli, anche per le corse passate. Il tempo nelle zone viene dai battiti secondo per secondo dell’orologio; sotto il 50% è “fuori zona”.',
-        'With at least 5 <b>resting HR</b> readings in the last 28 days, zones use your <b>heart-rate reserve</b> (Karvonen method): resting HR + % × (max HR − resting HR). This makes the zones yours, not just your age’s: fitter people have a lower resting HR and different zones. Easy running never goes above 80% of max HR and run-walk stays a little lower (65% of the reserve). Simple check: if you can speak in full sentences you are in the easy zone. '+
-        'Without a field test, max HR is estimated as <b>208 − 0.7 × age</b> (Tanaka): more accurate than <b>220 − age</b>, which underestimates it after 40. The estimate can be off by ±10 bpm: if you do a test, enter it in your profile and zones and limits update automatically, past runs included. Time in zones comes from your watch’s second-by-second heart rate; below 50% is “below zones”.') + '</p>';
+      '<p class="in-p">' + T('Come nascono questi numeri (Tanaka e Karvonen) è spiegato in alto, in “Il tuo cuore, non una tabella”. La stima dall’età può sbagliare di ±10 bpm: con un test sul campo inserisci la FC max nel profilo. Il tempo nelle zone viene dai battiti secondo per secondo dell’orologio; sotto il 50% è “fuori zona”.',
+        'How these numbers are built (Tanaka and Karvonen) is explained above, in “Your heart, not a table”. The age estimate can be off by ±10 bpm: after a field test, enter your max HR in your profile. Time in zones comes from your watch’s second-by-second heart rate; below 50% is “below zones”.') + '</p>';
 
     const bmi = '<div class="in-zones">' + [['&lt; 18,5', T('sottopeso', 'underweight')], ['18,5–24,9', T('normopeso', 'healthy')], ['25–29,9', T('sovrappeso', 'overweight')], ['≥ 30', T('obesità', 'obesity')]].map((z) => '<div><b>' + z[0] + '</b><small>' + z[1] + '</small></div>').join('') + '</div>' +
       kv(T('Formula', 'Formula'), T('peso (kg) ÷ altezza (m)²', 'weight (kg) ÷ height (m)²')) +
@@ -586,7 +610,7 @@
       voce('limiti', G.shield, '#a2845e', T('Limiti e privacy', 'Limits and privacy'), T('Cosa non fa, dove stanno i dati', 'What it does not do, where data lives'), limiti) +
     '</section>';
 
-    return hero + regole + elenco;
+    return hero + '<div class="sec-title"><h2>' + T('Come ti segue il coach', 'How the coach follows you') + '</h2></div>' + cuore + regole + elenco;
   }
 
   /* ---- Guida: come funziona (solo ciò che l'app fa davvero) ---- */
@@ -1418,16 +1442,16 @@
       const corsa = x._tipo === 'corsa';
       const zn = corsa && x.zona ? x.zona.slice(1) : '';
       const zona = zn ? ' <span class="zchip z' + zn + '">' + x.zona + '</span>' : '';
-      const info = [x.ora_inizio ? esc(x.ora_inizio) : '', x.tempo ? fmtDurata(x.tempo) : '', x.meteo ? meteoBreve(x.meteo) : ''].filter(Boolean).join(' · ');
+      // da telefono la riga resta corta: FC e meteo sono nel dettaglio
+      const info = [x.ora_inizio ? esc(x.ora_inizio) : '', x.tempo ? fmtDurata(x.tempo) : ''].filter(Boolean).join(' · ');
       const passo = corsa ? fmtPasso(x.passo_corsa || x.passo_medio) + '/km' : '';
-      const fc = x.fc_media ? fmt0(x.fc_media) + ' bpm' : '';
       return '<div class="run' + (aperta ? ' open' : '') + '">' +
         '<button type="button" class="rc' + (corsa ? '' : ' rc-altro') + '" data-corsa="' + esc(id) + '" aria-expanded="' + aperta + '"' + (zn ? ' style="--zc:var(--zone-' + zn + ')"' : '') + '>' +
           '<span class="rc-g"><b>' + Number(x.data.slice(8)) + '</b><small>' + esc(giornoSett(x.data)) + '</small></span>' +
           '<span class="rc-m"><b>' + esc(corsa ? (x.nome || T('Corsa', 'Run')) : nomeTipo(x.tipo)) + '</b>' +
             '<small>' + (info || '&nbsp;') + '</small></span>' +
           '<span class="rc-n"><b>' + (x.distanza ? fmt1(x.distanza) + '<small> km</small>' : (x.tempo ? fmtDurata(x.tempo) : '–')) + '</b>' +
-            '<small>' + [passo, fc].filter(Boolean).join(' · ') + zona + '</small></span>' +
+            '<small>' + passo + zona + '</small></span>' +
         '</button>' +
         (aperta && !corsa ? '<div class="det"><div class="mets">' +
           '<div class="met"><span>' + T('Durata', 'Duration') + '</span><b>' + fmtDurata(x.durata) + '</b></div>' +
@@ -1629,7 +1653,21 @@
     const nota = s.disponibile ? '' :
       '<section class="card empty">' + T('Ancora nessun dato di salute: controlla che <b>FC a riposo, HRV e sonno</b> arrivino su Intervals.icu (Apple Watch: consenti l’accesso all’app Companion in Salute; Garmin e altri: attiva il wellness nel collegamento con Intervals.icu).', 'No health data yet: check that <b>resting HR, HRV and sleep</b> reach Intervals.icu (Apple Watch: allow the Companion app in Apple Health; Garmin and others: enable wellness in the Intervals.icu connection).') + '</section>';
 
-    return '<div class="sec-title"><h2>' + T('Ultimi valori', 'Latest values') + '</h2><button type="button" class="link-btn" data-salute="fc_riposo">' + T('Tutti i dati', 'All data') + ' ›</button></div>' + tilesTutti + bmiCard + nota +
+    // Giorni con recupero incompleto (30 giorni): stesse regole che alleggeriscono la seduta
+    const rc = s.recupero_30g;
+    const recCard = !rc || !s.disponibile ? '' : (() => {
+      const g = rc.giorni || [], primi = g.slice(0, 4), altri = g.slice(4);
+      const riga = (x) => '<div class="dd-li"><b>' + esc(fmtDataLunga(x.data)) + '</b><span>' + x.segnali.map(esc).join(' · ') + '</span></div>';
+      return '<section class="card rec-card"><div class="rec-top"><h3>' + T('Giorni con recupero incompleto', 'Days with incomplete recovery') + '</h3><b class="rec-n' + (g.length ? ' warn' : '') + '">' + g.length + '<small>/30</small></b></div>' +
+        '<p class="sub">' + T('Ultimi 30 giorni. In questi giorni il coach ha alleggerito la seduta.', 'Last 30 days. On these days the coach eased your session.') + '</p>' +
+        (g.length ? '<div class="dd-list">' + primi.map(riga).join('') + '</div>' +
+            (altri.length ? '<details class="more"><summary>' + T('Altri ' + altri.length + ' giorni', altri.length + ' more days') + '</summary><div class="dd-list">' + altri.map(riga).join('') + '</div></details>' : '')
+          : '<p class="dd-p">' + (rc.base_pronta ? T('Nessuno: il recupero è sempre stato nella norma. 💪', 'None: recovery has always been normal. 💪') : T('Il coach confronta ogni giorno con la tua media delle 4 settimane precedenti: servono almeno 5 giorni di dati per iniziare.', 'The coach compares each day with your average of the previous 4 weeks: at least 5 days of data are needed to start.')) + '</p>') +
+        '<details class="more"><summary>' + T('Quando il recupero è incompleto', 'When recovery is incomplete') + '</summary><p class="dd-p">' + T('Basta un segnale rispetto alla tua media dei 28 giorni prima: FC a riposo ≥ +5 bpm, HRV ≤ −15%, sonno sotto 5h30′.', 'One signal against your average of the previous 28 days is enough: resting HR ≥ +5 bpm, HRV ≤ −15%, sleep under 5h30′.') + '</p></details>' +
+      '</section>';
+    })();
+
+    return '<div class="sec-title"><h2>' + T('Ultimi valori', 'Latest values') + '</h2><button type="button" class="link-btn" data-salute="fc_riposo">' + T('Tutti i dati', 'All data') + ' ›</button></div>' + tilesTutti + recCard + bmiCard + nota +
       (grafici.length ? '<div class="grid-' + (grafici.length === 1 ? '1' : grafici.length === 2 ? '2e' : '3') + '">' + grafici.join('') + '</div>' : '');
   }
 
@@ -4054,8 +4092,9 @@
   function dettagliSalute(key) {
     const d = DETTAGLI_SALUTE[key];
     if (!d) return '';
+    // ogni voce si apre da sola: la pagina resta corta
     return '<section class="card dd-dett"><h3>' + T('Approfondisci', 'Learn more') + '</h3>' +
-      d.map(([ti, tx, te, txe]) => '<div class="dd-dv"><b>' + esc(LANG === 'en' ? te : ti) + '</b><p>' + esc(LANG === 'en' ? txe : tx) + '</p></div>').join('') +
+      d.map(([ti, tx, te, txe]) => '<details class="dd-dv"><summary>' + esc(LANG === 'en' ? te : ti) + '</summary><p>' + esc(LANG === 'en' ? txe : tx) + '</p></details>').join('') +
       '<p class="g-note">' + T('Indicazioni generali, non una diagnosi: per dubbi sulla salute senti un medico.', 'General guidance, not a diagnosis: for health concerns, see a doctor.') + '</p></section>';
   }
 
@@ -4072,7 +4111,6 @@
     const prec = st.giorni.filter((g) => g.data >= precInizio && g.data < inizio && g[key] != null).map((g) => g[key]);
     const medPrec = prec.length ? prec.reduce((a, b) => a + b, 0) / prec.length : null;
     const ultimo = [...st.giorni].reverse().find((g) => g[key] != null);
-    const segnali = st.giorni.filter((g) => g.data >= inizio && g.segnali && g.segnali.length);
 
     const chips = '<div class="m-chips">' + (disponibili.length ? disponibili : [key]).map((k) => '<button type="button" class="m-chip cat-' + METRICHE[k].cat + (k === key ? ' on' : '') + '" data-metrica="' + k + '">' + esc(METRICHE[k].nome()) + '</button>').join('') + '</div>';
     const seg = '<div class="seg-ctl" role="tablist">' + RANGE().map(([n, l]) => '<button type="button" role="tab" aria-selected="' + (n === saluteGiorni) + '" class="' + (n === saluteGiorni ? 'on' : '') + '" data-range="' + n + '">' + l + '</button>').join('') + '</div>';
@@ -4096,13 +4134,6 @@
       '</section>' +
       '<section class="card"><h3>' + T('Cosa significa', 'What it means') + '</h3><p class="dd-p">' + M.cosa() + '</p><h3 class="dd-h2">' + T('Come lo usa il coach', 'How the coach uses it') + '</h3><p class="dd-p">' + M.coach() + '</p></section>' +
       dettagliSalute(key);
-
-    if (['fc_riposo', 'hrv', 'sonno_sec'].includes(key)) {
-      html += '<section class="card"><h3>' + T('Giorni con recupero incompleto', 'Days with incomplete recovery') + '</h3><p class="sub">' + T('In questo periodo, secondo le regole del coach (FC a riposo, HRV, sonno)', 'In this period, by the coach’s rules (resting HR, HRV, sleep)') + '</p>' +
-        (segnali.length ? '<div class="dd-list">' + segnali.reverse().map((g) => '<div class="dd-li"><b>' + esc(fmtDataLunga(g.data)) + '</b><span>' + g.segnali.map(esc).join(' · ') + '</span></div>').join('') + '</div>'
-          : '<p class="dd-p">' + (st.giorni.filter((g) => g.base_fc_riposo != null || g.base_hrv != null).length ? T('Nessuno: il recupero è sempre stato nella norma.', 'None: recovery has always been normal.') : T('Il coach confronta ogni giorno con la tua media delle 4 settimane precedenti: servono almeno 5 giorni di dati per iniziare.', 'The coach compares each day with your average of the previous 4 weeks: at least 5 days of data are needed to start.')) + '</p>') +
-        '</section>';
-    }
 
     mostraSheet(T('Salute e recupero', 'Health and recovery'), html);
     const chipOn = document.querySelector('.m-chip.on');
