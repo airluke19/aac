@@ -2393,7 +2393,7 @@ function costruisciProgramma(oggiStr) {
       const desc = descPerData.get(p0.data);
       const ridotta = sedutaDa(p0.settimana - 1, Math.min(2, p0.seduta - 1), p0.data, riduci(desc));
       delete ridotta.seduta;
-      prossime[0] = { ...p0, ...ridotta, adattata: { motivi, originale: `${p0.blocchi} (${p0.durata_min}′)` } };
+      prossime[0] = { ...p0, ...ridotta, adattata: { motivi, originale: `${p0.blocchi} (${p0.durata_min}′)`, originale_min: p0.durata_min, originale_titolo: p0.titolo.replace(/^(Sett\.|Wk) \d+ · /, ''), originale_tipo: p0.tipo } };
       const idx = calendario.findIndex((s) => s.data === p0.data);
       if (idx >= 0) calendario[idx] = { ...calendario[idx], ...prossime[0] };
     }

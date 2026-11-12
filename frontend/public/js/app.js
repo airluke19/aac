@@ -393,11 +393,26 @@
     return '<p class="fc-perche"><b>' + T('Perché questa FC', 'Why this HR') + '</b> · ' + esc(txt) + (s.tipo === 'qualita' ? '' : ' ' + esc(T('Se riesci a parlare a frasi intere va bene anche qualche battito sopra.', 'If you can speak in full sentences, a few beats above is fine.'))) + '</p>';
   }
 
+  // Seduta alleggerita: perche' (in base a quali dati), cosa cambia rispetto alla prevista e cosa resta uguale nel piano
   function bannerAdattata(s) {
     if (!s.adattata) return '';
-    return '<div class="adapt">⚙︎ <b>' + T('Adattata ai tuoi dati', 'Adapted to your data') + '</b> · ' + esc(s.adattata.motivi.join(', ')) +
-      T('. Prevista: ', '. Planned: ') + esc(s.adattata.originale) + '.</div>';
+    const a = s.adattata;
+    const qualita = a.originale_tipo === 'qualita';
+    const pct = a.originale_min ? Math.round(s.durata_min / a.originale_min * 100) : null;
+    const cosa = qualita
+      ? T('La seduta intensa diventa <b>' + s.durata_min + '′ di corsa facile</b>: niente lavoro di qualità con il corpo non recuperato.', 'The hard session becomes <b>' + s.durata_min + '′ of easy running</b>: no quality work while your body is not recovered.')
+      : T('Stessa seduta, più corta: <b>' + s.durata_min + '′</b> invece di ' + (a.originale_min || '') + '′' + (pct ? ' (circa il ' + pct + '%)' : '') + ', allo stesso ritmo tranquillo.', 'Same session, shorter: <b>' + s.durata_min + '′</b> instead of ' + (a.originale_min || '') + '′' + (pct ? ' (about ' + pct + '%)' : '') + ', at the same easy pace.');
+    return '<div class="adapt adapt-x">' +
+      '<div class="ax-h">⚙︎ <b>' + T('Seduta alleggerita dal coach', 'Session lightened by the coach') + '</b></div>' +
+      '<div class="ax-r"><span>' + T('Perché', 'Why') + '</span><p>' + esc(a.motivi.join(' · ')) + '</p></div>' +
+      '<div class="ax-r"><span>' + T('Prevista', 'Planned') + '</span><p>' + esc((a.originale_titolo ? a.originale_titolo + ': ' : '') + a.originale) + '</p></div>' +
+      '<div class="ax-r"><span>' + T('Oggi', 'Today') + '</span><p>' + cosa + '</p></div>' +
+      '<details class="more ax-more"><summary>' + T('Come decido', 'How I decide') + '</summary><p class="fine">' +
+        T('Ogni mattina confronto FC a riposo, HRV e sonno con la <b>tua media degli ultimi 28 giorni</b>, e guardo forma e carico. Basta un segnale fuori soglia — FC a riposo almeno +5 bpm, HRV almeno −15%, sonno sotto 5h30′, forma (TSB) sotto −25, carico recente oltre 1,5 volte l’abituale — e alleggerisco: la seduta scende a circa il 60%, quella intensa diventa corsa facile. Il piano non cambia: la seduta conta come fatta per la settimana e, se domani i dati tornano nella norma, si riprende come previsto.',
+          'Every morning I compare resting HR, HRV and sleep with <b>your own 28-day average</b>, and I look at form and load. One signal out of range — resting HR at least +5 bpm, HRV at least −15%, sleep under 5h30′, form (TSB) below −25, recent load over 1.5× your usual — and I ease off: the session drops to about 60%, a hard one becomes an easy run. The plan does not change: the session counts as done for the week and, if your data is back to normal tomorrow, you continue as planned.') +
+      '</p></details></div>';
   }
+
 
   /* ---- Info: come funziona AAC (regole reali del motore) ---- */
   function renderInfo(d) {
@@ -471,7 +486,7 @@
 
     const partenza = '<p>' + T('Dalla tua corsa continua più lunga delle ultime 6 settimane:', 'From your longest continuous run in the last 6 weeks:') + '</p>' +
       '<div class="in-map">' + [['< 10′', 1], ['10′', 6], ['20′', 8], ['30′', 9], ['45′', 14], ['60′', 17], ['95′', 22]].map((x) => '<div><b>' + x[0] + '</b><span>' + T('sett. ', 'wk ') + x[1] + '</span></div>').join('') + '</div>' +
-      '<p class="nf-foot">' + T('Puoi cambiarla in Account.', 'You can change it in Account.') + '</p>';
+      '<p class="nf-foot">' + T('Puoi sceglierla a mano in Piano → Rivedi il piano con il coach, all’ultimo passo.', 'You can pick it by hand in Plan → Review the plan with the coach, at the last step.') + '</p>';
 
     const fasiTesti = d.programma && d.programma.fasi ? d.programma.fasi.map((f) => [f.nome, f.obiettivo + '.']) : T([
       ['Ripartenza', 'Fino a 20–25′ di corsa continua.'], ['Base aerobica', '45–50′ senza fermarsi.'], ['Costruzione', 'Lungo fino a 1h35, primi ritmi.'], ['Mezza maratona', 'Picco, scarico e gara.']
@@ -488,8 +503,8 @@
       '<ul class="in-list">' +
         '<li>' + T('Si parte con <b>3 sedute</b> a settimana. La 4ª (e la 5ª per mezza e maratona) si guadagna: 3 settimane di fila tutte fatte, senza fatica e con il carico che cresce in modo sicuro (rapporto carico acuto/cronico ≤ 1,3). Il tetto dipende da obiettivo, fase e intensità: “Ambiziosa” una in più, “Tranquilla” una in meno.', 'You start with <b>3 sessions</b> a week. The 4th (and the 5th for half and marathon) is earned: 3 weeks in a row all done, without fatigue and with load rising safely (acute/chronic load ratio ≤ 1.3). The cap depends on goal, phase and intensity: “Ambitious” one more, “Easy-going” one fewer.') + '</li>' +
         '<li>' + T('Le sedute in più sono corse facili in Z2: più volume, non più intensità (principio 80/20). Con segnali di fatica, o se per 2 settimane non entrano, il coach la toglie. Scarico, gara e corsa-cammino restano a 3.', 'Extra sessions are easy Z2 runs: more volume, not more intensity (80/20 principle). With signs of fatigue, or if they do not fit for 2 weeks, the coach removes one. Recovery, race and run-walk weeks stay at 3.') + '</li>' +
-        '<li>' + T('I giorni li sceglie il coach: mai due sedute impegnative (lungo, ritmo, gara) in giorni di fila, il lungo di preferenza nel weekend, i tuoi giorni preferiti (Account) quando possibile. Se corri in un altro giorno la seduta va lì; se ne salti una, passa ai giorni che restano della settimana.', 'The coach picks the days: never two hard sessions (long, pace, race) on consecutive days, the long run preferably at the weekend, your preferred days (Account) whenever possible. If you run on another day the session moves there; if you miss one, it moves to the remaining days of the week.') + '</li>' +
-        '<li>' + T('Giorni <b>obbligatori</b> (Account): il coach usa solo quelli, una seduta per giorno. Con 2 giorni tiene le sedute più importanti (lungo e qualità) e salta una corsa facile; se sono attaccati, il secondo è sempre facile. Con 1 giorno fai una seduta per volta e ogni settimana del piano dura 2 settimane: l’obiettivo slitta, e la data stimata lo mostra.', '<b>Fixed</b> days (Account): the coach only uses those, one session per day. With 2 days it keeps the key sessions (long run and quality) and skips an easy run; if they are back to back, the second is always easy. With 1 day you do one session at a time and each plan week lasts 2 weeks: your goal moves later, and the estimated date shows it.') + '</li>' +
+        '<li>' + T('I giorni li sceglie il coach: mai due sedute impegnative (lungo, ritmo, gara) in giorni di fila, il lungo di preferenza nel weekend, i tuoi giorni preferiti (Piano → Rivedi il piano con il coach) quando possibile. Se corri in un altro giorno la seduta va lì; se ne salti una, passa ai giorni che restano della settimana.', 'The coach picks the days: never two hard sessions (long, pace, race) on consecutive days, the long run preferably at the weekend, your preferred days (Plan → Review the plan with the coach) whenever possible. If you run on another day the session moves there; if you miss one, it moves to the remaining days of the week.') + '</li>' +
+        '<li>' + T('Giorni <b>obbligatori</b> (Piano → Rivedi il piano con il coach): il coach usa solo quelli, una seduta per giorno. Con 2 giorni tiene le sedute più importanti (lungo e qualità) e salta una corsa facile; se sono attaccati, il secondo è sempre facile. Con 1 giorno fai una seduta per volta e ogni settimana del piano dura 2 settimane: l’obiettivo slitta, e la data stimata lo mostra.', '<b>Fixed</b> days (Plan → Review the plan with the coach): the coach only uses those, one session per day. With 2 days it keeps the key sessions (long run and quality) and skips an easy run; if they are back to back, the second is always easy. With 1 day you do one session at a time and each plan week lasts 2 weeks: your goal moves later, and the estimated date shows it.') + '</li>' +
         '<li>' + T('Per avanzare contano le corse fatte nella settimana, in qualunque giorno.', 'To move forward, the runs done during the week count, on any day.') + '</li>' +
       '</ul>' +
       '<p class="in-p">' + T('Fonti: progressione di frequenza dei piani di Daniels, Pfitzinger e Higdon; carico acuto/cronico (Gabbett, 2016); distribuzione 80/20 (Seiler).', 'Sources: frequency progression from the Daniels, Pfitzinger and Higdon plans; acute/chronic load (Gabbett, 2016); 80/20 distribution (Seiler).') + '</p>';
@@ -3883,6 +3898,93 @@
     renderSaluteSheet();
   }
 
+  // Approfondimenti per ogni parametro di Salute: come si misura, valori di riferimento, cosa lo fa cambiare, consiglio
+  const DETTAGLI_SALUTE = {
+    fc_riposo: [
+      ['Come si misura', 'L’orologio prende i battiti più bassi e stabili della giornata, di solito di notte. Apple Watch, Garmin e gli altri usano metodi un po’ diversi: per questo conta il confronto con la tua media, non con quella di un altro.', 'How it’s measured', 'Your watch takes the lowest, steadiest heart rate of the day, usually at night. Apple Watch, Garmin and others use slightly different methods: that’s why the comparison with your own average matters, not with someone else’s.'],
+      ['Valori di riferimento', 'Negli adulti tra 50 e 80 bpm; chi corre con regolarità scende spesso sotto 60. Quello che conta è la tua tendenza nel tempo.', 'Reference values', 'In adults between 50 and 80 bpm; regular runners often go below 60. What matters is your own trend over time.'],
+      ['Cosa la fa salire', 'Allenamenti duri o ravvicinati, poco sonno, stress, alcol, caldo, disidratazione e i primi giorni di un raffreddore. Spesso sale prima che tu senta la stanchezza.', 'What raises it', 'Hard or back-to-back workouts, short sleep, stress, alcohol, heat, dehydration and the first days of a cold. It often rises before you feel tired.'],
+      ['Consiglio', 'Se resta alta 2–3 giorni di fila, rallenta anche tu: il coach lo fa già, ma ascoltati. È anche il dato da cui partono le tue zone cardiache personali.', 'Tip', 'If it stays high for 2–3 days in a row, slow down too: the coach already does, but listen to yourself. It is also where your personal heart-rate zones start from.'],
+    ],
+    hrv: [
+      ['Come si misura', 'Di notte l’orologio misura le piccole differenze di tempo tra un battito e l’altro. Garmin e la maggior parte usano l’rMSSD, Apple l’SDNN: numeri su scale diverse.', 'How it’s measured', 'At night your watch measures the tiny differences in time between heartbeats. Garmin and most others use rMSSD, Apple uses SDNN: numbers on different scales.'],
+      ['Valori di riferimento', 'Non esiste un valore “giusto”: dipende da età, genetica e allenamento, e va da 20 a oltre 100 ms. Più alto del tuo solito = sistema nervoso riposato.', 'Reference values', 'There’s no “right” value: it depends on age, genetics and fitness, from 20 to over 100 ms. Higher than your usual = rested nervous system.'],
+      ['Cosa la fa scendere', 'Fatica accumulata, sonno scarso, stress, alcol, malattia in arrivo, cene pesanti e tardive.', 'What lowers it', 'Accumulated fatigue, poor sleep, stress, alcohol, an oncoming illness, heavy late dinners.'],
+      ['Consiglio', 'Guarda la tendenza di una settimana, non il singolo giorno. Respirazione lenta, sonno regolare e giorni facili davvero facili la fanno risalire.', 'Tip', 'Look at the weekly trend, not a single day. Slow breathing, regular sleep and truly easy easy days bring it back up.'],
+    ],
+    sonno_sec: [
+      ['Come si misura', 'Dal movimento e dai battiti mentre dormi. La durata è affidabile; le fasi del sonno sono solo una stima.', 'How it’s measured', 'From movement and heart rate while you sleep. Duration is reliable; sleep stages are only an estimate.'],
+      ['Valori di riferimento', 'Gli adulti hanno bisogno di 7–9 ore; chi si allena ne trae beneficio anche dalla parte alta.', 'Reference values', 'Adults need 7–9 hours; people who train benefit from the upper end too.'],
+      ['Perché conta tanto', 'Il corpo si adatta all’allenamento mentre dormi: lì ripara i muscoli e consolida la forma. Poco sonno aumenta il rischio di infortuni e rende le sedute più faticose.', 'Why it matters so much', 'Your body adapts to training while you sleep: that’s where muscles repair and fitness consolidates. Short sleep raises injury risk and makes sessions feel harder.'],
+      ['Consiglio', 'Orari regolari, camera fresca e buia, schermi spenti un po’ prima. Una notte corta capita: il coach alleggerisce quella giornata.', 'Tip', 'Regular hours, a cool dark room, screens off a little earlier. A short night happens: the coach eases that day.'],
+    ],
+    sonno_score: [
+      ['Come si calcola', 'Un punteggio da 0 a 100 dell’orologio che combina durata, regolarità, fasi e risvegli. Ogni marca ha la sua formula; Apple non lo fornisce.', 'How it’s calculated', 'A 0–100 score from your watch combining duration, regularity, stages and awakenings. Each brand has its own formula; Apple doesn’t provide one.'],
+      ['Come leggerlo', 'Sopra 80 buono, tra 60 e 80 discreto, sotto 60 scarso. Più utile della singola notte è la tendenza.', 'How to read it', 'Above 80 good, 60–80 fair, below 60 poor. The trend is more useful than a single night.'],
+    ],
+    passi: [
+      ['Come si misura', 'L’accelerometro dell’orologio o del telefono conta i passi di tutta la giornata, allenamenti compresi.', 'How it’s measured', 'The accelerometer in your watch or phone counts steps all day, workouts included.'],
+      ['Valori di riferimento', 'Tra 7.000 e 10.000 al giorno sono associati a benefici per la salute, oltre all’allenamento.', 'Reference values', 'Between 7,000 and 10,000 a day are linked to health benefits, on top of training.'],
+      ['Consiglio', 'Nei giorni di riposo camminare aiuta il recupero. Una giornata da 25.000 passi però è carico: tienilo presente prima di un lungo.', 'Tip', 'On rest days walking helps recovery. A 25,000-step day is load, though: keep it in mind before a long run.'],
+    ],
+    piani: [
+      ['Come si misura', 'L’altimetro barometrico dell’orologio conta circa 3 metri di salita come un piano.', 'How it’s measured', 'Your watch’s barometric altimeter counts about 3 metres of climbing as one floor.'],
+      ['Consiglio', 'Le scale sono un ottimo rinforzo per polpacci e glutei: aiutano anche la corsa.', 'Tip', 'Stairs are great strength work for calves and glutes: they help your running too.'],
+    ],
+    calorie: [
+      ['Come si calcola', 'L’orologio stima l’energia spesa da battiti, peso, età e movimento. È una stima, con un margine anche del 20%.', 'How it’s calculated', 'Your watch estimates the energy spent from heart rate, weight, age and movement. It’s an estimate, with a margin of up to 20%.'],
+      ['Consiglio', 'Nei giorni di lungo e di qualità mangia abbastanza carboidrati: correre a stomaco vuoto rende le sedute più dure e il recupero più lento.', 'Tip', 'On long-run and quality days eat enough carbs: running on empty makes sessions harder and recovery slower.'],
+    ],
+    spo2: [
+      ['Come si misura', 'Con la luce rossa e infrarossa del sensore, di solito di notte. Al polso è meno precisa di un pulsossimetro da dito.', 'How it’s measured', 'With the sensor’s red and infrared light, usually at night. At the wrist it’s less precise than a finger pulse oximeter.'],
+      ['Valori di riferimento', 'Normale tra 95 e 100%. In quota scende un po’, ed è normale.', 'Reference values', 'Normal between 95 and 100%. At altitude it drops a little, and that’s normal.'],
+      ['Attenzione', 'Valori bassi ripetuti, soprattutto con fiato corto, sono da sentire con un medico: AAC non fa diagnosi.', 'Caution', 'Repeated low values, especially with shortness of breath, are worth checking with a doctor: AAC doesn’t diagnose.'],
+    ],
+    respirazione: [
+      ['Come si misura', 'Dalle piccole variazioni del battito legate al respiro, mentre dormi.', 'How it’s measured', 'From the small heart-rate changes linked to breathing, while you sleep.'],
+      ['Valori di riferimento', 'A riposo tra 12 e 20 respiri al minuto. È un dato molto stabile in ogni persona.', 'Reference values', 'At rest between 12 and 20 breaths per minute. It’s very stable for each person.'],
+      ['Perché guardarla', 'Proprio perché è stabile, un aumento di 2–3 respiri sul tuo solito è un segnale precoce di malanno o di fatica.', 'Why watch it', 'Precisely because it’s stable, a rise of 2–3 breaths over your usual is an early sign of illness or fatigue.'],
+    ],
+    fc_sonno: [
+      ['Come si misura', 'La media dei battiti durante il sonno.', 'How it’s measured', 'The average heart rate during sleep.'],
+      ['Come leggerla', 'Di solito qualche battito sopra la FC a riposo. Se sale rispetto al tuo solito, il corpo sta ancora lavorando: digestione, alcol, fatica o un malanno.', 'How to read it', 'Usually a few beats above resting HR. If it rises above your usual, your body is still working: digestion, alcohol, fatigue or an illness.'],
+    ],
+    vo2max: [
+      ['Come si misura', 'L’orologio lo stima dal rapporto tra passo e battiti nelle corse e camminate all’aperto con GPS. È una stima: un test in laboratorio può dare un valore diverso.', 'How it’s measured', 'Your watch estimates it from the relationship between pace and heart rate on outdoor runs and walks with GPS. It’s an estimate: a lab test may give a different value.'],
+      ['Valori di riferimento', 'Dipende da età e sesso: per un uomo di 30–40 anni, sopra 45 è buono; per una donna, sopra 38. Le tabelle cambiano con l’età.', 'Reference values', 'It depends on age and sex: for a man aged 30–40, above 45 is good; for a woman, above 38. The tables change with age.'],
+      ['Cosa lo fa salire', 'La costanza: tante corse facili e un po’ di lavoro intenso, come il 4×4 norvegese. Sale lentamente, in settimane e mesi.', 'What raises it', 'Consistency: lots of easy running and some hard work, like the Norwegian 4×4. It rises slowly, over weeks and months.'],
+    ],
+    peso: [
+      ['Da dove arriva', 'Dalla bilancia collegata a Intervals.icu o dall’app di salute; se inserisci il peso nel profilo, vale il dato più recente.', 'Where it comes from', 'From a scale linked to Intervals.icu or your health app; if you enter your weight in the profile, the most recent value wins.'],
+      ['Come leggerlo', 'Varia di 1–2 kg da un giorno all’altro per acqua e cibo: conta la media di qualche settimana. Pesati sempre nello stesso momento, per esempio al mattino.', 'How to read it', 'It varies by 1–2 kg from day to day because of water and food: the average over a few weeks is what counts. Weigh yourself at the same time, for example in the morning.'],
+      ['Consiglio', 'Con il peso e l’altezza AAC calcola il BMI in Salute. Il peso lo decide soprattutto l’alimentazione: la corsa aiuta, ma non fa miracoli.', 'Tip', 'With weight and height AAC computes your BMI in Health. Weight is mostly decided by diet: running helps, but it doesn’t work miracles.'],
+    ],
+    grasso: [
+      ['Come si misura', 'Le bilance smart usano l’impedenza: una piccola corrente attraversa il corpo. Il valore cambia con l’idratazione, quindi conta la tendenza.', 'How it’s measured', 'Smart scales use impedance: a small current passes through your body. The value changes with hydration, so the trend is what counts.'],
+      ['Valori di riferimento', 'Indicativamente 10–20% negli uomini e 18–28% nelle donne per chi è sportivo.', 'Reference values', 'Roughly 10–20% for men and 18–28% for women among active people.'],
+    ],
+    pressione_max: [
+      ['Come si misura', 'Con uno sfigmomanometro collegato alla tua app di salute.', 'How it’s measured', 'With a blood-pressure monitor linked to your health app.'],
+      ['Valori di riferimento', 'Ottimale sotto 120 mmHg (massima) e 80 (minima). Misurala seduto, a riposo, sempre nello stesso orario.', 'Reference values', 'Optimal below 120 mmHg (systolic) and 80 (diastolic). Measure it seated, at rest, at the same time of day.'],
+      ['Attenzione', 'Valori alti ripetuti vanno sentiti con un medico prima di aumentare l’allenamento.', 'Caution', 'Repeated high values should be checked with a doctor before increasing training.'],
+    ],
+    pressione_min: [
+      ['Valori di riferimento', 'Ottimale sotto 80 mmHg. Con l’allenamento aerobico regolare la pressione tende a scendere.', 'Reference values', 'Optimal below 80 mmHg. With regular aerobic training blood pressure tends to drop.'],
+    ],
+    glicemia: [
+      ['Come si misura', 'Da un glucometro o da un sensore continuo collegato all’app di salute.', 'How it’s measured', 'From a glucose meter or a continuous sensor linked to your health app.'],
+      ['Valori di riferimento', 'A digiuno di norma 70–100 mg/dL. Durante e dopo lo sport la glicemia si muove: è normale.', 'Reference values', 'Fasting usually 70–100 mg/dL. During and after exercise blood sugar moves: that’s normal.'],
+      ['Attenzione', 'In caso di diabete segui le indicazioni del tuo medico su allenamento e alimentazione.', 'Caution', 'If you have diabetes, follow your doctor’s advice on training and nutrition.'],
+    ],
+  };
+  function dettagliSalute(key) {
+    const d = DETTAGLI_SALUTE[key];
+    if (!d) return '';
+    return '<section class="card dd-dett"><h3>' + T('Approfondisci', 'Learn more') + '</h3>' +
+      d.map(([ti, tx, te, txe]) => '<div class="dd-dv"><b>' + esc(LANG === 'en' ? te : ti) + '</b><p>' + esc(LANG === 'en' ? txe : tx) + '</p></div>').join('') +
+      '<p class="g-note">' + T('Indicazioni generali, non una diagnosi: per dubbi sulla salute senti un medico.', 'General guidance, not a diagnosis: for health concerns, see a doctor.') + '</p></section>';
+  }
+
   function renderSaluteSheet() {
     const st = storiaSalute, key = saluteMetrica, M = METRICHE[key];
     const disponibili = Object.keys(METRICHE).filter((k) => st.giorni.some((g) => g[k] != null));
@@ -3918,7 +4020,8 @@
         '<div class="dd-stat"><span>' + T('Rispetto al periodo prima', 'Versus previous period') + '</span><b class="' + dvCls + '">' + dvTxt + '</b><small>' + (medPrec != null ? T('media precedente ', 'previous avg ') + M.fmt(medPrec) : T('dati insufficienti', 'not enough data')) + '</small></div>' +
         stat(T('Giorni con dato', 'Days with data'), presenti.length + '<small>/' + saluteGiorni + '</small>') +
       '</section>' +
-      '<section class="card"><h3>' + T('Cosa significa', 'What it means') + '</h3><p class="dd-p">' + M.cosa() + '</p><h3 class="dd-h2">' + T('Come lo usa il coach', 'How the coach uses it') + '</h3><p class="dd-p">' + M.coach() + '</p></section>';
+      '<section class="card"><h3>' + T('Cosa significa', 'What it means') + '</h3><p class="dd-p">' + M.cosa() + '</p><h3 class="dd-h2">' + T('Come lo usa il coach', 'How the coach uses it') + '</h3><p class="dd-p">' + M.coach() + '</p></section>' +
+      dettagliSalute(key);
 
     if (['fc_riposo', 'hrv', 'sonno_sec'].includes(key)) {
       html += '<section class="card"><h3>' + T('Giorni con recupero incompleto', 'Days with incomplete recovery') + '</h3><p class="sub">' + T('In questo periodo, secondo le regole del coach (FC a riposo, HRV, sonno)', 'In this period, by the coach’s rules (resting HR, HRV, sleep)') + '</p>' +

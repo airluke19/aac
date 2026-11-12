@@ -1951,3 +1951,17 @@ body.rivivi-on #tabbar { display: none; }
 @media (prefers-reduced-motion: reduce) { .acc-guida.loading svg { animation: none; } }
 .acc-sync-stato { margin: 8px 0 2px; font-size: .84rem; color: var(--muted); }
 .acc-sync-stato .err { color: var(--danger); font-weight: 600; }
+
+/* Seduta alleggerita: perché, prevista, oggi */
+.adapt-x { display: grid; gap: 8px; }
+.adapt-x .ax-h { font-size: .95rem; }
+.adapt-x .ax-r { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: baseline; }
+.adapt-x .ax-r span { font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.adapt-x .ax-r p { margin: 0; font-size: .9rem; line-height: 1.45; }
+.adapt-x .ax-more { margin-top: 2px; }
+.adapt-x .ax-more .fine { margin-top: 6px; }
+/* Salute: approfondimenti per parametro */
+.dd-dett .dd-dv { padding: 10px 0; border-top: 1px solid var(--line); }
+.dd-dett .dd-dv:first-of-type { border-top: 0; padding-top: 4px; }
+.dd-dett .dd-dv b { display: block; font-size: .9rem; }
+.dd-dett .dd-dv p { margin: 4px 0 0; font-size: .9rem; line-height: 1.5; color: var(--text-2, var(--muted)); }

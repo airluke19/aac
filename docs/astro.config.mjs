@@ -20,6 +20,8 @@ export default defineConfig({
       },
       social: [{ icon: 'github', label: 'GitHub', href: 'https://github.com/airluke19/aac' }],
       customCss: ['./src/styles/aac.css'],
+      // lingua e tema come nell'app: pulsanti rotondi con il suono dell'interruttore
+      components: { ThemeSelect: './src/components/Tema.astro', LanguageSelect: './src/components/Lingua.astro' },
       lastUpdated: false,
       pagination: true,
       sidebar: [

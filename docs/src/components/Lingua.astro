@@ -1,0 +1,19 @@
+---
+// Italiano/inglese come nell'app: pulsante rotondo con la lingua di destinazione (EN o IT) e lo stesso suono
+const path = Astro.url.pathname;
+const en = path === '/en' || path.startsWith('/en/');
+const verso = en ? (path.replace(/^\/en/, '') || '/') : '/en' + path;
+const etichetta = en ? 'Passa all’italiano' : 'Switch to English';
+---
+<a class="aac-ico aac-lingua" href={verso} hreflang={en ? 'it' : 'en'} lang={en ? 'it' : 'en'} aria-label={etichetta} title={etichetta}>{en ? 'IT' : 'EN'}</a>
+<script>
+  import { suonoInterruttore } from '../scripts/suono';
+  for (const a of document.querySelectorAll<HTMLAnchorElement>('.aac-lingua')) {
+    a.addEventListener('click', (e) => {
+      if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
+      e.preventDefault();
+      suonoInterruttore(true);
+      setTimeout(() => { location.href = a.href; }, 120); // il tempo di sentire il clic
+    });
+  }
+</script>
