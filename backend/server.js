@@ -568,7 +568,8 @@ function parereCorsa(id, oggiStr = oggi(), gia = null) {
   // 6. la chiusa: settimana e prossima seduta
   const p = costruisciProgramma(oggiStr);
   let chiusa = null;
-  if (p && p.attivo) {
+  // solo per le corse della settimana in corso: su una corsa vecchia "settimana e prossima" non hanno senso
+  if (p && p.attivo && p.settimana && c.data >= p.settimana.da) {
     const st = p.settimana, prox = p.prossime.find((x) => x.data > c.data && !x.fatta);
     const sett = st && st.sedute ? (st.fatte >= st.sedute ? L(`Settimana completa: ${st.fatte} sedute su ${st.sedute}. Si avanza!`, `Week complete: ${st.fatte} of ${st.sedute} sessions. Moving forward!`)
       : st.fatte >= Math.max(2, st.sedute - 1) ? L(`${st.fatte} sedute su ${st.sedute}: la settimana è già salva.`, `${st.fatte} of ${st.sedute} sessions: the week is already in the bag.`)
