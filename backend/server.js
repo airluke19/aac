@@ -372,7 +372,7 @@ function vociDiario(cd) {
   }
   const s0 = p.prossime && p.prossime[0];
   if (s0 && s0.adattata) add(ora, 'alleggerita', `alleggerita:${s0.data}`, L('Seduta alleggerita', 'Session lightened'),
-    L(`${gm(s0.data)}: ${s0.adattata.motivi.join(', ')}. Prevista: ${s0.adattata.originale}.`, `${gm(s0.data)}: ${s0.adattata.motivi.join(', ')}. Planned: ${s0.adattata.originale}.`));
+    `${gm(s0.data)}. ${spiegaAlleggerita(s0)}`);
   const im = p.intensita && p.intensita.ultima_modifica;
   if (im) add(`${im.data}T21:00:00`, 'intensita', `intensita:${im.data}`, L('Intensità ritoccata', 'Intensity adjusted'), im.motivo);
   const fm = p.frequenza && p.frequenza.ultima_modifica;
@@ -453,6 +453,18 @@ account.eventi.nuovaRichiesta = (u) => {
     .catch((e) => console.warn('[notifiche] avviso admin', e.message));
 };
 
+// Seduta alleggerita spiegata come nell'app: perche', prevista, oggi (notifiche e diario)
+function spiegaAlleggerita(s) {
+  const a = s.adattata;
+  if (!a) return '';
+  const pct = a.originale_min ? Math.round(s.durata_min / a.originale_min * 100) : null;
+  const oggiTxt = a.originale_tipo === 'qualita'
+    ? L(`${s.durata_min}′ di corsa facile, niente qualità finché non hai recuperato`, `${s.durata_min}′ of easy running, no quality work until you have recovered`)
+    : L(`${s.durata_min}′ invece di ${a.originale_min}′${pct ? ` (circa il ${pct}%)` : ''}, stesso ritmo tranquillo`, `${s.durata_min}′ instead of ${a.originale_min}′${pct ? ` (about ${pct}%)` : ''}, same easy pace`);
+  return L(`Perché: ${a.motivi.join(', ')}. Prevista: ${a.originale_titolo ? a.originale_titolo + ', ' : ''}${a.originale}. Oggi: ${oggiTxt}. Il piano non cambia.`,
+    `Why: ${a.motivi.join(', ')}. Planned: ${a.originale_titolo ? a.originale_titolo + ', ' : ''}${a.originale}. Today: ${oggiTxt}. Your plan doesn’t change.`);
+}
+
 // Testo delle notifiche (solo seduta o settimana, niente dati di salute). Sincrono: LINGUA torna com'era.
 function testoNotifica(u, tipo, lingua) {
   const prima = LINGUA;
@@ -469,7 +481,7 @@ function testoNotifica(u, tipo, lingua) {
         if (!s || s.data !== oggiStr || s.fatta) return null; // oggi niente seduta: nessuna notifica
         const corpo = `${nome(s)} · ${s.durata_min}′` + (s.fc_target ? L(` · FC ${s.fc_target}`, ` · HR ${s.fc_target}`) : '');
         return s.adattata
-          ? { title: L('Oggi seduta alleggerita', 'Lighter session today'), body: `${corpo}. ${L('Motivo', 'Why')}: ${s.adattata.motivi.join(', ')}.`, tag: 'mattina', url: '/' }
+          ? { title: L('Oggi seduta alleggerita', 'Lighter session today'), body: `${corpo}. ${spiegaAlleggerita(s)}`, tag: 'mattina', url: '/' }
           : { title: L('Oggi si corre', 'Run today'), body: corpo, tag: 'mattina', url: '/' };
       }
       if (tipo === 'domenica') {
@@ -669,6 +681,22 @@ function stessaUscita(a, b) {
   const da = Number(a.distance) || 0, db_ = Number(b.distance) || 0;
   if (da > 0 && db_ > 0) return Math.abs(da - db_) / Math.max(da, db_) <= 0.15;
   return ma != null && mb != null;
+}
+
+// Doppioni dentro Intervals: due app caricano la stessa uscita (es. Intervals Companion e Health Sync dall'Apple Watch).
+// Resta quella con piu' dati (cadenza, RPE, passo, cardio...), a parita' la prima caricata; la corsa conta una volta sola.
+const CAMPI_RICCHEZZA = ['average_heartrate', 'max_heartrate', 'average_cadence', 'total_elevation_gain', 'icu_rpe', 'average_stride', 'calories', 'icu_lap_count'];
+const ricchezza = (g) => CAMPI_RICCHEZZA.filter((k) => g[k] != null && g[k] !== 0).length;
+const eCorsa = (g) => /Run/i.test(String(g.type || ''));
+function unisciDoppioni(lista) {
+  const tenute = [], scartate = [];
+  const ord = lista.filter(Boolean).sort((a, b) => ricchezza(b) - ricchezza(a) || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+  for (const g of ord) {
+    const dup = tenute.find((t) => eCorsa(t) === eCorsa(g) && stessaUscita(t, g));
+    if (dup) scartate.push({ id: String(g.id), tenuta: String(dup.id) });
+    else tenute.push(g);
+  }
+  return { tenute, scartate };
 }
 
 async function intervalsGet(percorso, params) {
@@ -1223,6 +1251,10 @@ async function eseguiSync(origine) {
     const ultimaStrava = daStrava.reduce((m, g) => { const d = String(g.start_date_local || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(d) && d > m ? d : m; }, (stravaPrec && stravaPrec.ultima) || '');
     if (haInt) setMeta('strava_bloccate', JSON.stringify({ ultima: ultimaStrava || null, nella_finestra: daStrava.length, controllo: oggiStr }));
 
+    // la stessa uscita caricata da due app: ne resta una (la piu' completa)
+    const doppioni = unisciDoppioni(grezze);
+    grezze = doppioni.tenute;
+
     let benessereGrezzo = [];
     if (haInt) {
       try {
@@ -1313,6 +1345,33 @@ async function eseguiSync(origine) {
       const pred = db.prepare('SELECT id FROM scarpe WHERE predefinita = 1 AND attiva = 1').get();
       if (pred) for (const id of idsNuove) db.prepare('UPDATE attivita SET scarpa_id = ? WHERE id = ? AND scarpa_id IS NULL').run(pred.id, id);
 
+      // Doppioni tolti: la scarpa scelta a mano passa alla corsa che resta, poi l'altra si cancella
+      for (const d of doppioni.scartate) {
+        db.prepare('UPDATE attivita SET scarpa_id = COALESCE(scarpa_id, (SELECT scarpa_id FROM attivita WHERE id = ?)) WHERE id = ?').run(d.id, d.tenuta);
+        db.prepare('DELETE FROM attivita WHERE id = ?').run(d.id);
+        db.prepare('DELETE FROM altre_attivita WHERE id = ?').run(d.id);
+      }
+      // Doppioni gia' salvati (anche fuori dalla finestra del sync): resta la corsa con piu' dati
+      {
+        const righe = db.prepare("SELECT id, data, ora_inizio, distanza, cadenza, rpe, contatto, giri, fc_media, scarpa_id FROM attivita WHERE origine = 'intervals' AND id NOT LIKE 's%' ORDER BY data, ora_inizio").all();
+        const forma = (r) => ({ start_date_local: `${r.data}T${r.ora_inizio || ''}`, distance: (r.distanza || 0) * 1000 });
+        const ricco = (r) => [r.cadenza, r.rpe, r.contatto, r.fc_media, r.giri && r.giri.length > 2 ? 1 : null].filter((v) => v != null).length;
+        for (let i = 0; i < righe.length; i++) {
+          const a = righe[i];
+          if (!a || !a.ora_inizio) continue;
+          for (let j = i + 1; j < righe.length; j++) {
+            const b = righe[j];
+            if (!b) continue;
+            if (b.data !== a.data) break;
+            if (!b.ora_inizio || !stessaUscita(forma(a), forma(b))) continue;
+            const [tieni, togli] = ricco(b) > ricco(a) || (ricco(b) === ricco(a) && String(b.id).localeCompare(String(a.id), undefined, { numeric: true }) < 0) ? [b, a] : [a, b];
+            db.prepare('UPDATE attivita SET scarpa_id = COALESCE(scarpa_id, ?) WHERE id = ?').run(togli.scarpa_id, tieni.id);
+            db.prepare('DELETE FROM attivita WHERE id = ?').run(togli.id);
+            righe[righe.indexOf(togli)] = null;
+            if (togli === a) break;
+          }
+        }
+      }
       // Arrivate corse reali, le corse simulate di fabbrica non servono piu'
       if (corse > 0) {
         db.prepare("DELETE FROM attivita WHERE origine = 'mock'").run();
@@ -1355,6 +1414,7 @@ async function eseguiSync(origine) {
       altre_attivita: altre,
       giorni_salute: righeBenessere.length,
       ricevute: grezze.length,
+      doppioni: doppioni.scartate.length,
       da_strava: daStravaApi,
       errore_strava: erroreStrava,
       fonti: { intervals: haInt, strava: haStr },
@@ -3555,7 +3615,9 @@ function costruisciPasso(oggiStr, p, previsioni) {
   const ultimo = ultimaRiga
     ? { data: ultimaRiga.data, passo: ultimaRiga.passo_corsa || ultimaRiga.passo_medio, solo_corsa: Boolean(ultimaRiga.passo_corsa), distanza: ultimaRiga.distanza }
     : null;
-  if (recenti.length < RICHIESTE) return { disponibile: false, corse: recenti.length, richieste: RICHIESTE, ultimo };
+  // minuti di corsa (senza i tratti di cammino) della corsa migliore: spiega perche' il passo non c'e' ancora
+  const maxCorsaMin = righe.reduce((m, r) => Math.max(m, (r.tempo_corsa || (r.passo_corsa ? 0 : r.tempo) || 0) / 60), 0);
+  if (recenti.length < RICHIESTE) return { disponibile: false, corse: recenti.length, richieste: RICHIESTE, ultimo, corse_totali: righe.length, max_corsa_min: Math.round(maxCorsaMin) };
 
   const efs = recenti.slice(-8).map((x) => x.c.v / x.c.fc).sort((a, b) => a - b);
   const ef = efs[Math.floor(efs.length / 2)]; // mediana: robusta a una giornata storta
@@ -4288,7 +4350,7 @@ module.exports = {
   analizzaStream,
   testoNotifica, // testi delle notifiche (verifiche)
   aggiornaDiariTutti, // diario e avvisi dopo la sincronizzazione (verifiche)
-  stessaUscita, caricoDaFc, // doppioni Intervals/Strava e carico stimato (verifiche)
+  stessaUscita, caricoDaFc, unisciDoppioni, // doppioni Intervals/Strava e carico stimato (verifiche)
   // zone cardiache (usate anche nei test)
   fcMaxTanaka,
   soglieZone,

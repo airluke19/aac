@@ -410,7 +410,8 @@
       '<details class="more ax-more"><summary>' + T('Come decido', 'How I decide') + '</summary><p class="fine">' +
         T('Ogni mattina confronto FC a riposo, HRV e sonno con la <b>tua media degli ultimi 28 giorni</b>, e guardo forma e carico. Basta un segnale fuori soglia — FC a riposo almeno +5 bpm, HRV almeno −15%, sonno sotto 5h30′, forma (TSB) sotto −25, carico recente oltre 1,5 volte l’abituale — e alleggerisco: la seduta scende a circa il 60%, quella intensa diventa corsa facile. Il piano non cambia: la seduta conta come fatta per la settimana e, se domani i dati tornano nella norma, si riprende come previsto.',
           'Every morning I compare resting HR, HRV and sleep with <b>your own 28-day average</b>, and I look at form and load. One signal out of range — resting HR at least +5 bpm, HRV at least −15%, sleep under 5h30′, form (TSB) below −25, recent load over 1.5× your usual — and I ease off: the session drops to about 60%, a hard one becomes an easy run. The plan does not change: the session counts as done for the week and, if your data is back to normal tomorrow, you continue as planned.') +
-      '</p></details></div>';
+      '</p></details>' +
+      '<button type="button" class="link-btn ax-info" data-vai-info>' + T('Come ti segue il coach, spiegato in Info ›', 'How the coach follows you, explained in Info ›') + '</button></div>';
   }
 
 
@@ -610,7 +611,7 @@
       voce('limiti', G.shield, '#a2845e', T('Limiti e privacy', 'Limits and privacy'), T('Cosa non fa, dove stanno i dati', 'What it does not do, where data lives'), limiti) +
     '</section>';
 
-    return hero + '<div class="sec-title"><h2>' + T('Come ti segue il coach', 'How the coach follows you') + '</h2></div>' + cuore + regole + elenco;
+    return hero + '<div class="sec-title" id="info-come"><h2>' + T('Come ti segue il coach', 'How the coach follows you') + '</h2></div>' + cuore + regole + elenco;
   }
 
   /* ---- Guida: come funziona (solo ciò che l'app fa davvero) ---- */
@@ -1019,18 +1020,16 @@
   }
 
   /* ---- Cosa sbloccherai: un solo posto per tutti gli stati vuoti ---- */
-  function contaGiorni(serie, campo) { return (serie || []).filter((x) => x[campo] != null).length; }
   function renderSblocchi(d) {
     const items = [];
     const ps = d.passo, p = d.programma, t = d.previsioni && d.previsioni.tempo;
-    if (ps && !ps.disponibile) items.push([T('Il tuo passo al km', 'Your pace per km'), T('passo facile, ritmo medio e passo gara, in ogni seduta', 'easy, steady and race pace, in every session'), Math.min(ps.corse, ps.richieste), ps.richieste, T('corse', 'runs')]);
+    // il passo si stima solo da corse con almeno 10′ di corsa vera (anche a tratti): con meno la FC non si stabilizza
+    if (ps && !ps.disponibile) items.push([T('Il tuo passo al km', 'Your pace per km'),
+      T('passo facile, ritmo medio e passo gara, in ogni seduta. Conta solo una corsa con almeno 10′ di corsa (anche a tratti, senza la camminata): con meno la FC non fa in tempo a stabilizzarsi e il passo sarebbe sbagliato.', 'easy, steady and race pace, in every session. Only a run with at least 10′ of actual running counts (intervals too, walking excluded): with less, heart rate has no time to settle and the pace would be wrong.') +
+        (ps.corse_totali > ps.corse && ps.max_corsa_min != null ? ' <b>' + T('Finora la tua corsa più lunga ha ' + ps.max_corsa_min + '′ di corsa: arriverà quando i tratti si allungano.', 'So far your longest run has ' + ps.max_corsa_min + '′ of running: it will come as the running parts get longer.') + '</b>' : ''),
+      Math.min(ps.corse, ps.richieste), ps.richieste, T('corse da 10′', '10′ runs')]);
     if (t && !t.disponibile) items.push([T('Tempo previsto · ', 'Predicted time · ') + esc(obNome()), T('con una fascia di affidabilità', 'with a confidence range'), Math.min(t.corse_continue, t.richieste), t.richieste, T('corse continue', 'continuous runs')]);
     if (p && !p.obiettivo.stima_da_dati) items.push([T('Data della gara dai tuoi dati', 'Race date from your data'), T('e la probabilità di farcela entro ' + mesiOk() + ' mesi', 'and the chance of making it within ' + mesiOk() + ' months'), Math.min(p.storia.length, 3), 3, T('settimane', 'weeks')]);
-    if (d.salute) {
-      const s = d.salute.serie_30g;
-      const n = Math.max(contaGiorni(s, 'hrv'), contaGiorni(s, 'fc_riposo'));
-      if (n < 2) items.push([T('Andamento di HRV e FC a riposo', 'HRV and resting HR trends'), T('grafici degli ultimi 30 giorni', 'charts for the last 30 days'), n, 2, T('giorni', 'days')]);
-    }
     if (ps && ps.corse === 0 && !(ultimoStorico && ultimoStorico.corse.length)) items.push([T('Statistiche e progressi', 'Stats and progress'), T('volume, efficienza, zone cardiache, cadenza', 'volume, efficiency, heart-rate zones, cadence'), 0, 1, T('corsa', 'run')]);
     if (!items.length) return '';
     return '<section class="card unlock"><h3>' + T('Cosa sbloccherai', 'What you will unlock') + '</h3><p class="sub">' + T('Compaiono da sole con più dati.', 'They appear on their own with more data.') + '</p>' +
@@ -1323,7 +1322,6 @@
   /* ---- Storico: statistiche, tendenze, elenco allenamenti ---- */
   let ultimoStorico = null;
   let filtroMese = 'tutti';
-  let filtroTipo = 'corse';
   let filtroScarpa = 'tutte'; // 'tutte' | 'nessuna' | id scarpa
   // Obiettivo dell'utente (dal piano calcolato dal server)
   const OBIETTIVI_UI = [['5k', '5 km', '5K', '16'], ['10k', '10 km', '10K', '22'], ['mezza', 'Mezza maratona', 'Half marathon', '26'], ['maratona', 'Maratona', 'Marathon', '36']];
@@ -1428,50 +1426,33 @@
   function renderStorico(st) {
     if (!st) return '';
     const corse = st.corse.map((c) => ({ ...c, _tipo: 'corsa' }));
-    const altre = st.altre.map((a) => ({ ...a, _tipo: 'altro', tempo: a.durata }));
-    const tutte = (filtroTipo === 'corse' || filtroScarpa !== 'tutte' ? filtraScarpa(corse) : corse.concat(altre)).sort((a, b) => (a.data < b.data ? 1 : -1));
-    const mesi = Array.from(new Set(corse.concat(altre).map((x) => x.data.slice(0, 7)))).sort().reverse();
+    const tutte = filtraScarpa(corse).sort((a, b) => (a.data < b.data ? 1 : (a.data > b.data ? -1 : String(b.ora_inizio || '').localeCompare(String(a.ora_inizio || '')))));
+    const mesi = Array.from(new Set(corse.map((x) => x.data.slice(0, 7)))).sort().reverse();
     const lista = tutte.filter((x) => filtroMese === 'tutti' || x.data.startsWith(filtroMese));
     const nomeMese = (k) => new Date(k + '-15T12:00:00').toLocaleDateString(LOC, { month: 'long', year: 'numeric' });
 
-    // Elenco a schede, raggruppato per mese; la striscia a sinistra ha il colore della zona FC
+    // Elenco in stile app: un gruppo arrotondato per mese, righe separate da una linea sottile
     const giornoSett = (d) => new Date(d + 'T12:00:00').toLocaleDateString(LOC, { weekday: 'short' }).replace('.', '');
     const riga = (x) => {
-      const id = x._tipo + ':' + x.id;
+      const id = 'corsa:' + x.id;
       const aperta = apertaId === id;
-      const corsa = x._tipo === 'corsa';
-      const zn = corsa && x.zona ? x.zona.slice(1) : '';
-      const zona = zn ? ' <span class="zchip z' + zn + '">' + x.zona + '</span>' : '';
-      // da telefono la riga resta corta: FC e meteo sono nel dettaglio
-      const info = [x.ora_inizio ? esc(x.ora_inizio) : '', x.tempo ? fmtDurata(x.tempo) : ''].filter(Boolean).join(' · ');
-      const passo = corsa ? fmtPasso(x.passo_corsa || x.passo_medio) + '/km' : '';
+      const zn = x.zona ? x.zona.slice(1) : '';
+      const info = [x.ora_inizio ? esc(x.ora_inizio) : '', x.tempo ? fmtDurata(x.tempo) : ''].filter(Boolean).join(' · ') + (x.meteo ? ' · ' + meteoBreve(x.meteo) : '');
       return '<div class="run' + (aperta ? ' open' : '') + '">' +
-        '<button type="button" class="rc' + (corsa ? '' : ' rc-altro') + '" data-corsa="' + esc(id) + '" aria-expanded="' + aperta + '"' + (zn ? ' style="--zc:var(--zone-' + zn + ')"' : '') + '>' +
+        '<button type="button" class="rc" data-corsa="' + esc(id) + '" aria-expanded="' + aperta + '">' +
           '<span class="rc-g"><b>' + Number(x.data.slice(8)) + '</b><small>' + esc(giornoSett(x.data)) + '</small></span>' +
-          '<span class="rc-m"><b>' + esc(corsa ? (x.nome || T('Corsa', 'Run')) : nomeTipo(x.tipo)) + '</b>' +
-            '<small>' + (info || '&nbsp;') + '</small></span>' +
-          '<span class="rc-n"><b>' + (x.distanza ? fmt1(x.distanza) + '<small> km</small>' : (x.tempo ? fmtDurata(x.tempo) : '–')) + '</b>' +
-            '<small>' + passo + zona + '</small></span>' +
-        '</button>' +
-        (aperta && !corsa ? '<div class="det"><div class="mets">' +
-          '<div class="met"><span>' + T('Durata', 'Duration') + '</span><b>' + fmtDurata(x.durata) + '</b></div>' +
-          '<div class="met"><span>' + T('Distanza', 'Distance') + '</span><b>' + (x.distanza ? fmt1(x.distanza) + ' km' : '–') + '</b></div>' +
-          '<div class="met"><span>' + T('FC media', 'Avg HR') + '</span><b>' + (x.fc_media ? fmt0(x.fc_media) + ' bpm' : '–') + '</b></div>' +
-          '<div class="met"><span>' + T('Calorie', 'Calories') + '</span><b>' + (x.calorie ? fmt0(x.calorie) + ' kcal' : '–') + '</b></div></div></div>' : '') +
-      '</div>';
+          '<span class="rc-m"><b>' + esc(x.nome || T('Corsa', 'Run')) + '</b><small>' + (info || '&nbsp;') + '</small></span>' +
+          '<span class="rc-n"><b>' + (x.distanza ? fmt1(x.distanza) + '<small>km</small>' : (x.tempo ? fmtDurata(x.tempo) : '–')) + '</b>' +
+            '<small>' + fmtPasso(x.passo_corsa || x.passo_medio) + '/km' + (zn ? '<i class="rc-z" style="--zc:var(--zone-' + zn + ')">' + esc(x.zona) + '</i>' : '') + '</small></span>' +
+        '</button></div>';
     };
-    let righe = '', meseCorr = null;
-    for (const x of lista) {
-      const k = x.data.slice(0, 7);
-      if (k !== meseCorr) {
-        meseCorr = k;
-        const cm = lista.filter((y) => y._tipo === 'corsa' && y.data.startsWith(k));
-        righe += '<div class="rl-mese"><b>' + esc(nomeMese(k)) + '</b><span>' + cm.length + T(cm.length === 1 ? ' corsa' : ' corse', cm.length === 1 ? ' run' : ' runs') +
-          (cm.length ? ' · ' + fmt1(cm.reduce((t, y) => t + (y.distanza || 0), 0)) + ' km' : '') + '</span></div>';
-      }
-      righe += riga(x);
+    let righe = '';
+    for (const k of Array.from(new Set(lista.map((x) => x.data.slice(0, 7))))) {
+      const cm = lista.filter((y) => y.data.startsWith(k));
+      righe += '<div class="rl-mese"><b>' + esc(nomeMese(k)) + '</b><span>' + cm.length + T(cm.length === 1 ? ' corsa' : ' corse', cm.length === 1 ? ' run' : ' runs') +
+        ' · ' + fmt1(cm.reduce((t, y) => t + (y.distanza || 0), 0)) + ' km</span></div>' +
+        '<div class="rl-grp">' + cm.map(riga).join('') + '</div>';
     }
-
 
     const stats = st.corse.length ? '<div class="sec-title" id="storico"><h2>' + T('Andamento', 'Trends') + '</h2></div>' + renderStatistiche(st) +
       '<div class="grid-3">' +
@@ -1481,7 +1462,6 @@
       '</div>' : '';
     const elenco = '<section class="card elenco" id="elenco">' +
         '<div class="list-head"><h2>' + T('I tuoi allenamenti', 'Your workouts') + '</h2><div class="filtri">' +
-          '<select id="f-tipo" aria-label="' + T('Tipo di attività', 'Activity type') + '"><option value="corse"' + (filtroTipo === 'corse' ? ' selected' : '') + '>' + T('Solo corse', 'Runs only') + '</option><option value="tutte"' + (filtroTipo === 'tutte' ? ' selected' : '') + '>' + T('Tutte le attività', 'All activities') + '</option></select>' +
           '<select id="f-mese" aria-label="' + T('Mese', 'Month') + '"><option value="tutti">' + T('Tutti i mesi', 'All months') + '</option>' + mesi.map((k) => '<option value="' + k + '"' + (filtroMese === k ? ' selected' : '') + '>' + esc(nomeMese(k)) + '</option>').join('') + '</select>' +
         (SCARPE.length ? '<select id="f-scarpa" aria-label="' + T('Scarpa', 'Shoe') + '"><option value="tutte">' + T('Tutte le scarpe', 'All shoes') + '</option>' +
           SCARPE.map((x) => '<option value="' + x.id + '"' + (filtroScarpa === String(x.id) ? ' selected' : '') + '>👟 ' + esc(x.nome) + '</option>').join('') +
@@ -1568,7 +1548,6 @@
   }, true);
   document.addEventListener('change', (e) => {
     if (e.target.id === 'f-mese') { filtroMese = e.target.value; apertaId = null; aggiornaStorico(); }
-    if (e.target.id === 'f-tipo') { filtroTipo = e.target.value; apertaId = null; aggiornaStorico(); }
     if (e.target.id === 'f-scarpa') { filtroScarpa = e.target.value; apertaId = null; aggiornaStorico(); }
   });
 
@@ -1643,13 +1622,7 @@
           (cb.peso_normo ? ' · ' + T('normopeso per la tua altezza: ', 'healthy range for your height: ') + fmt1(cb.peso_normo[0]) + '–' + fmt1(cb.peso_normo[1]) + ' kg' : '') + '</p></section>';
     })();
 
-    const box = (id, titolo, sub) => '<section class="card"><h3>' + titolo + '</h3><p class="sub">' + sub + '</p><div class="chart-box sm" id="box-' + id + '"><canvas id="' + id + '" role="img" aria-label="' + titolo + '"></canvas></div></section>';
-
-    const sr = s.serie_30g || [];
-    const grafici = [];
-    if (contaGiorni(sr, 'hrv') >= 2) grafici.push(box('chart-hrv', 'HRV', T('30 giorni · più alta è meglio', '30 days · higher is better')));
-    if (contaGiorni(sr, 'fc_riposo') >= 2) grafici.push(box('chart-fcr', T('FC a riposo', 'Resting HR'), T('30 giorni · più bassa è meglio', '30 days · lower is better')));
-    if (contaGiorni(sr, 'sonno_sec') >= 1) grafici.push(box('chart-sonno', T('Sonno', 'Sleep'), T('30 giorni · ore per notte', '30 days · hours per night')));
+    // niente grafici qui: ogni valore ha il suo grafico nel dettaglio (tocca una scheda)
     const nota = s.disponibile ? '' :
       '<section class="card empty">' + T('Ancora nessun dato di salute: controlla che <b>FC a riposo, HRV e sonno</b> arrivino su Intervals.icu (Apple Watch: consenti l’accesso all’app Companion in Salute; Garmin e altri: attiva il wellness nel collegamento con Intervals.icu).', 'No health data yet: check that <b>resting HR, HRV and sleep</b> reach Intervals.icu (Apple Watch: allow the Companion app in Apple Health; Garmin and others: enable wellness in the Intervals.icu connection).') + '</section>';
 
@@ -1667,8 +1640,7 @@
       '</section>';
     })();
 
-    return '<div class="sec-title"><h2>' + T('Ultimi valori', 'Latest values') + '</h2><button type="button" class="link-btn" data-salute="fc_riposo">' + T('Tutti i dati', 'All data') + ' ›</button></div>' + tilesTutti + recCard + bmiCard + nota +
-      (grafici.length ? '<div class="grid-' + (grafici.length === 1 ? '1' : grafici.length === 2 ? '2e' : '3') + '">' + grafici.join('') + '</div>' : '');
+    return '<div class="sec-title"><h2>' + T('Ultimi valori', 'Latest values') + '</h2><button type="button" class="link-btn" data-salute="fc_riposo">' + T('Tutti i dati', 'All data') + ' ›</button></div>' + tilesTutti + bmiCard + nota + recCard;
   }
 
   /* ---------------------------------------------------------------------- */
@@ -1694,40 +1666,6 @@
     };
   }
 
-  function graficoLinea(id, serie, campo, colore, fmt) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const valori = serie.map((p) => p[campo]);
-    if (valori.filter((v) => v != null).length < 2) {
-      document.getElementById('box-' + id).innerHTML = '<div class="chart-empty">' + T('Servono almeno 2 giorni di dati', 'At least 2 days of data needed') + '</div>';
-      return;
-    }
-    const o = opzioniBase((c) => ' ' + fmt(c.parsed.y), (it) => fmtDataLunga(serie[it[0].dataIndex].data));
-    charts.push(new Chart(el, {
-      type: 'line',
-      data: { labels: serie.map((p) => fmtData(p.data)), datasets: [{ data: valori, borderColor: colore, backgroundColor: colore,
-        borderWidth: 2, tension: 0.35, spanGaps: true, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderWidth: 2, pointHoverBorderColor: cssVar('--surface') }] },
-      options: o
-    }));
-  }
-
-  function graficoBarre(id, serie, campo, colore, conv, fmt) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    const valori = serie.map((p) => (p[campo] == null ? null : conv(p[campo])));
-    if (!valori.some((v) => v != null)) {
-      document.getElementById('box-' + id).innerHTML = '<div class="chart-empty">' + T('Nessun dato negli ultimi 30 giorni', 'No data in the last 30 days') + '</div>';
-      return;
-    }
-    const o = opzioniBase((c) => ' ' + fmt(c.parsed.y), (it) => fmtDataLunga(serie[it[0].dataIndex].data));
-    o.scales.y.beginAtZero = true;
-    charts.push(new Chart(el, {
-      type: 'bar',
-      data: { labels: serie.map((p) => fmtData(p.data)), datasets: [{ data: valori, backgroundColor: colore, borderRadius: 4, maxBarThickness: 14 }] },
-      options: o
-    }));
-  }
-
   function disegnaGrafici(d) {
     charts.splice(0).forEach((c) => c.destroy());
     if (typeof Chart === 'undefined') {
@@ -1736,13 +1674,6 @@
     }
     Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif';
     const accent = cssVar('--accent'), accent2 = cssVar('--accent-2');
-
-    if (d.salute) {
-      const s = d.salute.serie_30g;
-      graficoLinea('chart-hrv', s, 'hrv', cssVar('--c-cuore'), (v) => fmt0(v) + ' ms');
-      graficoLinea('chart-fcr', s, 'fc_riposo', cssVar('--c-cuore'), (v) => fmt0(v) + ' bpm');
-      graficoBarre('chart-sonno', s, 'sonno_sec', cssVar('--c-sonno'), (v) => Math.round(v / 360) / 10, (v) => fmt1(v) + T(' ore', ' h'));
-    }
 
     if ($('#chart-tsb')) {
       const serie = d.tsb_serie;
@@ -2658,6 +2589,11 @@
   });
   document.addEventListener('click', async (e) => {
     if (e.target.closest('[data-vai-piano]')) { vaiTab('piano'); return; }
+    if (e.target.closest('[data-vai-info]')) {
+      vaiTab('info');
+      requestAnimationFrame(() => { const x = document.getElementById('info-come'); if (x) x.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); });
+      return;
+    }
     if (e.target.closest('[data-guida-apri]')) { apriGuida(); return; }
     if (!guida) return;
     if (e.target.closest('[data-guida-chiudi]')) { guida = null; ridisegnaGuida(); return; }

@@ -785,37 +785,36 @@ body.sheet-open { overflow: hidden; }
 .demo-bar { background: var(--accent); color: var(--accent-ink); }
 #corse-wrap { display: flex; flex-direction: column; gap: 14px; }
 
-/* Allenamenti: schede in evidenza, raggruppate per mese */
+/* Allenamenti: elenco in stile app, un gruppo arrotondato per mese, righe con linea sottile */
 .elenco .list-head h2 { margin: 0; font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; }
-.rl { display: flex; flex-direction: column; gap: 8px; }
-.rl .run { border: 0; }
-.rl-mese { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 12px 4px 2px; }
-.rl-mese:first-child { padding-top: 2px; }
-.rl-mese b { font-size: .95rem; font-weight: 800; text-transform: capitalize; }
+.rl { display: flex; flex-direction: column; }
+.rl-mese { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding: 18px 4px 8px; }
+.rl-mese:first-child { padding-top: 4px; }
+.rl-mese b { font-size: .95rem; font-weight: 700; text-transform: capitalize; }
 .rl-mese span { font-size: .78rem; color: var(--muted); font-variant-numeric: tabular-nums; }
-.rc { width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center;
-  padding: 12px 14px 12px 12px; font: inherit; color: var(--text); text-align: left; cursor: pointer;
-  background: var(--surface-2); border: 1px solid var(--line); border-left: 4px solid var(--zc, var(--accent)); border-radius: 16px;
-  transition: transform .15s ease, background .15s ease; }
-.rc:hover { background: var(--surface-3); }
-.rc:active { transform: scale(.99); }
-.run.open .rc { background: var(--surface-3); }
-.rc-g { display: flex; flex-direction: column; align-items: center; justify-content: center; width: 46px; height: 46px; border-radius: 12px;
-  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent); }
-.rc-g b { font-size: 1.2rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
-.rc-g small { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; margin-top: 2px; }
-.rc-m { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.rc-m b { font-size: .98rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rl-grp { background: var(--surface-2); border-radius: 18px; overflow: hidden; }
+.rl .run { border: 0; }
+.rc { position: relative; width: 100%; display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 12px; align-items: center;
+  padding: 13px 14px 13px 12px; font: inherit; color: var(--text); text-align: left; cursor: pointer; background: transparent; border: 0; border-radius: 0;
+  transition: background .15s ease; }
+.run + .run .rc::before { content: ''; position: absolute; top: 0; left: 60px; right: 0; height: .5px; background: var(--line-strong); }
+.rc:hover, .run.open .rc { background: var(--surface-3); }
+.rc:active { background: var(--surface-3); }
+.rc:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 18px; }
+.rc-g { display: flex; flex-direction: column; align-items: center; line-height: 1; }
+.rc-g b { font-family: var(--f-num); font-size: 1.3rem; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.rc-g small { font-size: .6875rem; font-weight: 600; color: var(--muted); margin-top: 3px; }
+.rc-m { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rc-m b { font-size: .97rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rc-m small { font-size: .78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.rc-n { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
-.rc-n b { font-size: 1.35rem; font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.rc-n b small { font-size: .72rem; color: var(--muted); font-weight: 600; }
-.rc-n > small { font-size: .78rem; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
-.rc-altro { background: transparent; border-left-color: var(--line-strong); padding-top: 9px; padding-bottom: 9px; }
-.rc-altro .rc-g { background: var(--fill); color: var(--muted); width: 40px; height: 40px; }
-.rc-altro .rc-n b { font-size: 1rem; }
-.rl .det { margin: 6px 4px 4px; }
-@media (max-width: 420px) { .rc { gap: 10px; padding: 11px 12px 11px 10px; } .rc-g { width: 42px; height: 42px; } .rc-n b { font-size: 1.2rem; } }
+.rc-m small .meteo { color: var(--text-2); }
+.rc-n { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.rc-n b { font-family: var(--f-num); font-size: 1.4rem; font-weight: 600; letter-spacing: -0.025em; line-height: 1; color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rc-n > small { display: inline-flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.rc-z { font-style: normal; display: inline-flex; align-items: center; gap: 4px; font-size: .72rem; font-weight: 700; color: var(--muted); }
+.rc-z::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--zc); }
+@media (max-width: 360px) { .rc { gap: 10px; padding: 12px 12px 12px 10px; } .rc-n b { font-size: 1.25rem; } .run + .run .rc::before { left: 56px; } }
+@media (prefers-reduced-motion: reduce) { .rc { transition: none; } }
 
 .zone-box { margin: 4px 0 10px; }
 .zone-box-h { display: flex; justify-content: space-between; font-size: .72rem; font-weight: 700; color: var(--muted); margin-bottom: 6px; }
@@ -1406,10 +1405,6 @@ details.more[open] > :not(summary), .pv-how[open] > div { animation: aprendo .22
 .tile .n { font-size: .75rem; margin-top: 6px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pace-top b { font-size: 1.625rem; font-weight: 600; letter-spacing: -0.025em; }
 .pv-big b { font-weight: 700; letter-spacing: -0.03em; }
-.rc-n b { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.025em; }
-.rc-g b { font-weight: 700; }
-.rc-g small { text-transform: none; letter-spacing: 0; font-size: .6875rem; font-weight: 600; }
-@media (max-width: 420px) { .rc-n b { font-size: 1.35rem; } }
 
 /* desktop: più aria, stessi numeri */
 @media (min-width: 760px) {
@@ -2015,3 +2010,4 @@ body.rivivi-on #tabbar { display: none; }
 .nf-diario b { font-size: 1rem; }
 .nf-diario p { margin: 4px 0 0; font-size: .875rem; line-height: 1.45; color: var(--text-2); }
 @media (max-width: 360px) { .nf-hc b { font-size: 1.3rem; } }
+.adapt-x .ax-info { display: block; margin-top: 10px; padding: 0; font-weight: 600; color: var(--accent); text-align: left; }
