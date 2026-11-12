@@ -17,7 +17,7 @@ AAC is a web app (mobile‑first, works on any phone or computer) that acts as y
 - AAC builds a **training plan**, from your very first run up to race day;
 - every time your watch syncs, AAC **reads your real data** (runs, heart rate, HRV, sleep) and **adjusts the plan**, always telling you why.
 
-It reads your data from [Intervals.icu](https://intervals.icu), a free service that collects data from almost any watch: Apple Watch (via a companion app), Garmin, Coros, Polar, Suunto and more. AAC never asks for your watch password.
+It reads your data from [Intervals.icu](https://intervals.icu), a free service that collects data from almost any watch: Apple Watch (via a companion app), Garmin, Coros, Polar, Suunto and more. AAC never asks for your watch password. It can also read your runs straight from **Strava** with one tap (OAuth): use one source or both, duplicates are merged.
 
 ## Why AAC (the added value)
 
@@ -90,7 +90,7 @@ Goal, intensity and days are set with a **step-by-step guide that opens inside t
 - **Today:** next session, how you are today, last run, this week
 - **Health:** resting HR, HRV, sleep, steps, BMI and more
 - **Load and injuries:** three declared signals (recent vs usual load ACWR, weekly km jump, single-run jump over the month's longest); a warning on Today, a section in Progress, the next session lightened when ACWR goes above 1.5 and a cap for the next long run (+10%)
-- **Connecting your watch:** if your runs reach Intervals.icu only through Strava (which Intervals cannot pass on), the app warns you and a step-by-step guide shows how to connect Garmin, Apple Watch, Coros, Polar or Suunto directly
+- **Data sources:** the profile shows where your data comes from — **Strava** (one tap, runs only) and/or **Intervals.icu** (runs plus resting HR, HRV and sleep) — with status, sync now and a step-by-step guide for each. Runs arriving from both are kept once; for Strava-only users AAC estimates load from heart rate so form and injury checks keep working. If runs reach Intervals only through Strava, the app warns you and offers both fixes
 - **Install and notifications:** add AAC to your Home Screen (on iPhone: Safari → Share → Add to Home Screen) and turn on notifications in your profile: your session every morning at the time you choose (including when the coach lightens it) and a weekly recap on Sunday at 7 pm; an alert every time the coach changes something (the same entries as the coach's history); the administrator is also notified of every new access request. All notifications are on by default; the phone's permission is given with one tap. Standard Web Push, no app store; the VAPID keys are generated on first start and stored encrypted in `sistema.db` (nothing to add to `.env`)
 - **What the coach did:** a clock icon at the top opens the full history of the coach's interventions (weekly decisions, lightened sessions, intensity and frequency changes, load warnings, updated heart‑rate zones, notifications sent), each with its reason; every session also explains where its heart‑rate limit comes from
 - **Plan:** calendar with every change explained; copy a finished session as Markdown to discuss it with any AI assistant; download the calendar (.ics); share a finished session as an image or as a **route video** (the 3D fly-over recorded on your device) for a post (4:5) or a story (9:16), drawn on your device in your accent colour on a background you pick (dark, theme colour, light and a few sporty tints), with the route shape (no map) or without it
@@ -129,7 +129,7 @@ The documentation site itself is in [`docs/`](docs/) (Astro + Starlight): enable
 | Service | Image | Role |
 |---|---|---|
 | `frontend` | `ghcr.io/airluke19/aac-frontend` | nginx (unprivileged): serves the app and forwards `/api`, `/auth`, `/demo` to the backend. The app page is served only after the backend confirms the sign‑in. The only service published on the host. |
-| `backend` | `ghcr.io/airluke19/aac-backend` | Node.js 22, Express, SQLite (better‑sqlite3), node‑cron: API, Google sign‑in, Intervals.icu sync, plan engine. Internal network only. |
+| `backend` | `ghcr.io/airluke19/aac-backend` | Node.js 22, Express, SQLite (better‑sqlite3), node‑cron: API, Google sign‑in, Intervals.icu and Strava sync, plan engine. Internal network only. |
 | `backup` | `ghcr.io/airluke19/aac-backup` | Nightly verified backups and restore. No network at all. |
 
 - **Data:** Docker volume `aac-db` (`/data`): `sistema.db` (users and sessions) and one SQLite database per user.
@@ -144,7 +144,7 @@ AAC is designed to be exposed on the internet and follows the OWASP Top 10:
 
 - **Access control:** every request is bound to the signed‑in user's own database; admin endpoints check the role; the demo is read‑only.
 - **Sign‑in:** Google OpenID Connect with PKCE; invitations and admin approval; `__Host-` session cookie (`Secure`, `HttpOnly`, `SameSite=Lax`), 30 days, server‑side logout; CSRF header on every change; rate limits.
-- **Data:** Intervals.icu keys encrypted with AES‑256‑GCM; session tokens stored only as SHA‑256 hashes; parameterised SQL; all dynamic HTML escaped; input checked against allow‑lists.
+- **Data:** Intervals.icu keys and Strava tokens encrypted with AES‑256‑GCM; session tokens stored only as SHA‑256 hashes; parameterised SQL; all dynamic HTML escaped; input checked against allow‑lists.
 - **Browser:** strict Content‑Security‑Policy (no inline scripts, no `eval`, no CDN), HSTS, anti‑framing and the other security headers.
 - **Containers:** non‑root, read‑only filesystem, no capabilities, `no-new-privileges`, memory and process limits; only the frontend is published, on `127.0.0.1` by default.
 - **Supply chain:** `npm ci` with lockfiles, Actions pinned to commit SHAs, Dependabot. Every image carries its **SBOM** in the registry: SPDX from BuildKit plus a **signed** CycloneDX SBOM and signed SLSA provenance (Sigstore, GitHub attestations). Check them with `gh attestation verify oci://ghcr.io/airluke19/aac-backend:latest --owner airluke19` (provenance; add `--predicate-type https://cyclonedx.org/bom` for the SBOM) or read the SPDX with `docker buildx imagetools inspect ghcr.io/airluke19/aac-backend:latest --format '{{ json .SBOM }}'`; each build run also keeps the CycloneDX files as artifacts for 90 days. Trivy blocks releases with fixable HIGH/CRITICAL vulnerabilities, leaked secrets or misconfigurations.

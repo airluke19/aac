@@ -38,7 +38,7 @@ const MAX_IN_ATTESA = 50; // richieste di accesso non ancora approvate
 
 function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
   const sis = new Database(path.join(BASE.dataDir, 'sistema.db'));
-  const eventi = { nuovaRichiesta: null }; // impostati da fuori (es. notifiche all'amministratore)
+  const eventi = { nuovaRichiesta: null, stravaDisponibile: null }; // impostati da fuori (notifiche all'amministratore, Strava)
   sis.pragma('journal_mode = WAL');
   sis.pragma('busy_timeout = 5000');
   sis.exec(`
@@ -382,8 +382,11 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
         intensita_auto: u.intensita_auto !== 0,
         giorni_sedute: giorniDa(u.giorni_sedute), // null = sceglie il coach
         giorni_modo: u.giorni_modo === 'fissi' ? 'fissi' : 'preferiti',
+        // fonti dei dati: Intervals.icu (chiave + Athlete ID) e/o Strava (collegato con OAuth)
+        strava: { disponibile: Boolean(eventi.stravaDisponibile && eventi.stravaDisponibile()), collegato: Boolean(u.strava_refresh), nome: u.strava_refresh ? u.strava_nome || null : null, dal: u.strava_refresh ? u.strava_collegato || null : null },
+        ha_fonte: Boolean((u.intervals_key && u.athlete_id) || u.strava_refresh),
       },
-      completo: Boolean(u.intervals_key && u.athlete_id && u.programma_inizio),
+      completo: Boolean(((u.intervals_key && u.athlete_id) || u.strava_refresh) && u.programma_inizio),
       // nuovo iscritto: utente (non amministratore) registrato negli ultimi 30 giorni -> domande iniziali sulla corsa
       nuovo: u.ruolo !== 'admin' && Boolean(u.creato) && u.creato >= new Date(Date.now() - 30 * 864e5).toISOString(),
       // per l'amministratore: richieste di accesso da approvare (pallino sull'avatar)
@@ -468,8 +471,8 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
 
   // ---- amministrazione ----
   function elencoUtenti() {
-    return sis.prepare('SELECT id, email, nome, foto, ruolo, stato, creato, ultimo_accesso, athlete_id, intervals_key IS NOT NULL AS ha_chiave, programma_inizio FROM utenti ORDER BY ruolo, stato, email').all()
-      .map((u) => ({ ...u, ha_chiave: Boolean(u.ha_chiave) }));
+    return sis.prepare('SELECT id, email, nome, foto, ruolo, stato, creato, ultimo_accesso, athlete_id, intervals_key IS NOT NULL AS ha_chiave, strava_refresh IS NOT NULL AS ha_strava, programma_inizio FROM utenti ORDER BY ruolo, stato, email').all()
+      .map((u) => ({ ...u, ha_chiave: Boolean(u.ha_chiave), ha_strava: Boolean(u.ha_strava) }));
   }
   function invita(email) {
     email = String(email || '').trim().toLowerCase();

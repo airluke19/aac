@@ -1965,3 +1965,26 @@ body.rivivi-on #tabbar { display: none; }
 .dd-dett .dd-dv:first-of-type { border-top: 0; padding-top: 4px; }
 .dd-dett .dd-dv b { display: block; font-size: .9rem; }
 .dd-dett .dd-dv p { margin: 4px 0 0; font-size: .9rem; line-height: 1.5; color: var(--text-2, var(--muted)); }
+
+/* Profilo: fonti dei dati (Strava, Intervals.icu) */
+.acc-fonti .sub { margin: 6px 0 0; }
+.fonte { margin-top: 14px; padding: 14px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); }
+.fonte-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fonte-top b { font-size: 1rem; }
+.fonte-st { font-size: .75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: var(--surface); color: var(--muted); border: 1px solid var(--line); }
+.fonte-st.on { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+.fonte-cons { margin-left: auto; font-size: .72rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
+.fonte p { margin: 8px 0 0; font-size: .9rem; line-height: 1.45; }
+.fonte .fonte-no { font-size: .82rem; color: var(--muted); }
+.fonte-az { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.fonte-chiave { margin-top: 10px; }
+.fonte-chiave .acc-form { margin-top: 8px; }
+/* Pulsante Strava: arancione del marchio (linee guida di Strava) */
+.btn-strava { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 44px; padding: 0 18px; border-radius: 999px; background: #fc4c02; color: #fff !important;
+  font: inherit; font-weight: 700; font-size: .92rem; text-decoration: none; border: 0; cursor: pointer; }
+.btn-strava:hover { filter: brightness(1.06); }
+.btn-strava:focus-visible { outline: 2px solid #fc4c02; outline-offset: 3px; }
+.av-strava { margin-top: 12px; width: 100%; }
+.link-strava { color: #fc4c02 !important; }
+.powered-strava { font-size: .72rem; font-weight: 600; color: var(--muted); letter-spacing: .02em; }
+.dd-actions .powered-strava { align-self: center; }

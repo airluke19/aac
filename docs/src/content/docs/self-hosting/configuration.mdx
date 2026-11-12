@@ -20,6 +20,23 @@ sidebar:
 | `LOGIN_GOOGLE` | `off` forza la modalità utente singolo; il backend rifiuta allora le richieste da internet |
 | `AAC_AMBIENTE` | `staging` mostra un badge **BETA**, così un'istanza di prova non si confonde con la produzione |
 | `COMPOSE_PROJECT_NAME` / `AAC_PREFIX` | Più istanze sulla stessa macchina (container e volumi `<AAC_PREFIX>-backend`, `<AAC_PREFIX>-db`…) |
+| `STRAVA_CLIENT_ID` / `STRAVA_CLIENT_SECRET` | App Strava per il collegamento con un tocco (facoltativo, vedi [Strava](#strava)) |
 | `INTERVALS_API_KEY` / `INTERVALS_ATHLETE_ID` | Solo modalità utente singolo: credenziali Intervals.icu (si possono inserire anche nel profilo) |
 
 Le **notifiche push** non richiedono configurazione: le chiavi VAPID si generano al primo avvio e restano cifrate nel database di sistema, incluso nei backup.
+
+## Strava
+
+Per offrire ai tuoi utenti il collegamento con Strava (facoltativo):
+
+1. Su [strava.com/settings/api](https://www.strava.com/settings/api) crea un'applicazione: nome (per esempio *AAC*), categoria *Training*, sito web e, in **Authorization Callback Domain**, il dominio di `PUBLIC_URL` senza `https://` (per esempio `aac.run`).
+2. Copia **Client ID** e **Client Secret** nel `.env`:
+
+   ```bash
+   STRAVA_CLIENT_ID=12345
+   STRAVA_CLIENT_SECRET=...
+   ```
+
+3. `docker compose up -d`: nel profilo compare *Connetti con Strava*.
+
+Una nuova app Strava può essere usata **solo dal suo proprietario** finché Strava non la approva: per aprirla agli altri utenti invia la richiesta di revisione dal programma sviluppatori di Strava. AAC legge solo le attività (`activity:read_all`), stima il carico dalla frequenza cardiaca, mostra "Dati da Strava" con il link *Vedi su Strava* e cancella le attività quando l'utente scollega Strava.

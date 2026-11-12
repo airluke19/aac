@@ -1,0 +1,51 @@
+---
+title: Connect Strava
+description: The quickest way to bring your runs into AAC. One tap, no keys.
+sidebar:
+  order: 3
+---
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+If your watch already uploads runs to **Strava**, it's the quickest way to use AAC: **one tap**, no keys to copy. Your runs arrive on their own, every 15 minutes.
+
+<Steps>
+
+1. **Open your profile**
+
+   In AAC tap your avatar at the top: the first section is *Where your data comes from*.
+
+2. **Tap "Connect with Strava"**
+
+   Strava opens. Sign in if needed.
+
+3. **Keep "View data about your activities" ticked and tap Authorize**
+
+   It's the only permission needed: AAC reads your activities, never writes or posts anything.
+
+4. **Done**
+
+   You're back in AAC: within minutes your runs from the last 12 months arrive, with map, heart rate, pace, cadence and elevation.
+
+</Steps>
+
+## Strava, Intervals.icu or both?
+
+| | Strava | Intervals.icu |
+|---|---|---|
+| Connection | one tap | Athlete ID and API key |
+| Runs with map, heart rate and pace | ✓ | ✓ |
+| Resting HR, HRV, sleep | — | ✓ |
+| Session adapted every morning | from load and form only | ✓ full |
+| Heart-rate-reserve zones | — | ✓ |
+
+**The coach's advice:** if you can, connect **both**. Strava brings your runs effortlessly, Intervals.icu the recovery data that lets the coach adapt every session. If the same run arrives from both sources, AAC keeps it **only once**.
+
+## Good to know
+
+- **Load** for Strava runs (Strava doesn't provide it) is estimated by AAC from heart rate: that's how form, load and injuries keep working.
+- **Disconnecting** is always possible from your profile: AAC revokes access and deletes the runs that came from Strava.
+- **Runs imported into Intervals from Strava** don't reach AAC because of Strava's terms: connecting Strava directly solves it.
+
+<Aside type="note" title="Self-hosting">
+On an instance you host yourself, the Strava option appears only after you create a Strava app: see [Configuration](/en/self-hosting/configuration/#strava).
+</Aside>

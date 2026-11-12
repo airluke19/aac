@@ -328,6 +328,12 @@ function dbPer(file) {
 const { creaAccount, etaDa } = require('./account');
 const account = creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo: (ctx, nuovo) => mappaCambioObiettivo(ctx, nuovo) });
 
+// Strava come seconda fonte di dati (OAuth, solo attivita'): vedi strava.js
+const { creaStrava } = require('./strava');
+const strava = creaStrava({ sis: account.sistema, cifra: account.cifra, decifra: account.decifra, publicUrl: BASE.publicUrl,
+  clientId: (process.env.STRAVA_CLIENT_ID || '').trim(), clientSecret: (process.env.STRAVA_CLIENT_SECRET || '').trim() });
+account.eventi.stravaDisponibile = () => strava.attivo;
+
 // Notifiche push (seduta del mattino, riepilogo della domenica): vedi notifiche.js
 const { creaNotifiche } = require('./notifiche');
 const notifiche = creaNotifiche({
@@ -640,7 +646,30 @@ class ErroreSync extends Error {
   }
 }
 
-const sincronizzazioneConfigurata = () => Boolean(CONFIG.apiKey && CONFIG.athleteId);
+// Fonti dei dati: Intervals.icu (chiave + Athlete ID) e/o Strava (collegato con OAuth)
+const intervalsConfigurato = () => Boolean(CONFIG.apiKey && CONFIG.athleteId);
+const stravaCollegato = () => { const st = contesto.getStore(); return Boolean(st && st.utente && strava.collegato(st.utente.id)); };
+const sincronizzazioneConfigurata = () => intervalsConfigurato() || stravaCollegato();
+
+// Carico di un'attivita' Strava (Strava non lo fornisce): stima stile hrTSS dalla FC media rispetto alla soglia
+// (circa l'89% della FC max); senza cardio, un carico moderato per ora. Serve a CTL/ATL, forma e carico e infortuni.
+function caricoStimato(durataSec, fcMedia) {
+  const ore = durataSec / 3600;
+  if (!(ore > 0)) return null;
+  if (!(fcMedia > 40)) return round(ore * 55, 1);
+  const intensita = fcMedia / (CONFIG.fcMax * 0.89);
+  return round(ore * intensita * intensita * 100, 1);
+}
+// Stessa uscita registrata due volte (Intervals e Strava): stesso giorno, partenza entro 5 minuti, distanza entro il 15%
+const minutiDi = (s) => { const m = /T(\d{2}):(\d{2})/.exec(String(s || '')); return m ? Number(m[1]) * 60 + Number(m[2]) : null; };
+function stessaUscita(a, b) {
+  if (String(a.start_date_local || '').slice(0, 10) !== String(b.start_date_local || '').slice(0, 10)) return false;
+  const ma = minutiDi(a.start_date_local), mb = minutiDi(b.start_date_local);
+  if (ma != null && mb != null && Math.abs(ma - mb) > 5) return false;
+  const da = Number(a.distance) || 0, db_ = Number(b.distance) || 0;
+  if (da > 0 && db_ > 0) return Math.abs(da - db_) / Math.max(da, db_) <= 0.15;
+  return ma != null && mb != null;
+}
 
 async function intervalsGet(percorso, params) {
   const url = new URL(`${CONFIG.intervalsBase}/api/v1/athlete/${encodeURIComponent(CONFIG.athleteId)}${percorso}`);
@@ -964,7 +993,9 @@ async function completaIstogrammiFc(limite = 60) {
   let fatte = 0;
   for (const { id } of righe) {
     try {
-      const st = await intervalsGetAttivita(id, '/streams', { types: 'time,heartrate' });
+      const st = id.startsWith('s')
+        ? await strava.stream(contesto.getStore().utente.id, id, 'time,heartrate')
+        : await intervalsGetAttivita(id, '/streams', { types: 'time,heartrate' });
       agg.run(JSON.stringify(st ? istogrammaDaStreams(st) : []), id);
       fatte++;
     } catch (e) {
@@ -983,15 +1014,20 @@ async function analizzaCorseNuove(limite = 40) {
   let ok = 0;
   for (const { id } of daFare) {
     try {
-      const st = await intervalsGetAttivita(id, '/streams', { types: 'time,velocity_smooth,heartrate,cadence,distance,fixed_altitude,altitude,watts,latlng' });
+      const daStrava = id.startsWith('s');
+      const st = daStrava
+        ? await strava.stream(contesto.getStore().utente.id, id)
+        : await intervalsGetAttivita(id, '/streams', { types: 'time,velocity_smooth,heartrate,cadence,distance,fixed_altitude,altitude,watts,latlng' });
       const a = st ? analizzaStream(st) : null;
       if (st) db.prepare('UPDATE attivita SET fc_istogramma = ? WHERE id = ?').run(JSON.stringify(istogrammaDaStreams(st)), id);
       let giri = [];
-      try {
-        const iv = await intervalsGetAttivita(id, '/intervals');
-        giri = applicaGiri(a, iv);
-      } catch (e) {
-        console.warn(`[giri] ${id}: ${e.message}`);
+      if (!daStrava) {
+        try {
+          const iv = await intervalsGetAttivita(id, '/intervals');
+          giri = applicaGiri(a, iv);
+        } catch (e) {
+          console.warn(`[giri] ${id}: ${e.message}`);
+        }
       }
       if (a) {
         agg.run(a.tempo_corsa, a.distanza_corsa, a.passo_corsa, a.fc_corsa, JSON.stringify(a.parziali), a.serie ? JSON.stringify(a.serie) : null, JSON.stringify(giri), 1, calcolaDeriva(a.serie), id);
@@ -1001,6 +1037,7 @@ async function analizzaCorseNuove(limite = 40) {
       }
     } catch (e) {
       console.warn(`[stream] ${id}: ${e.message}`);
+      if (e.status === 429) break; // limite di Strava: si riprende alla prossima sincronizzazione
       db.prepare('UPDATE attivita SET stream_ok = -1 WHERE id = ?').run(id);
     }
   }
@@ -1163,8 +1200,9 @@ function avviaSync(origine) {
 
 async function eseguiSync(origine) {
   if (!sincronizzazioneConfigurata()) {
-    throw new ErroreSync('Intervals.icu non configurato: imposta INTERVALS_API_KEY e INTERVALS_ATHLETE_ID nel file .env.', 503);
+    throw new ErroreSync(L('Nessuna fonte di dati collegata: collega Intervals.icu o Strava dal profilo.', 'No data source connected: connect Intervals.icu or Strava from your profile.'), 503);
   }
+  const haInt = intervalsConfigurato(), haStr = stravaCollegato();
   const t0 = Date.now();
   try {
     const oggiStr = oggi();
@@ -1174,7 +1212,7 @@ async function eseguiSync(origine) {
       !ultimaReale || !ultimoCompleto || diffDays(oggiStr, ultimoCompleto.slice(0, 10)) >= CONFIG.fullResyncDays;
     const oldest = completo ? addDays(oggiStr, -CONFIG.historyDays) : addDays(ultimaReale, -CONFIG.recentDays);
 
-    const grezze = await intervalsGet('/activities', { oldest, newest: addDays(oggiStr, 1) });
+    let grezze = haInt ? await intervalsGet('/activities', { oldest, newest: addDays(oggiStr, 1) }) : [];
     if (!Array.isArray(grezze)) throw new ErroreSync('Risposta inattesa da Intervals.icu (attività).');
 
     // Le attivita' importate da Strava arrivano vuote dall'API di Intervals (termini di Strava): le contiamo
@@ -1183,14 +1221,35 @@ async function eseguiSync(origine) {
     let stravaPrec = null;
     try { stravaPrec = JSON.parse(getMeta('strava_bloccate') || 'null'); } catch (_) { stravaPrec = null; }
     const ultimaStrava = daStrava.reduce((m, g) => { const d = String(g.start_date_local || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(d) && d > m ? d : m; }, (stravaPrec && stravaPrec.ultima) || '');
-    setMeta('strava_bloccate', JSON.stringify({ ultima: ultimaStrava || null, nella_finestra: daStrava.length, controllo: oggiStr }));
+    if (haInt) setMeta('strava_bloccate', JSON.stringify({ ultima: ultimaStrava || null, nella_finestra: daStrava.length, controllo: oggiStr }));
 
     let benessereGrezzo = [];
-    try {
-      benessereGrezzo = await intervalsGet('/wellness', { oldest, newest: oggiStr });
-      if (!Array.isArray(benessereGrezzo)) benessereGrezzo = [];
-    } catch (e) {
-      console.warn(`[sync] Wellness non disponibile (${e.message}): uso CTL/ATL delle attività.`);
+    if (haInt) {
+      try {
+        benessereGrezzo = await intervalsGet('/wellness', { oldest, newest: oggiStr });
+        if (!Array.isArray(benessereGrezzo)) benessereGrezzo = [];
+      } catch (e) {
+        console.warn(`[sync] Wellness non disponibile (${e.message}): uso CTL/ATL delle attività.`);
+      }
+    }
+
+    // Strava: attivita' dal suo ultimo dato (o un anno, la prima volta), senza i doppioni gia' arrivati da Intervals
+    let daStravaApi = 0, erroreStrava = null;
+    if (haStr) {
+      try {
+        const ultimaSt = db.prepare("SELECT MAX(data) AS m FROM attivita WHERE id LIKE 's%'").get().m;
+        const sv = await strava.attivita(contesto.getStore().utente.id, ultimaSt ? addDays(ultimaSt, -CONFIG.recentDays) : addDays(oggiStr, -CONFIG.historyDays), caricoStimato);
+        const dirette = grezze.filter((g) => g && Number(g.distance) > 0);
+        const giaDb = db.prepare("SELECT data, ora_inizio, distanza FROM attivita WHERE id NOT LIKE 's%' AND origine = 'intervals' AND data >= ?").all(addDays(oggiStr, -CONFIG.historyDays - 1))
+          .map((r) => ({ start_date_local: `${r.data}T${r.ora_inizio || ''}`, distance: (r.distanza || 0) * 1000 }));
+        const nuoveSt = sv.filter((a) => !dirette.some((g) => stessaUscita(a, g)) && !giaDb.some((g) => stessaUscita(a, g)));
+        daStravaApi = nuoveSt.length;
+        grezze = grezze.concat(nuoveSt);
+      } catch (e) {
+        if (!haInt) throw new ErroreSync(e.message, e.status === 401 ? 401 : 502);
+        erroreStrava = e.message;
+        console.warn(`[sync] Strava: ${e.message}`);
+      }
     }
 
     const righeBenessere = benessereGrezzo.map(normalizzaBenessere).filter(Boolean);
@@ -1258,6 +1317,14 @@ async function eseguiSync(origine) {
       if (corse > 0) {
         db.prepare("DELETE FROM attivita WHERE origine = 'mock'").run();
       }
+      // Una corsa arrivata prima da Strava e poi anche da Intervals: resta quella di Intervals (piu' completa)
+      if (haInt) {
+        const st = db.prepare("SELECT id, data, ora_inizio, distanza FROM attivita WHERE id LIKE 's%'").all();
+        const dirette = db.prepare("SELECT data, ora_inizio, distanza FROM attivita WHERE id NOT LIKE 's%' AND origine = 'intervals'").all();
+        const forma = (r) => ({ start_date_local: `${r.data}T${r.ora_inizio || ''}`, distance: (r.distanza || 0) * 1000 });
+        const doppie = st.filter((a) => dirette.some((g) => stessaUscita(forma(a), forma(g))));
+        for (const d of doppie) db.prepare('DELETE FROM attivita WHERE id = ?').run(d.id);
+      }
     })();
 
     let analisi = { analizzate: 0, tentate: 0 };
@@ -1288,6 +1355,9 @@ async function eseguiSync(origine) {
       altre_attivita: altre,
       giorni_salute: righeBenessere.length,
       ricevute: grezze.length,
+      da_strava: daStravaApi,
+      errore_strava: erroreStrava,
+      fonti: { intervals: haInt, strava: haStr },
       completo,
       durata_ms: Date.now() - t0,
     };
@@ -1317,6 +1387,7 @@ function statoSync() {
   }
   return {
     configurata: sincronizzazioneConfigurata(),
+    fonti: { intervals: intervalsConfigurato(), strava: stravaCollegato() },
     in_corso: syncInCorso.has(contesto.getStore().utente.id),
     ultimo_sync: getMeta('ultimo_sync'),
     ultimo_esito: esito,
@@ -1328,7 +1399,7 @@ function statoSync() {
 async function syncTutti(origine) {
   for (const u of account.utentiAttivi()) {
     const ctx = account.contestoDi(u);
-    if (!ctx.cfg.apiKey || !ctx.cfg.athleteId) continue;
+    if (!(ctx.cfg.apiKey && ctx.cfg.athleteId) && !strava.collegato(u.id)) continue;
     try {
       await contesto.run(ctx, () => avviaSync(origine));
     } catch (_) {
@@ -1368,8 +1439,12 @@ function avviaScheduler() {
  * esponenziale (nessun carico) nei giorni senza dati.
  */
 function costruisciSerieGiornaliera(fino, soloMock) {
-  const attivita = db.prepare('SELECT data, ctl, atl FROM attivita ORDER BY data ASC, id ASC').all();
+  const attivita = db.prepare('SELECT data, ctl, atl, carico FROM attivita ORDER BY data ASC, id ASC').all();
   if (!attivita.length) return [];
+  // carico dei giorni senza CTL/ATL da Intervals (attivita' arrivate da Strava): si costruiscono con le stesse costanti
+  const carichi = new Map();
+  for (const a of attivita) if (a.ctl == null && a.carico > 0) carichi.set(a.data, (carichi.get(a.data) || 0) + a.carico);
+  if (!soloMock) for (const a of db.prepare("SELECT data, carico FROM altre_attivita WHERE id LIKE 's%' AND carico > 0").all()) carichi.set(a.data, (carichi.get(a.data) || 0) + a.carico);
 
   // Con sole corse simulate, il CTL/ATL reale di Intervals non va mescolato a quello simulato
   const benessere = new Map(
@@ -1404,8 +1479,9 @@ function costruisciSerieGiornaliera(fino, soloMock) {
       ctl = a.ctl;
       atl = a.atl;
     } else {
-      ctl *= K_CTL;
-      atl *= K_ATL;
+      const c = carichi.get(d) || 0;
+      ctl = ctl * K_CTL + c * (1 - K_CTL);
+      atl = atl * K_ATL + c * (1 - K_ATL);
     }
     serie.push({ data: d, ctl: round(ctl, 1), atl: round(atl, 1), tsb: round(ctl - atl, 1) });
   }
@@ -1951,7 +2027,7 @@ function statoCollegamento(oggiStr) {
   let s = null;
   try { s = JSON.parse(getMeta('strava_bloccate') || 'null'); } catch (_) { s = null; }
   const diretta = db.prepare("SELECT MAX(data) AS m FROM attivita WHERE origine = 'intervals'").get().m || null;
-  if (!s || !s.ultima) return { strava_ultima: null, ultima_diretta: diretta, avviso: false };
+  if (!s || !s.ultima || stravaCollegato()) return { strava_ultima: null, ultima_diretta: diretta, avviso: false };
   return { strava_ultima: s.ultima, ultima_diretta: diretta, avviso: diffDays(oggiStr, s.ultima) <= 30 && (!diretta || s.ultima > diretta) };
 }
 
@@ -3882,6 +3958,20 @@ function creaApp() {
   // Login con Google, sessioni, profilo e amministrazione utenti; da qui in poi ogni richiesta ha il suo utente
   account.monta(app, { L, demo });
   notifiche.monta(app, { L });
+  // Strava: connetti (OAuth), ritorno, scollega. Collegato: prima sincronizzazione subito. Scollegato: via le sue attivita'.
+  const utenteAttivo = (id) => account.utentiAttivi().find((x) => x.id === id);
+  strava.monta(app, {
+    L,
+    csrf: (req, res, next) => (req.get('x-requested-with') === 'coach' ? next() : res.status(400).json({ errore: L('Richiesta non valida', 'Invalid request') })),
+    quandoCollegato: (id) => { const u = utenteAttivo(id); if (u) contesto.run(account.contestoDi(u), () => avviaSync('strava')).catch(() => {}); },
+    quandoScollegato: (id) => {
+      const u = utenteAttivo(id);
+      if (!u) return;
+      const udb = account.contestoDi(u).db;
+      const a = udb.prepare("DELETE FROM attivita WHERE id LIKE 's%'").run().changes, b = udb.prepare("DELETE FROM altre_attivita WHERE id LIKE 's%'").run().changes;
+      console.log(`[strava] u${id}: cancellate ${a} corse e ${b} altre attivita' arrivate da Strava`);
+    },
+  });
 
   // Statistiche di utilizzo di un utente (solo amministratore, non durante il "Vedi come"):
   // ultimi 35 giorni, fascia oraria (30 giorni) e allenamento rispetto al piano (4 settimane).

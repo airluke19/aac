@@ -165,7 +165,7 @@
   function renderSyncInfo(d) {
     const s = d.sincronizzazione || {};
     const e = s.ultimo_esito;
-    if (!s.configurata) statoSyncHtml = T('<span class="err">Intervals.icu non collegato</span>: inserisci API key e Athlete ID qui sotto', '<span class="err">Intervals.icu not connected</span>: add your API key and Athlete ID below');
+    if (!s.configurata) statoSyncHtml = T('<span class="err">Nessuna fonte collegata</span>: collega Strava o Intervals.icu qui sotto', '<span class="err">No data source connected</span>: connect Strava or Intervals.icu below');
     else if (e && e.ok === false) statoSyncHtml = T('<span class="err">Ultima sincronizzazione fallita:</span> ', '<span class="err">Last sync failed:</span> ') + esc(e.errore);
     else if (s.ultimo_sync) statoSyncHtml = T('Ultima sincronizzazione <b>', 'Last sync <b>') + esc(fmtQuando(s.ultimo_sync)) + '</b>' + T(' · automatica ogni 15 minuti', ' · automatic every 15 minutes');
     else statoSyncHtml = T('Nessuna sincronizzazione ancora eseguita', 'No sync yet');
@@ -780,8 +780,10 @@
     let h = '';
     if (d.collegamento && d.collegamento.avviso && !(ME && ME.demo)) {
       h += '<section class="avviso warn"><div class="av-h">' + ICO.sync + '<h3>' + T('Le tue corse arrivano da Strava', 'Your runs come from Strava') + '</h3></div>' +
-        '<p>' + T('Intervals.icu non può passare ad AAC le attività importate da Strava: lo vietano i termini di Strava. Collega l’orologio <b>direttamente</b> a Intervals.icu, bastano due minuti.', 'Intervals.icu cannot pass activities imported from Strava to AAC: Strava’s terms forbid it. Connect your watch <b>directly</b> to Intervals.icu, it takes two minutes.') + '</p>' +
-        '<button type="button" class="gc-cta" data-apri-sheet="#collega"><span>' + T('Collega l’orologio', 'Connect your watch') + '</span>' + FRECCIA + '</button></section>';
+        '<p>' + T('Intervals.icu non può passare ad AAC le attività importate da Strava: lo vietano i termini di Strava. Puoi collegare Strava direttamente ad AAC, oppure l’orologio direttamente a Intervals.icu.', 'Intervals.icu cannot pass activities imported from Strava to AAC: Strava’s terms forbid it. You can connect Strava directly to AAC, or your watch directly to Intervals.icu.') + '</p>' +
+        (ME && ME.profilo && ME.profilo.strava && ME.profilo.strava.disponibile
+          ? '<a class="btn-strava av-strava" href="/api/strava/collega">' + T('Connetti Strava direttamente: un tocco', 'Connect Strava directly: one tap') + '</a>' : '') +
+        '<button type="button" class="gc-cta" data-apri-sheet="#collega"><span>' + T('Oppure collega l’orologio a Intervals', 'Or connect your watch to Intervals') + '</span>' + FRECCIA + '</button></section>';
     }
     const c = d.programma && d.programma.carico;
     if (c && c.livello !== 'ok') {
@@ -1779,6 +1781,7 @@
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
     if (location.hash === '#collega') { apriCollega(); return; }
+    if (location.hash === '#guida-strava') { apriGuidaStrava(); return; }
     if (location.hash === '#diario') { apriDiario(); return; }
     const mu = location.hash.match(/^#uso\/(\d+)$/);
     if (mu) { apriUso(mu[1]); return; }
@@ -1884,7 +1887,7 @@
     caricaValutazione();
     // nuovo utente: prima di tutto il collegamento con Intervals.icu e la data di inizio
     const pr = ME.profilo || {};
-    if (!ME.completo && !(pr.ha_chiave && pr.athlete_id) && !location.hash) apriSheet('#account');
+    if (!ME.completo && !pr.ha_fonte && !location.hash) apriSheet('#account');
     else if (!chiediInizio()) chiediCorpo();
   }
 
@@ -1892,7 +1895,7 @@
   // (proposta: oggi o il primo dei giorni scelti). Non si rimanda: senza data il calendario resta vuoto.
   function chiediInizio() {
     const pr = ME && ME.profilo;
-    if (!pr || ME.demo || ME.impersonato_da || !pr.ha_chiave || !pr.athlete_id || pr.programma_inizio) return false;
+    if (!pr || ME.demo || ME.impersonato_da || !pr.ha_fonte || pr.programma_inizio) return false;
     if ($('#inizio-dlg')) return true;
     const oggiS = (ultimiDati && ultimiDati.oggi) || new Date().toLocaleDateString('sv-SE');
     const proposta = primoGiornoUtile({ oggi: oggiS, giorni: new Set(pr.giorni_sedute || []) });
@@ -2270,31 +2273,53 @@
     const u = ME, p = u.profilo;
     const campo = (id, label, input, nota) => '<label class="acc-f" for="' + id + '"><span>' + label + '</span>' + input + (nota ? '<small>' + nota + '</small>' : '') + '</label>';
     let html = '<section class="acc-head">' + avatar(u, 'av-lg') + '<div><h1>' + esc(u.nome || u.email) + '</h1><p>' + esc(u.email) + (u.ruolo === 'admin' ? ' · <b>' + T('amministratore', 'administrator') + '</b>' : '') + '</p></div></section>';
+    const sv = p.strava || {}, haInt = Boolean(p.ha_chiave && p.athlete_id);
+    const nonIniziato = !p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10));
     if (!u.completo) {
-      html += '<section class="card acc-welcome"><h3>' + T('Benvenuto! Tre passi per iniziare', 'Welcome! Three steps to get started') + '</h3><ol>' +
-        '<li>' + T('Porta i dati del tuo orologio su <b>Intervals.icu</b> (account gratuito). <b>Apple Watch</b>: installa l’app <b>Intervals.icu Companion</b> sull’iPhone e consenti allenamenti, FC a riposo, HRV e sonno. <b>Garmin, Coros, Polar, Suunto, Wahoo</b>: collega l’account in Intervals.icu → Settings → Connections.', 'Get your watch data onto <b>Intervals.icu</b> (free account). <b>Apple Watch</b>: install the <b>Intervals.icu Companion</b> app on iPhone and allow workouts, resting HR, HRV and sleep. <b>Garmin, Coros, Polar, Suunto, Wahoo</b>: link the account in Intervals.icu → Settings → Connections.') + '</li>' +
-        '<li>' + T('Collega il tuo orologio direttamente a Intervals.icu (non tramite Strava): <button type="button" class="link-btn" data-apri-sheet="#collega">guida</button>.', 'Connect your watch directly to Intervals.icu (not via Strava): <button type="button" class="link-btn" data-apri-sheet="#collega">guide</button>.') + '</li>' +
-        '<li>' + T('Su intervals.icu apri <b>Settings → Developer Settings</b>: copia l’<b>Athlete ID</b> e genera una <b>API key</b>.', 'On intervals.icu open <b>Settings → Developer Settings</b>: copy the <b>Athlete ID</b> and generate an <b>API key</b>.') + '</li>' +
-        '<li>' + T('Incollali qui sotto e scegli il giorno della prima seduta.', 'Paste them below and pick the day of your first session.') + '</li></ol></section>';
+      html += '<section class="card acc-welcome"><h3>' + T('Benvenuto! Due passi per iniziare', 'Welcome! Two steps to get started') + '</h3><ol>' +
+        '<li>' + T('<b>Collega una fonte dei dati</b> qui sotto: ' + (sv.disponibile ? 'Strava è la più veloce (un tocco), Intervals.icu porta anche FC a riposo, HRV e sonno.' : 'Intervals.icu, con il tuo orologio collegato.'), '<b>Connect a data source</b> below: ' + (sv.disponibile ? 'Strava is the quickest (one tap), Intervals.icu also brings resting HR, HRV and sleep.' : 'Intervals.icu, with your watch connected.')) + '</li>' +
+        '<li>' + T('<b>Scegli il giorno della prima seduta</b> nella sezione Il tuo piano.', '<b>Pick the day of your first session</b> in the Your plan section.') + '</li></ol></section>';
     }
-    html += '<form id="acc-form" class="card acc-form" autocomplete="off">' +
-      '<div class="acc-h3row"><h3>Intervals.icu</h3><div class="acc-h3az">' +
-        '<button type="button" class="acc-guida" data-apri-sheet="#collega">' + ICO.share + '<span>' + T('Collega l’orologio', 'Connect your watch') + '</span></button>' +
-        (p.ha_chiave && p.athlete_id ? '<button type="button" class="acc-guida" id="acc-sync"' + (syncInCorso ? ' disabled' : '') + '>' + ICO.sync + '<span>' + (syncInCorso ? T('Sincronizzo…', 'Syncing…') : T('Sincronizza ora', 'Sync now')) + '</span></button>' : '') +
-      '</div></div>' +
+    const statoF = (on, txt) => '<span class="fonte-st' + (on ? ' on' : '') + '">' + (on ? '✓ ' : '') + txt + '</span>';
+    // ---- 1. da dove arrivano i dati: Strava e/o Intervals.icu ----
+    html += '<section class="card acc-fonti">' +
+      '<div class="acc-h3row"><h3>' + T('Da dove arrivano i tuoi dati', 'Where your data comes from') + '</h3>' +
+        (p.ha_fonte ? '<button type="button" class="acc-guida" id="acc-sync"' + (syncInCorso ? ' disabled' : '') + '>' + ICO.sync + '<span>' + (syncInCorso ? T('Sincronizzo…', 'Syncing…') : T('Sincronizza ora', 'Sync now')) + '</span></button>' : '') + '</div>' +
+      '<p class="sub">' + T('Puoi usare una fonte o entrambe: se la stessa corsa arriva da tutte e due, la teniamo una volta sola.', 'Use one source or both: if the same run arrives from both, we keep it only once.') + '</p>' +
       '<p class="acc-sync-stato" id="acc-sync-stato">' + statoSyncHtml + '</p>' +
-      campo('acc-ath', 'Athlete ID', '<input id="acc-ath" name="athlete_id" inputmode="text" placeholder="i123456" value="' + esc(p.athlete_id) + '">') +
-      campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
-      '<h3>' + T('Programma', 'Plan') + '</h3>' +
-      // obiettivo, intensita' e giorni si scelgono con la guida passo passo (tab Piano)
+      (sv.disponibile
+        ? '<div class="fonte fonte-strava"><div class="fonte-top"><b>Strava</b>' + statoF(sv.collegato, sv.collegato ? T('collegato', 'connected') + (sv.nome ? ' · ' + esc(sv.nome) : '') : T('non collegato', 'not connected')) + '</div>' +
+            '<p>' + T('Le tue corse con mappa, cardio, passo e dislivello. <b>Un tocco</b> e hai finito: niente chiavi da copiare.', 'Your runs with map, heart rate, pace and elevation. <b>One tap</b> and you’re done: no keys to copy.') + '</p>' +
+            '<p class="fonte-no">' + T('Non porta FC a riposo, HRV e sonno: per adattare la seduta ogni mattina serve Intervals.icu.', 'It doesn’t bring resting HR, HRV and sleep: to adapt the session every morning you need Intervals.icu.') + '</p>' +
+            '<div class="fonte-az">' + (sv.collegato
+              ? '<button type="button" class="link-btn" id="strava-scollega">' + T('Scollega Strava', 'Disconnect Strava') + '</button>'
+              : '<a class="btn-strava" href="/api/strava/collega">' + T('Connetti con Strava', 'Connect with Strava') + '</a>') +
+              '<button type="button" class="link-btn" data-apri-sheet="#guida-strava">' + T('Come funziona', 'How it works') + '</button></div></div>'
+        : '') +
+      '<div class="fonte fonte-int"><div class="fonte-top"><b>Intervals.icu</b>' + statoF(haInt, haInt ? T('collegato', 'connected') : T('non collegato', 'not connected')) + (sv.disponibile ? '<span class="fonte-cons">' + T('consigliato', 'recommended') + '</span>' : '') + '</div>' +
+        '<p>' + T('Corse <b>e dati di salute</b>: FC a riposo, HRV e sonno. Servono al coach per adattare la seduta ogni mattina e per le tue zone cardiache personali.', 'Runs <b>and health data</b>: resting HR, HRV and sleep. The coach uses them to adapt your session every morning and for your personal heart-rate zones.') + '</p>' +
+        '<div class="fonte-az"><button type="button" class="acc-guida" data-apri-sheet="#collega">' + ICO.share + '<span>' + T('Collega l’orologio a Intervals', 'Connect your watch to Intervals') + '</span></button></div>' +
+        '<details class="more fonte-chiave"' + (haInt ? '' : ' open') + '><summary>' + (haInt ? T('Athlete ID e API key', 'Athlete ID and API key') : T('Inserisci Athlete ID e API key', 'Enter Athlete ID and API key')) + '</summary>' +
+          '<form id="acc-int-form" class="acc-form" autocomplete="off">' +
+            '<p class="fine">' + T('Su intervals.icu apri <b>Settings → Developer Settings</b>: copia l’Athlete ID e genera una API key.', 'On intervals.icu open <b>Settings → Developer Settings</b>: copy the Athlete ID and generate an API key.') + '</p>' +
+            campo('acc-ath', 'Athlete ID', '<input id="acc-ath" name="athlete_id" inputmode="text" placeholder="i123456" value="' + esc(p.athlete_id) + '">') +
+            campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
+            '<p class="acc-err" hidden></p><button type="submit" class="btn-primary">' + T('Salva Intervals.icu', 'Save Intervals.icu') + '</button>' +
+          '</form></details></div>' +
+    '</section>';
+    // ---- 2. il piano ----
+    html += '<section class="card"><h3>' + T('Il tuo piano', 'Your plan') + '</h3>' +
+      '<p class="sub">' + T('Obiettivo, intensità, giorni e settimana di partenza si scelgono con il coach nel tab Piano.', 'Goal, intensity, days and starting week are chosen with the coach in the Plan tab.') + '</p>' +
       '<button type="button" class="gc-cta" data-vai-piano><span>' + T('Rivedi il tuo piano', 'Review your plan') + '</span>' + FRECCIA + '</button>' +
-      // prima seduta e orario solo finche' il piano non e' iniziato (dopo restano quelli salvati)
-      (!p.programma_inizio || p.programma_inizio > ((ultimiDati && ultimiDati.oggi) || new Date().toISOString().slice(0, 10))
-        ? '<div class="acc-row acc-row2">' +
+      (nonIniziato
+        ? '<form id="acc-piano-form" class="acc-form" autocomplete="off"><div class="acc-row acc-row2">' +
             campo('acc-ini', T('Prima seduta', 'First session'), '<input id="acc-ini" name="programma_inizio" type="date" value="' + esc(p.programma_inizio || '') + '">') +
             campo('acc-ora', T('Orario', 'Time'), '<input id="acc-ora" name="programma_ora" type="time" value="' + esc(p.programma_ora || '06:30') + '">') +
-          '</div>'
+          '</div><p class="acc-err" hidden></p><button type="submit" class="btn-primary">' + T('Salva', 'Save') + '</button></form>'
         : '') +
+    '</section>';
+    // ---- 3. il corpo ----
+    html += '<form id="acc-form" class="card acc-form" autocomplete="off">' +
       '<h3>' + T('Il tuo corpo', 'Your body') + '</h3>' +
       '<div class="acc-row acc-row2">' +
         campo('acc-nascita', T('Data di nascita', 'Date of birth'), '<input id="acc-nascita" name="data_nascita" type="date" min="1930-01-01" max="' + new Date().toISOString().slice(0, 10) + '" value="' + esc(p.data_nascita || '') + '">') +
@@ -2310,7 +2335,7 @@
         return campo('acc-fcmax', T('FC max misurata (bpm)', 'Measured max HR (bpm)'), '<input id="acc-fcmax" name="fc_max" type="number" inputmode="numeric" min="140" max="220" placeholder="' + stima + '" value="' + esc(p.fc_max || '') + '">' +
           '<small>' + T('Vuoto = stimata dall’età: 208 − 0,7 × età = ' + stima + ' bpm. Le zone cardiache e la FC di sicurezza si ricalcolano da sole.', 'Empty = age-based estimate: 208 − 0.7 × age = ' + stima + ' bpm. Heart-rate zones and safety HR update automatically.') + '</small>');
       })() +
-      '<p id="acc-err" class="acc-err" hidden></p>' +
+      '<p class="acc-err" hidden></p>' +
       '<button type="submit" class="btn-primary">' + T('Salva', 'Save') + '</button>' +
     '</form>' + '<section class="card acc-notifiche" id="acc-notifiche"><h3>🔔 ' + T('Notifiche', 'Notifications') + '</h3><div class="skeleton" style="height:60px"></div></section>' + renderColori() + '<section class="card" id="acc-scarpe"><h3>👟 ' + T('Le tue scarpe', 'Your shoes') + '</h3><div class="skeleton" style="height:80px"></div></section>' +
     '';
@@ -2342,7 +2367,9 @@
     const me = tutti.filter((x) => x.ruolo === 'admin');
     const num = (v, l, cls) => '<div class="adm-n' + (cls ? ' ' + cls : '') + '"><b>' + v + '</b><span>' + l + '</span></div>';
     const btn = (az, id, testo, cls) => '<button type="button" class="pill-btn ' + (cls || '') + '" data-acc="' + az + '" data-id="' + id + '">' + testo + '</button>';
-    const meta = (x) => '<span class="adm-tag' + (x.ha_chiave ? ' ok' : '') + '">' + (x.ha_chiave ? 'Intervals ✓' : T('Intervals da collegare', 'Intervals not linked')) + '</span>' +
+    const meta = (x) => (x.ha_chiave || x.ha_strava
+        ? (x.ha_chiave ? '<span class="adm-tag ok">Intervals ✓</span>' : '') + (x.ha_strava ? '<span class="adm-tag ok">Strava ✓</span>' : '')
+        : '<span class="adm-tag">' + T('Nessuna fonte collegata', 'No data source') + '</span>') +
       (x.uso && x.uso.ultima
         ? '<span class="adm-uso">' + pallini7(x.uso.giorni7) + '<span>' + esc(quandoUso(x.uso.ultima, oggiIso)) + (x.uso.minuti_medi ? ' · ' + x.uso.minuti_medi + T('′/giorno', '′/day') : '') + '</span></span>'
         : '<span class="adm-tag">' + (x.ultimo_accesso ? T('nessun uso registrato', 'no usage yet') : T('mai entrato', 'never signed in')) + '</span>');
@@ -2546,7 +2573,7 @@
           '<li>' + T('<b>Ogni giorno</b> guardo FC a riposo, HRV e sonno: se sei stanco la seduta si alleggerisce.', '<b>Every day</b> I check resting HR, HRV and sleep: if you are tired the session gets lighter.') + '</li>' +
           '<li>' + T('<b>Ogni settimana</b> decido se avanzare, ripetere o tornare indietro, e se aggiungere una seduta.', '<b>Every week</b> I decide whether to move on, repeat or step back, and whether to add a session.') + '</li>' +
           '<li>' + T('<b>Ogni 3 settimane</b> ritocco l’intensità in base a come rispondi.', '<b>Every 3 weeks</b> I fine-tune the intensity based on how you respond.') + '</li></ul></div>' +
-        (ME.profilo && ME.profilo.ha_chiave ? '<details class="more gd-livello" id="gd-livello"><summary>' + T('Preferisci scegliere tu da quale settimana partire?', 'Prefer to choose which week to start from?') + '</summary><div id="gd-liv-box"><div class="skeleton" style="height:90px"></div></div></details>' : '') +
+        (ME.profilo && ME.profilo.ha_fonte ? '<details class="more gd-livello" id="gd-livello"><summary>' + T('Preferisci scegliere tu da quale settimana partire?', 'Prefer to choose which week to start from?') + '</summary><div id="gd-liv-box"><div class="skeleton" style="height:90px"></div></div></details>' : '') +
         '<p id="gd-err" class="acc-err" hidden></p>';
     }
     const nav = '<div class="gd-nav">' + (g.passo > 1 ? '<button type="button" class="pill-btn gd-ind" data-guida-vai="-1">' + T('Indietro', 'Back') + '</button>' : '<button type="button" class="pill-btn gd-ind" data-guida-chiudi>' + T('Annulla', 'Cancel') + '</button>') +
@@ -2758,6 +2785,48 @@
 
 
 
+  /* ---- Strava: guida, scollega ed esito del collegamento ---- */
+  function apriGuidaStrava() {
+    const sv = (ME && ME.profilo && ME.profilo.strava) || {};
+    mostraSheet(T('Strava', 'Strava'), '<section class="collega">' +
+      '<div class="in-flow"><span>⌚ ' + T('Orologio', 'Watch') + '</span><i></i><span>🟠 Strava</span><i></i><span>🏃 AAC</span></div>' +
+      '<p class="cl-intro">' + T('Se il tuo orologio carica già le corse su Strava, è il modo <b>più veloce</b> per usare AAC: un tocco e le corse arrivano da sole, ogni 15 minuti.', 'If your watch already uploads runs to Strava, it’s the <b>quickest</b> way to use AAC: one tap and your runs arrive on their own, every 15 minutes.') + '</p>' +
+      '<ol class="cl-passi">' +
+        '<li>' + T('Nel profilo tocca <b>Connetti con Strava</b>.', 'In your profile tap <b>Connect with Strava</b>.') + '</li>' +
+        '<li>' + T('Accedi a Strava e lascia la spunta su <b>“Visualizza dati sulle tue attività”</b>: è l’unico permesso che serve.', 'Sign in to Strava and keep <b>“View data about your activities”</b> ticked: it’s the only permission needed.') + '</li>' +
+        '<li>' + T('Tocca <b>Autorizza</b>: torni in AAC e in pochi minuti arrivano le corse degli ultimi 12 mesi.', 'Tap <b>Authorize</b>: you’re back in AAC and within minutes your runs from the last 12 months arrive.') + '</li>' +
+      '</ol>' +
+      '<div class="cl-note"><h4>' + T('Da sapere', 'Good to know') + '</h4><ul>' +
+        '<li>' + T('<b>Cosa arriva</b>: corse e altre attività, con mappa, cardio, passo, cadenza e dislivello.', '<b>What arrives</b>: runs and other activities, with map, heart rate, pace, cadence and elevation.') + '</li>' +
+        '<li>' + T('<b>Cosa non arriva</b>: FC a riposo, HRV e sonno (Strava non li condivide). Per l’adattamento di ogni mattina e le zone personali collega anche Intervals.icu.', '<b>What doesn’t</b>: resting HR, HRV and sleep (Strava doesn’t share them). For the daily adaptation and personal zones also connect Intervals.icu.') + '</li>' +
+        '<li>' + T('<b>Entrambe le fonti</b>: se la stessa corsa arriva da Strava e da Intervals, la teniamo una volta sola.', '<b>Both sources</b>: if the same run arrives from Strava and Intervals, we keep it only once.') + '</li>' +
+        '<li>' + T('<b>Solo lettura</b>: AAC non pubblica nulla su Strava. Puoi scollegarlo quando vuoi dal profilo: le corse arrivate da Strava vengono cancellate da AAC.', '<b>Read only</b>: AAC never posts to Strava. You can disconnect it any time from your profile: runs that came from Strava are deleted from AAC.') + '</li>' +
+      '</ul></div>' +
+      (sv.disponibile && !sv.collegato && !(ME && ME.demo) ? '<a class="btn-strava cl-go" href="/api/strava/collega">' + T('Connetti con Strava', 'Connect with Strava') + '</a>' : '') +
+      '<p class="powered-strava">Powered by Strava</p>' +
+    '</section>');
+  }
+  document.addEventListener('click', async (e) => {
+    if (!e.target.closest('#strava-scollega')) return;
+    if (!confirm(T('Scollegare Strava? Le corse arrivate da Strava verranno cancellate da AAC.', 'Disconnect Strava? Runs that came from Strava will be deleted from AAC.'))) return;
+    const r = await inviaJson('POST', '/api/strava/scollega');
+    toast(r.ok ? T('Strava scollegato', 'Strava disconnected') : T('Operazione non riuscita', 'Operation failed'), r.ok ? 'ok' : 'err');
+    try { ME = await caricaJson('/api/me'); } catch (_) { /* resta il profilo di prima */ }
+    await caricaDati(true);
+    if (location.hash === '#account') apriAccount();
+  });
+  // ritorno dal collegamento con Strava (?strava=ok|annullato|permessi|errore)
+  (() => {
+    const q = new URLSearchParams(location.search), esito = q.get('strava');
+    if (!esito) return;
+    const msg = { ok: [T('Strava collegato: le tue corse arrivano tra pochi minuti', 'Strava connected: your runs arrive within minutes'), 'ok'],
+      annullato: [T('Collegamento con Strava annullato', 'Strava connection cancelled'), 'err'],
+      permessi: [T('Serve il permesso di leggere le attività: riprova e lascia la spunta', 'Permission to read activities is needed: try again and keep it ticked'), 'err'],
+      errore: [T('Collegamento con Strava non riuscito: riprova', 'Strava connection failed: please try again'), 'err'] }[esito];
+    if (msg) setTimeout(() => toast(msg[0], msg[1]), 600);
+    history.replaceState(null, '', location.pathname + location.hash);
+  })();
+
   /* ---- Cosa ha fatto il coach: lo storico di ogni intervento ---- */
   const leggiVisto = () => { try { return localStorage.getItem('coach-diario-visto') || ''; } catch (_) { return ''; } };
   function aggiornaPallinoDiario() {
@@ -2816,12 +2885,12 @@
   });
 
   $('#sheet-body').addEventListener('submit', async (e) => {
-    if (e.target.id === 'acc-form') {
+    if (['acc-form', 'acc-int-form', 'acc-piano-form'].includes(e.target.id)) {
       e.preventDefault();
       const f = new FormData(e.target), corpo = {};
       for (const [k, v] of f.entries()) if (k !== 'giorni_sedute' && (String(v).trim() !== '' || ['athlete_id', 'eta', 'fc_max', 'altezza', 'peso', 'data_nascita'].includes(k))) corpo[k] = String(v).trim();
       const btn = e.target.querySelector('button[type=submit]'); btn.disabled = true;
-      const err = $('#acc-err'); err.hidden = true;
+      const err = e.target.querySelector('.acc-err'); err.hidden = true;
       try {
         const { ok, out } = await inviaJson('PUT', '/api/profilo', corpo);
         if (!ok) {
@@ -2833,7 +2902,7 @@
         ME = out;
         toast(T('Profilo salvato', 'Profile saved'), 'ok');
         await caricaDati(true);
-        if (ME.completo && ME.profilo.ha_chiave) sincronizza();
+        if (ME.profilo.ha_fonte && e.target.id === 'acc-int-form') sincronizza();
         if (chiediInizio()) return;
         apriAccount();
       } catch (_) { /* gestito */ } finally { btn.disabled = false; }
@@ -3103,7 +3172,9 @@
     if (!s) html += '<section class="card empty">' + T('I grafici secondo per secondo arrivano con la prossima sincronizzazione (servono i dati dettagliati da Intervals.icu).', 'Second-by-second charts arrive with the next sync (detailed data from Intervals.icu is needed).') + '</section>';
 
     html += '<div class="azioni dd-actions">' +
-      '<a class="btn-mini" href="https://intervals.icu/activities/' + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">' + T('Apri su Intervals.icu', 'Open in Intervals.icu') + '</a></div>';
+      (String(c.id).startsWith('s')
+        ? '<a class="btn-mini link-strava" href="https://www.strava.com/activities/' + encodeURIComponent(String(c.id).slice(1)) + '" target="_blank" rel="noopener">' + T('Vedi su Strava', 'View on Strava') + '</a><span class="powered-strava">' + T('Dati da Strava', 'Data from Strava') + '</span>'
+        : '<a class="btn-mini" href="https://intervals.icu/activities/' + encodeURIComponent(c.id) + '" target="_blank" rel="noopener">' + T('Apri su Intervals.icu', 'Open in Intervals.icu') + '</a>') + '</div>';
 
     mostraSheet(T('Allenamento', 'Workout'), html);
     if (s && typeof Chart !== 'undefined') disegnaSeduta(s, a, pr);

@@ -94,6 +94,9 @@ services:
       DB_PATH: /data/corse.db
       INTERVALS_API_KEY: ${INTERVALS_API_KEY:-}
       INTERVALS_ATHLETE_ID: ${INTERVALS_ATHLETE_ID:-}
+      # Strava come fonte di dati (facoltativo): app creata su strava.com/settings/api, dominio di callback = dominio di PUBLIC_URL
+      STRAVA_CLIENT_ID: ${STRAVA_CLIENT_ID:-}
+      STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET:-}
       SYNC_CRON: ${SYNC_CRON:-*/15 * * * *}
       # Eta' iniziale del primo utente (admin), per stimare la FC massima; poi si cambia dal profilo
       ATHLETE_AGE: ${ATHLETE_AGE:-33}

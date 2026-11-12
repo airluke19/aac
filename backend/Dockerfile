@@ -29,7 +29,7 @@ RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack 
            /usr/local/bin/yarn /usr/local/bin/yarnpkg /opt/yarn-*
 
 COPY --from=build /app/node_modules ./node_modules
-COPY package.json server.js account.js demo.js notifiche.js ./
+COPY package.json server.js account.js demo.js notifiche.js strava.js ./
 
 # /data e' il punto di mount del volume persistente con corse.db
 RUN mkdir -p /data && chown -R node:node /data /app

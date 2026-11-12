@@ -1,0 +1,51 @@
+---
+title: Collega Strava
+description: Il modo più veloce per portare le tue corse in AAC. Un tocco, niente chiavi.
+sidebar:
+  order: 3
+---
+import { Steps, Aside } from '@astrojs/starlight/components';
+
+Se il tuo orologio carica già le corse su **Strava**, è il modo più veloce per usare AAC: **un tocco**, nessuna chiave da copiare. Le corse arrivano da sole, ogni 15 minuti.
+
+<Steps>
+
+1. **Apri il profilo**
+
+   In AAC tocca il tuo avatar in alto: la prima sezione è *Da dove arrivano i tuoi dati*.
+
+2. **Tocca "Connetti con Strava"**
+
+   Si apre Strava. Accedi, se serve.
+
+3. **Lascia la spunta su "Visualizza dati sulle tue attività" e tocca Autorizza**
+
+   È l'unico permesso che serve: AAC legge le attività, non scrive e non pubblica nulla.
+
+4. **Fatto**
+
+   Torni in AAC: in pochi minuti arrivano le corse degli ultimi 12 mesi, con mappa, cardio, passo, cadenza e dislivello.
+
+</Steps>
+
+## Strava, Intervals.icu o entrambi?
+
+| | Strava | Intervals.icu |
+|---|---|---|
+| Collegamento | un tocco | Athlete ID e API key |
+| Corse con mappa, cardio e passo | ✓ | ✓ |
+| FC a riposo, HRV, sonno | — | ✓ |
+| Seduta adattata ogni mattina | solo da carico e forma | ✓ completa |
+| Zone cardiache sulla riserva | — | ✓ |
+
+**Il consiglio del coach:** se puoi, collegali **entrambi**. Strava porta le corse senza fatica, Intervals.icu i dati di recupero che permettono al coach di adattare ogni seduta. Se la stessa corsa arriva da tutte e due le fonti, AAC la tiene **una volta sola**.
+
+## Da sapere
+
+- **Il carico** delle corse di Strava (che Strava non fornisce) lo stima AAC dalla frequenza cardiaca: così funzionano anche forma, carico e infortuni.
+- **Scollegare** si può sempre, dal profilo: AAC revoca l'accesso e cancella le corse arrivate da Strava.
+- **Le corse importate su Intervals da Strava** non arrivano ad AAC per via dei termini di Strava: collegando Strava direttamente il problema sparisce.
+
+<Aside type="note" title="Self-hosting">
+Su un'istanza installata da te, l'opzione Strava compare solo dopo aver creato un'app Strava: vedi [Configurazione](/self-hosting/configuration/#strava).
+</Aside>
