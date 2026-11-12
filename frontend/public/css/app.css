@@ -1950,13 +1950,23 @@ body.rivivi-on #tabbar { display: none; }
 .acc-sync-stato .err { color: var(--danger); font-weight: 600; }
 
 /* Seduta alleggerita: perché, prevista, oggi */
-.adapt-x { display: grid; gap: 8px; }
-.adapt-x .ax-h { font-size: .95rem; }
+.adapt-x { display: block; }
+.adapt-x > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+.adapt-x > summary::-webkit-details-marker { display: none; }
+.adapt-x > summary b { font-size: .95rem; }
+.adapt-x > summary::after { content: ''; flex: none; margin-left: 4px; width: 7px; height: 7px; border: solid var(--muted); border-width: 0 2px 2px 0; transform: rotate(45deg) translateY(-2px); transition: transform .2s; }
+.adapt-x[open] > summary::after { transform: rotate(-135deg); }
+.adapt-x > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 8px; }
+.ax-breve { margin-left: auto; font-size: .85rem; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+/* pallino che pulsa: il coach ti ha ascoltato */
+.ax-dot { position: relative; flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--warn); }
+.ax-dot::after { content: ''; position: absolute; inset: 0; border-radius: 50%; background: var(--warn); animation: ax-pulsa 1.8s ease-out infinite; }
+@keyframes ax-pulsa { from { transform: scale(1); opacity: .6; } to { transform: scale(2.6); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .ax-dot::after { animation: none; display: none; } .adapt-x > summary::after { transition: none; } }
+.adapt-x .ax-body { display: grid; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: .5px solid var(--line-strong); }
 .adapt-x .ax-r { display: grid; grid-template-columns: 72px 1fr; gap: 10px; align-items: baseline; }
 .adapt-x .ax-r span { font-size: .72rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
 .adapt-x .ax-r p { margin: 0; font-size: .9rem; line-height: 1.45; }
-.adapt-x .ax-more { margin-top: 2px; }
-.adapt-x .ax-more .fine { margin-top: 6px; }
 /* Salute: approfondimenti per parametro */
 .dd-dett .dd-dv { border-top: 1px solid var(--line); }
 .dd-dett .dd-dv:first-of-type { border-top: 0; }
@@ -2012,4 +2022,4 @@ body.rivivi-on #tabbar { display: none; }
 .nf-diario b { font-size: 1rem; }
 .nf-diario p { margin: 4px 0 0; font-size: .875rem; line-height: 1.45; color: var(--text-2); }
 @media (max-width: 360px) { .nf-hc b { font-size: 1.3rem; } }
-.adapt-x .ax-info { display: block; margin-top: 10px; padding: 0; font-weight: 600; color: var(--accent); text-align: left; }
+.adapt-x .ax-info { justify-self: start; margin-top: 2px; padding: 0; font-weight: 600; color: var(--accent); text-align: left; }

@@ -38,6 +38,8 @@ function creaDemo({ BASE, dbPer, chiudiDb, contesto, fn }) {
     if (nuovo) {
       const t0 = Date.now();
       contesto.run(ctx, () => genera(ctx.db, inizio, giorno));
+      // le cache calcolate durante la generazione (es. FC a riposo per le zone) vedevano dati incompleti
+      for (const k of Object.keys(ctx)) if (k.startsWith('_')) delete ctx[k];
       console.log(`[demo] dati simulati generati per il ${giorno} (${Date.now() - t0} ms)`);
     }
     // rimuove i database demo dei giorni precedenti (solo file demo-*.db in /data/demo)

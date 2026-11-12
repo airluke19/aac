@@ -402,16 +402,15 @@
     const cosa = qualita
       ? T('La seduta intensa diventa <b>' + s.durata_min + '′ di corsa facile</b>: niente lavoro di qualità con il corpo non recuperato.', 'The hard session becomes <b>' + s.durata_min + '′ of easy running</b>: no quality work while your body is not recovered.')
       : T('Stessa seduta, più corta: <b>' + s.durata_min + '′</b> invece di ' + (a.originale_min || '') + '′' + (pct ? ' (circa il ' + pct + '%)' : '') + ', allo stesso ritmo tranquillo.', 'Same session, shorter: <b>' + s.durata_min + '′</b> instead of ' + (a.originale_min || '') + '′' + (pct ? ' (about ' + pct + '%)' : '') + ', at the same easy pace.');
-    return '<div class="adapt adapt-x">' +
-      '<div class="ax-h">⚙︎ <b>' + T('Seduta alleggerita dal coach', 'Session lightened by the coach') + '</b></div>' +
-      '<div class="ax-r"><span>' + T('Perché', 'Why') + '</span><p>' + esc(a.motivi.join(' · ')) + '</p></div>' +
-      '<div class="ax-r"><span>' + T('Prevista', 'Planned') + '</span><p>' + esc((a.originale_titolo ? a.originale_titolo + ': ' : '') + a.originale) + '</p></div>' +
-      '<div class="ax-r"><span>' + T('Oggi', 'Today') + '</span><p>' + cosa + '</p></div>' +
-      '<details class="more ax-more"><summary>' + T('Come decido', 'How I decide') + '</summary><p class="fine">' +
-        T('Ogni mattina confronto FC a riposo, HRV e sonno con la <b>tua media degli ultimi 28 giorni</b>, e guardo forma e carico. Basta un segnale fuori soglia — FC a riposo almeno +5 bpm, HRV almeno −15%, sonno sotto 5h30′, forma (TSB) sotto −25, carico recente oltre 1,5 volte l’abituale — e alleggerisco: la seduta scende a circa il 60%, quella intensa diventa corsa facile. Il piano non cambia: la seduta conta come fatta per la settimana e, se domani i dati tornano nella norma, si riprende come previsto.',
-          'Every morning I compare resting HR, HRV and sleep with <b>your own 28-day average</b>, and I look at form and load. One signal out of range — resting HR at least +5 bpm, HRV at least −15%, sleep under 5h30′, form (TSB) below −25, recent load over 1.5× your usual — and I ease off: the session drops to about 60%, a hard one becomes an easy run. The plan does not change: the session counts as done for the week and, if your data is back to normal tomorrow, you continue as planned.') +
-      '</p></details>' +
-      '<button type="button" class="link-btn ax-info" data-vai-info>' + T('Come ti segue il coach, spiegato in Info ›', 'How the coach follows you, explained in Info ›') + '</button></div>';
+    // compatto: una riga con il pallino che pulsa ("ti ho ascoltato"), il dettaglio si apre con un tocco
+    const breve = qualita ? T(s.durata_min + '′ facili', s.durata_min + '′ easy') : T(s.durata_min + '′ invece di ' + (a.originale_min || '') + '′', s.durata_min + '′ instead of ' + (a.originale_min || '') + '′');
+    return '<details class="adapt adapt-x"><summary><span class="ax-dot" aria-hidden="true"></span><b>' + T('Seduta alleggerita', 'Session eased') + '</b><span class="ax-breve">' + breve + '</span></summary>' +
+      '<div class="ax-body">' +
+        '<div class="ax-r"><span>' + T('Perché', 'Why') + '</span><p>' + esc(a.motivi.join(' · ')) + '</p></div>' +
+        '<div class="ax-r"><span>' + T('Prevista', 'Planned') + '</span><p>' + esc((a.originale_titolo ? a.originale_titolo + ': ' : '') + a.originale) + '</p></div>' +
+        '<div class="ax-r"><span>' + T('Oggi', 'Today') + '</span><p>' + cosa + '</p></div>' +
+        '<button type="button" class="link-btn ax-info" data-vai-info>' + T('Come ragiona il coach ›', 'How the coach thinks ›') + '</button>' +
+      '</div></details>';
   }
 
 
@@ -4134,7 +4133,7 @@
       '<div class="pane-head"><h1>' + titolo + '</h1>' + (sotto ? '<span>' + sotto + '</span>' : '') + '</div>' + html + '</div>';
     $('#main').innerHTML =
       pane('oggi', T('Oggi', 'Today'), esc(fmtDataLunga(d.oggi)).replace(/^./, (x) => x.toUpperCase()),
-        renderAttivaNotifiche() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderOggi(d) + renderComeStai(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
+        renderAttivaNotifiche() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderComeStai(d) + renderOggi(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
         renderProgramma(d) + renderGuidaCard()) +
