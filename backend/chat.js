@@ -93,7 +93,7 @@ function creaRisposta(h, d, tema) {
   const descSeduta = (s) => {
     const corsa = s.corsa_min && s.corsa_min < s.durata_min ? L(`, di cui ${s.corsa_min}′ di corsa`, `, ${s.corsa_min}′ of it running`) : '';
     const fc = s.fc_target ? L(` con FC ${s.fc_target} bpm`, ` at HR ${s.fc_target} bpm`) : '';
-    return `${nomeS(s.titolo)}: ${s.durata_min}′${corsa}${fc}.`;
+    return `${nomeS(s.titolo)}, ${s.durata_min}′${corsa}${fc}.`;
   };
   const perAlleggerita = (s) => {
     const a = s.adattata;
@@ -211,8 +211,8 @@ function creaRisposta(h, d, tema) {
     case 'fc': {
       const fi = at.fc_max_info || {};
       if (!fi.valore || !lim) { out.push(L('Mi servono età o FC massima nel profilo per calcolare le tue zone.', 'I need your age or max HR in your profile to work out your zones.')); break; }
-      const orig = fi.fonte === 'misurata' ? L(`la tua FC massima misurata, ${fi.valore} bpm`, `your measured max HR, ${fi.valore} bpm`) : L(`la FC massima stimata con Tanaka (208 − 0,7 × età): ${fi.valore} bpm`, `max HR estimated with Tanaka (208 − 0.7 × age): ${fi.valore} bpm`);
-      out.push(L(`Il tuo limite per la corsa facile è ${lim} bpm. Parto da ${orig}.`, `Your easy-run limit is ${lim} bpm. I start from ${orig}.`));
+      const orig = fi.fonte === 'misurata' ? L(`dalla tua FC massima misurata, ${fi.valore} bpm`, `your measured max HR, ${fi.valore} bpm`) : L(`dalla FC massima stimata con Tanaka (208 − 0,7 × età): ${fi.valore} bpm`, `max HR estimated with Tanaka (208 − 0.7 × age): ${fi.valore} bpm`);
+      out.push(L(`Il tuo limite per la corsa facile è ${lim} bpm. Parto ${orig}.`, `Your easy-run limit is ${lim} bpm. I start from ${orig}.`));
       if (fi.metodo === 'riserva' && fi.fc_riposo) out.push(L(`Poi uso la tua FC a riposo (${fi.fc_riposo} bpm) con il metodo di Karvonen: ${fi.fc_riposo} + 70% × (${fi.valore} − ${fi.fc_riposo}) ≈ ${lim}. Così il limite è tuo, non di una tabella: due persone con la stessa età ma cuori diversi hanno limiti diversi.`, `Then I use your resting HR (${fi.fc_riposo} bpm) with the Karvonen method: ${fi.fc_riposo} + 70% × (${fi.valore} − ${fi.fc_riposo}) ≈ ${lim}. So the limit is yours, not a table’s: two people the same age with different hearts get different limits.`));
       else out.push(L('Appena avrò almeno 5 misure di FC a riposo negli ultimi 28 giorni, userò anche quella (metodo di Karvonen) per un limite ancora più tuo.', 'As soon as I have at least 5 resting HR readings in the last 28 days, I’ll use them too (Karvonen method) for an even more personal limit.'));
       if (fi.fonte !== 'misurata') out.push(L('Se conosci la tua FC massima vera (da una gara o un test), scrivila nel profilo: è il dato che rende tutto più preciso.', 'If you know your real max HR (from a race or a test), add it to your profile: it’s what makes everything more precise.'));

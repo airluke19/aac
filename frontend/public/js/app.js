@@ -2855,7 +2855,8 @@
     log.innerHTML = CHAT.msg.map(bolla).join('') + (CHAT.attesa ? '<div class="ch-m ch-coach"><span class="ch-av" aria-hidden="true">' + ICO.logo + '</span><div class="ch-b ch-dots" aria-label="' + T('Il coach sta scrivendo', 'The coach is typing') + '"><i></i><i></i><i></i></div></div>' : '');
     $('#ch-sugg').innerHTML = CHAT.attesa ? '' : CHAT.sugg.map((s) => '<button type="button" class="ch-chip" data-chat-tema="' + esc(s.tema) + '">' + esc(s.label) + '</button>').join('');
     const ultimo = log.lastElementChild;
-    if (ultimo) ultimo.scrollIntoView({ block: 'end', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    // la risposta del coach si legge dall'inizio; il proprio messaggio e i puntini restano in fondo
+    if (ultimo) ultimo.scrollIntoView({ block: CHAT.attesa || ultimo.classList.contains('ch-io') ? 'end' : 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   }
   async function chiediCoach(corpo, mio) {
     if (CHAT.attesa) return;

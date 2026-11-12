@@ -2048,13 +2048,13 @@ body.chat-open .sheet-body { padding-bottom: 0 !important; }
 .ch-wrap { display: flex; flex-direction: column; min-height: calc(100dvh - 76px); }
 .ch-nota { margin: 0 0 14px; font-size: .75rem; color: var(--muted); text-align: center; }
 .ch-log { flex: 1; display: flex; flex-direction: column; gap: 12px; padding-bottom: 10px; }
-.ch-m { display: flex; gap: 8px; align-items: flex-end; max-width: 88%; }
+.ch-m { display: flex; gap: 8px; align-items: flex-end; max-width: 88%; scroll-margin-top: 72px; scroll-margin-bottom: 80px; }
 .ch-io { align-self: flex-end; }
 .ch-io p { margin: 0; padding: 10px 14px; border-radius: 18px 18px 4px 18px; background: var(--accent); color: var(--accent-ink); font-size: .95rem; line-height: 1.4; white-space: pre-wrap; overflow-wrap: anywhere; }
 .ch-av { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .ch-av svg { width: 18px; height: 18px; }
 .ch-b { padding: 10px 14px; border-radius: 18px 18px 18px 4px; background: var(--surface); border: 1px solid var(--line); }
-.ch-b p { margin: 0 0 8px; font-size: .95rem; line-height: 1.45; }
+.ch-b p { margin: 0 0 8px; font-size: .92rem; line-height: 1.45; }
 .ch-b p:last-child { margin: 0; }
 .ch-dots { display: flex; gap: 5px; padding: 15px 16px; }
 .ch-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--muted); animation: ch-bat 1.2s infinite ease-in-out; }
