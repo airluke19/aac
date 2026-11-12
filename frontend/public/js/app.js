@@ -954,7 +954,12 @@
     if (!r) { cls = ''; titolo = T('Dati di recupero in arrivo', 'Recovery data on its way'); testo = T('Per ora il piano segue le sedute fatte.', 'For now the plan follows completed sessions.'); }
     else if (segnali.length) { cls = 'warn'; titolo = T('Seduta alleggerita', 'Session eased'); testo = esc(segnali.join(' · ')); }
     else if (r.base_fc_riposo == null && r.base_hrv == null) { cls = ''; titolo = T('Sto imparando i tuoi valori', 'Learning your baseline'); testo = T('Servono 5 giorni di dati.', '5 days of data needed.'); }
-    else { cls = 'ok'; titolo = T('Recuperato', 'Recovered'); testo = T('Seduta piena', 'Full session'); }
+    else {
+      // recupero ok, ma la seduta puo' essere alleggerita per altri motivi (carico, forma): niente "seduta piena"
+      const s0 = d.programma && d.programma.prossime && d.programma.prossime[0];
+      cls = 'ok'; titolo = T('Recuperato', 'Recovered');
+      testo = s0 && s0.adattata ? T('Seduta alleggerita per il carico', 'Session eased for load') : T('Seduta piena', 'Full session');
+    }
     const val = (k, ico, nome, v, un) => '<button type="button" class="cs-v cat-' + METRICHE[k].cat + '" data-salute="' + k + '"' + (m[k] ? ' title="' + esc(quando(d.oggi, m[k].data)) + '"' : '') + '><span class="cs-l"><i>' + ico + '</i>' + nome + '</span><b>' + v + (v !== '–' && un ? '<small>' + un + '</small>' : '') + '</b>' + (m[k] && giorniDa(m[k].data, d.oggi) > 1 ? '<span class="cs-q">' + esc(quando(d.oggi, m[k].data)) + '</span>' : '') + '</button>';
     return '<section class="card come-stai ' + cls + '">' +
       '<div class="cs-head"><span class="cs-dot"></span><div><h3>' + titolo + '</h3><p>' + testo + '</p></div></div>' +
