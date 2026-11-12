@@ -4276,6 +4276,7 @@ module.exports = {
   analizzaStream,
   testoNotifica, // testi delle notifiche (verifiche)
   aggiornaDiariTutti, // diario e avvisi dopo la sincronizzazione (verifiche)
+  stessaUscita, caricoStimato, // doppioni Intervals/Strava e carico stimato (verifiche)
   // zone cardiache (usate anche nei test)
   fcMaxTanaka,
   soglieZone,
