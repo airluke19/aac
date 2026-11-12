@@ -653,7 +653,7 @@ const sincronizzazioneConfigurata = () => intervalsConfigurato() || stravaColleg
 
 // Carico di un'attivita' Strava (Strava non lo fornisce): stima stile hrTSS dalla FC media rispetto alla soglia
 // (circa l'89% della FC max); senza cardio, un carico moderato per ora. Serve a CTL/ATL, forma e carico e infortuni.
-function caricoStimato(durataSec, fcMedia) {
+function caricoDaFc(durataSec, fcMedia) {
   const ore = durataSec / 3600;
   if (!(ore > 0)) return null;
   if (!(fcMedia > 40)) return round(ore * 55, 1);
@@ -1238,7 +1238,7 @@ async function eseguiSync(origine) {
     if (haStr) {
       try {
         const ultimaSt = db.prepare("SELECT MAX(data) AS m FROM attivita WHERE id LIKE 's%'").get().m;
-        const sv = await strava.attivita(contesto.getStore().utente.id, ultimaSt ? addDays(ultimaSt, -CONFIG.recentDays) : addDays(oggiStr, -CONFIG.historyDays), caricoStimato);
+        const sv = await strava.attivita(contesto.getStore().utente.id, ultimaSt ? addDays(ultimaSt, -CONFIG.recentDays) : addDays(oggiStr, -CONFIG.historyDays), caricoDaFc);
         const dirette = grezze.filter((g) => g && Number(g.distance) > 0);
         const giaDb = db.prepare("SELECT data, ora_inizio, distanza FROM attivita WHERE id NOT LIKE 's%' AND origine = 'intervals' AND data >= ?").all(addDays(oggiStr, -CONFIG.historyDays - 1))
           .map((r) => ({ start_date_local: `${r.data}T${r.ora_inizio || ''}`, distance: (r.distanza || 0) * 1000 }));
@@ -4276,7 +4276,7 @@ module.exports = {
   analizzaStream,
   testoNotifica, // testi delle notifiche (verifiche)
   aggiornaDiariTutti, // diario e avvisi dopo la sincronizzazione (verifiche)
-  stessaUscita, caricoStimato, // doppioni Intervals/Strava e carico stimato (verifiche)
+  stessaUscita, caricoDaFc, // doppioni Intervals/Strava e carico stimato (verifiche)
   // zone cardiache (usate anche nei test)
   fcMaxTanaka,
   soglieZone,
