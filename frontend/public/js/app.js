@@ -2844,8 +2844,9 @@
     aggiornaPallinoDiario();
   }
 
-  /* ---- Chiedi al coach: chat a regole (il server sceglie l'argomento e risponde con i tuoi dati) ---- */
-  const CHAT = { msg: [], sugg: [], attesa: false, tema: null };
+  /* ---- Chiedi al coach: il server capisce l'argomento e risponde con i tuoi dati ---- */
+  // ultimo = tema dell'ultima risposta, rimandato al server per capire i seguiti ("e domani?")
+  const CHAT = { msg: [], sugg: [], attesa: false, tema: null, ultimo: null };
   const bolla = (m) => m.da === 'io'
     ? '<div class="ch-m ch-io"><p>' + esc(m.testo) + '</p></div>'
     : '<div class="ch-m ch-coach"><span class="ch-av" aria-hidden="true">' + ICO.logo + '</span><div class="ch-b">' + m.testo.map((x) => '<p>' + esc(x) + '</p>').join('') + '</div></div>';
@@ -2867,7 +2868,7 @@
     // una piccola pausa: la risposta arriva come da una persona, non a scatto
     await new Promise((ok) => setTimeout(ok, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 450));
     CHAT.attesa = false;
-    if (r.ok && r.out && Array.isArray(r.out.testo)) { CHAT.msg.push({ da: 'coach', testo: r.out.testo }); CHAT.sugg = r.out.suggerimenti || []; }
+    if (r.ok && r.out && Array.isArray(r.out.testo)) { CHAT.msg.push({ da: 'coach', testo: r.out.testo }); CHAT.sugg = r.out.suggerimenti || []; CHAT.ultimo = typeof r.out.tema === 'string' ? r.out.tema : null; }
     else CHAT.msg.push({ da: 'coach', testo: [r.out && r.out.errore ? r.out.errore : T('Non riesco a risponderti ora: riprova tra poco.', 'I can’t answer right now: try again shortly.')] });
     if (CHAT.msg.length > 60) CHAT.msg.splice(0, CHAT.msg.length - 60);
     disegnaChat();
@@ -2889,7 +2890,7 @@
     const inp = $('#ch-in'), t = inp.value.trim().slice(0, 300);
     if (!t || CHAT.attesa) return;
     inp.value = '';
-    chiediCoach({ testo: t }, t);
+    chiediCoach(CHAT.ultimo ? { testo: t, prima: CHAT.ultimo } : { testo: t }, t);
   });
   document.addEventListener('click', (e) => {
     const c = e.target.closest('[data-chat-tema]');

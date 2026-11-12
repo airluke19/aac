@@ -12,9 +12,11 @@
     "node": ">=20"
   },
   "dependencies": {
+    "@huggingface/tokenizers": "0.2.0",
     "better-sqlite3": "^13.0.3",
     "express": "^4.21.2",
     "node-cron": "^4.6.0",
+    "onnxruntime-node": "1.30.0",
     "web-push": "^3.6.7"
   }
 }

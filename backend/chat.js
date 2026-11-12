@@ -1,12 +1,14 @@
 'use strict';
 // ---------------------------------------------------------------------------
-// Chiedi al coach: una chat a regole, senza servizi esterni.
-// Il messaggio dell'utente serve solo a scegliere un argomento (parole chiave):
-// non viene mai eseguito, interpretato come istruzione, salvato o scritto nei log.
-// Le risposte sono frasi scritte qui, riempite con i dati dell'utente collegato
-// (gli stessi del motore del piano). Niente da "convincere": fuori dalla corsa
-// il coach riporta gentilmente il discorso sull'allenamento.
+// Chiedi al coach: risposte scritte qui e riempite con i dati dell'utente collegato
+// (gli stessi del motore del piano). Il messaggio serve solo a capire di cosa si parla:
+// capire.js confronta il suo significato con frasi d'esempio (modello di embedding locale,
+// nessun testo generato); se il modello non c'e' si usano le parole chiave qui sotto.
+// Il testo non viene mai eseguito, interpretato come istruzione, salvato o scritto nei log.
+// Fuori dalla corsa il coach riporta gentilmente il discorso sull'allenamento.
 // ---------------------------------------------------------------------------
+
+const capire = require('./capire');
 
 const MAX_TESTO = 300;
 
@@ -69,7 +71,7 @@ function scegliTema(testo) {
 }
 
 // h = helper del server: L, fmtPasso, giornoSettimana, parere(id), scarpe(), cadenze(), nome
-function creaRisposta(h, d, tema) {
+function creaRisposta(h, d, tema, info = {}) {
   const { L } = h;
   const p = (d && d.programma) || {};
   const at = (d && d.atleta) || {};
@@ -141,6 +143,26 @@ function creaRisposta(h, d, tema) {
       break;
     case 'oggi': {
       if (!attivo) { nessunPiano(); sugg = ['come_funziona']; break; }
+      // un giorno preciso ("che seduta ho giovedì?", "e domani?")
+      const giorno = info.giorno != null && oggiStr ? dataDaGiorno(info.giorno, oggiStr, h.addDays) : null;
+      if (giorno && giorno !== oggiStr) {
+        const cal = p.calendario || [];
+        const s = (p.prossime || []).find((x) => x.data === giorno) || cal.find((x) => x.data === giorno);
+        const Q = quando(giorno).replace(/^./, (c) => c.toUpperCase());
+        if (s && s.fatta) out.push(L(`${Q} hai già corso: seduta fatta. 👍`, `${Q} you already ran: session done. 👍`));
+        else if (s) {
+          out.push(`${Q}: ` + descSeduta(s));
+          if (s.blocchi) out.push(L('Come si svolge: ', 'How it goes: ') + s.blocchi + (s.nota ? '. ' + s.nota : '.'));
+          if (s.adattata) out.push(perAlleggerita(s));
+          else if (giorno > h.addDays(oggiStr, 1)) out.push(L('La mattina stessa la riguardo con FC a riposo, HRV e sonno: se serve, la alleggerisco.', 'That morning I check it again against resting HR, HRV and sleep: if needed, I lighten it.'));
+        } else if (cal.length && giorno > cal[cal.length - 1].data) out.push(L('Quel giorno il piano è già concluso.', 'By that day your plan is already complete.'));
+        else {
+          const dopo = cal.find((x) => x.data > giorno && !x.fatta);
+          out.push(L(`${Q} è giorno di riposo: anche questo è allenamento.`, `${Q} is a rest day: that’s training too.`) + (dopo ? L(` La seduta dopo è ${quando(dopo.data)}: `, ` The next one is ${quando(dopo.data)}: `) + descSeduta(dopo) : ''));
+        }
+        sugg = ['settimana', 'fc', 'riscaldamento'];
+        break;
+      }
       if (!prossima) { out.push(L('Non vedo sedute in programma: il piano è concluso. Complimenti! Dal tab Piano puoi scegliere il prossimo obiettivo.', 'I see no planned sessions: your plan is complete. Congratulations! Choose your next goal from the Plan tab.')); break; }
       const fattaOggi = (p.prossime || []).some((x) => x.data === oggiStr && x.fatta) || ((p.settimana && p.settimana.giorni_fatti) || []).includes(oggiStr);
       if (prossima.data === oggiStr) out.push(L('Oggi: ', 'Today: ') + descSeduta(prossima));
@@ -359,6 +381,11 @@ function creaRisposta(h, d, tema) {
       sugg = ['ultima', 'carico', 'passo'];
       break;
     }
+    case 'fuori':
+      out.push(L('Qui ti so aiutare solo sulla corsa: il tuo piano, le sedute, il recupero, la salute da runner. Su questo passo la mano. 🙂', 'Here I can only help with running: your plan, sessions, recovery, runner’s health. On this one I’ll pass. 🙂'));
+      out.push(L('Torniamo ad allenarci: cosa ti serve sapere?', 'Back to training: what do you need to know?'));
+      sugg = ['oggi', 'problemi', 'obiettivo'];
+      break;
     default:
       out.push(L('Non sono sicuro di aver capito. Su corsa, piano, recupero e salute so rispondere bene: prova a chiedermelo in un altro modo, o scegli una domanda qui sotto.', 'I’m not sure I understood. I’m good on running, your plan, recovery and health: try asking another way, or pick a question below.'));
       sugg = ['oggi', 'problemi', 'ultima', 'obiettivo'];
@@ -408,12 +435,71 @@ function consenti(chiave) {
   return true;
 }
 
-// Ingresso: { testo?: string, tema?: string } -> tema valido o null
-function leggiDomanda(body) {
-  const b = body && typeof body === 'object' ? body : {};
-  if (typeof b.tema === 'string' && TEMI.has(b.tema)) return b.tema;
-  if (typeof b.testo === 'string') return scegliTema(b.testo.slice(0, MAX_TESTO));
-  return 'benvenuto';
+// Parole chiave trovate per tema: aiutano il modello a decidere (e servono se il modello manca)
+function contaParole(testo) {
+  const t = norm(testo), n = {};
+  for (const a of ARGOMENTI) { const k = a.kw.filter((x) => trova(t, x)).length; if (k) n[a.id] = k; }
+  return n;
 }
 
-module.exports = { creaRisposta, leggiDomanda, scegliTema, consenti, MAX_TESTO };
+// Giorno citato nella domanda: 'r<n>' = tra n giorni, 'd<n>' = giorno della settimana (0 = domenica)
+const SETTIMANA = [['domenica', 'sunday'], ['lunedi', 'monday'], ['martedi', 'tuesday'], ['mercoledi', 'wednesday'], ['giovedi', 'thursday'], ['venerdi', 'friday'], ['sabato', 'saturday']];
+function giornoChiesto(t) {
+  if (trova(t, 'dopodomani') || trova(t, 'day after tomorrow')) return 'r2';
+  if (trova(t, 'domani') || trova(t, 'tomorrow')) return 'r1';
+  const i = SETTIMANA.findIndex((g) => g.some((x) => trova(t, x)));
+  if (i >= 0) return 'd' + i;
+  if (trova(t, 'oggi') || trova(t, 'today') || trova(t, 'stasera') || trova(t, 'tonight')) return 'r0';
+  return null;
+}
+function dataDaGiorno(g, oggiStr, addDays) {
+  const n = Number(String(g).slice(1));
+  if (!Number.isInteger(n) || n < 0 || n > 6) return null;
+  if (g[0] === 'r') return addDays(oggiStr, n);
+  for (let k = 0; k < 7; k++) { const x = addDays(oggiStr, k); if (new Date(x + 'T00:00:00Z').getUTCDay() === n) return x; }
+  return null;
+}
+
+// Ingresso: { testo?: string, tema?: string, prima?: string } -> { temi: [1 o 2 temi], info }
+// prima = tema della risposta precedente (solo da lista ammessa), per capire i seguiti ("e domani?")
+async function capisciDomanda(body) {
+  const b = body && typeof body === 'object' ? body : {};
+  if (typeof b.tema === 'string' && TEMI.has(b.tema)) return { temi: [b.tema], info: {} };
+  if (typeof b.testo !== 'string') return { temi: ['benvenuto'], info: {} };
+  const testo = b.testo.slice(0, MAX_TESTO);
+  const t = norm(testo);
+  if (t.trim() === '') return { temi: ['benvenuto'], info: {} };
+  const prima = typeof b.prima === 'string' && TEMI.has(b.prima) ? b.prima : null;
+  const info = { giorno: giornoChiesto(t) };
+  // sicurezza a parole chiave, deterministica: non si aggira riformulando per il modello
+  for (const id of ['urgente', 'meta', 'ostile']) {
+    if (ARGOMENTI.find((x) => x.id === id).kw.some((k) => trova(t, k))) return { temi: [id], info };
+  }
+  // "perché?", "in che senso?": si continua il discorso di prima
+  if (prima && /^ (e )?(perche|come mai|in che senso|cioe|spiegami meglio|spiega meglio|dimmi di piu|why|how come|what do you mean|tell me more|explain) $/.test(t)) return { temi: [prima], info };
+  let temi = null;
+  try {
+    const bonus = info.giorno && info.giorno !== 'r0' ? { oggi: 0.008 } : {};
+    const r = await capire.capisci(testo, { paroleChiave: contaParole, prima, bonus });
+    if (r) temi = r.temi;
+  } catch (_) { /* si usano le parole chiave */ }
+  if (!temi || temi[0] === 'boh') {
+    const k = scegliTema(testo);
+    if (!temi || (k !== 'boh' && (contaParole(testo)[k] || 0) >= 2)) temi = [k];
+  }
+  // "e giovedì?" subito dopo una domanda sulle sedute: basta il giorno
+  if (temi[0] === 'boh' && info.giorno && (!prima || ['oggi', 'benvenuto', 'saluto', 'alleggerita', 'settimana'].includes(prima))) temi = ['oggi'];
+  return { temi, info };
+}
+
+// Una risposta per uno o due temi (es. "sono stanco ma giovedì ho le ripetute": stanco + oggi)
+function rispondi(h, d, temi, info) {
+  const r = creaRisposta(h, d, temi[0], info);
+  if (temi.length < 2) return r;
+  const r2 = creaRisposta(h, d, temi[1], info);
+  const visti = new Set(temi), sugg = [];
+  for (const s of r.suggerimenti.concat(r2.suggerimenti)) if (!visti.has(s.tema)) { visti.add(s.tema); sugg.push(s); }
+  return { tema: temi[0], temi, testo: r.testo.concat(r2.testo.filter((x) => !r.testo.includes(x))), suggerimenti: sugg.slice(0, 4) };
+}
+
+module.exports = { creaRisposta, rispondi, capisciDomanda, scegliTema, contaParole, consenti, MAX_TESTO };
