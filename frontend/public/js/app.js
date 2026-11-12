@@ -2817,7 +2817,7 @@
     const ultimo = ultimiDati && ultimiDati.diario_ultimo;
     b.querySelector('.diario-dot').hidden = !ultimo || ultimo <= leggiVisto();
   }
-  const ICO_DIARIO = { settimana: 'cal', alleggerita: 'wave', intensita: 'dati', frequenza: 'cal', zone: 'heart', carico: 'flame', notifica: 'campana' };
+  const ICO_DIARIO = { settimana: 'cal', alleggerita: 'wave', intensita: 'dati', frequenza: 'cal', zone: 'heart', carico: 'flame', notifica: 'campana', corsa: 'spunta' };
   async function apriDiario() {
     mostraSheet(T('Cosa ha fatto il coach', 'What the coach did'), '<div class="skeleton" style="height:300px"></div>');
     let voci = [];
@@ -2977,6 +2977,17 @@
     return out;
   }
 
+  // Il parere del coach sulla corsa (regole del motore, calcolate dal server)
+  function parereCoach(pc) {
+    if (!pc || !pc.punti) return '';
+    const ico = { ok: '✓', warn: '!', info: '•' };
+    return '<section class="card pc-card pc-' + esc(pc.tono) + '"><div class="pc-h"><span class="pc-av">' + ICO.logo + '</span><div><small>' + T('Il parere del coach', 'Coach’s take') + '</small><h3>' + esc(pc.titolo) + '</h3></div></div>' +
+      '<ul class="pc-list">' + pc.punti.map((x) => '<li class="pc-' + esc(x.tono) + '"><i aria-hidden="true">' + (ico[x.tono] || '•') + '</i><p>' + esc(x.testo) + '</p></li>').join('') + '</ul>' +
+      (pc.consiglio ? '<div class="pc-tip"><b>' + T('Il consiglio del coach', 'Coach’s tip') + '</b><p>' + esc(pc.consiglio) + '</p></div>' : '') +
+      (pc.chiusa ? '<p class="pc-chiusa">' + esc(pc.chiusa) + '</p>' : '') +
+    '</section>';
+  }
+
   async function apriSeduta(id) {
     mostraSheet(T('Allenamento', 'Workout'), '<div class="skeleton" style="height:180px"></div><div class="skeleton" style="height:260px"></div>');
     let a;
@@ -3021,6 +3032,7 @@
         '<div class="dd-kpi">' + kpi.map(([l, v, un]) => '<div><b>' + v + (un ? '<small>' + un + '</small>' : '') + '</b><span>' + l + '</span></div>').join('') + '</div>' +
         (puoCondividere() ? '<button type="button" class="dd-share" data-condividi="' + esc(c.id) + '">' + ICO.share + '<span>' + T('Condividi la corsa', 'Share this run') + '</span></button>' : '') +
       '</div></section>' +
+      parereCoach(a.parere) +
       '<div class="dd-groups">' +
         gruppo('cuore', ICO.heart, T('Cuore', 'Heart'), [
           tile(T('FC media', 'Avg HR'), c.fc_media ? fmt0(c.fc_media) + u('bpm') : null, z ? z.z + ' · ' + z.nome : ''),

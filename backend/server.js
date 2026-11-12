@@ -465,6 +465,149 @@ function spiegaAlleggerita(s) {
     `Why: ${a.motivi.join(', ')}. Planned: ${a.originale_titolo ? a.originale_titolo + ', ' : ''}${a.originale}. Today: ${oggiTxt}. Your plan doesn’t change.`);
 }
 
+// ---------------------------------------------------------------------------
+// Il parere del coach su una corsa: regole dichiarate sui tuoi dati (nessun servizio esterno, nessuna AI).
+// Seduta prevista vs fatta, FC rispetto al limite della seduta, efficienza rispetto alle ultime corse,
+// record, deriva cardiaca e prossima seduta. Usato nel dettaglio della corsa e nella notifica dopo il sync.
+// ---------------------------------------------------------------------------
+function parereCorsa(id, oggiStr = oggi(), gia = null) {
+  const a = gia || costruisciAttivita(id, oggiStr);
+  if (!a) return null;
+  const c = a.corsa, pr = a.prevista, cf = a.confronto;
+  const punti = []; // { tono: 'ok' | 'warn' | 'info' | 'tip', testo }
+  const consigli = []; // in ordine di priorita': il primo diventa "Il consiglio del coach"
+  const minuti = (sec) => Math.round(sec / 60);
+  const num = (x, d = 1) => String(round(x, d)).replace('.', LINGUA === 'en' ? '.' : ',');
+  const nomeS = (t) => t.replace(/^(Sett\.|Wk) \d+ · /, '');
+  const tipo = pr ? pr.tipo : null;
+  // la giornata conta una volta: piu' corse nello stesso giorno si sommano
+  const delGiorno = db.prepare("SELECT tempo FROM attivita WHERE origine = 'intervals' AND data = ?").all(c.data);
+  const minGiorno = minuti(delGiorno.reduce((t, x) => t + (x.tempo || 0), 0));
+  let tono = 'ok';
+
+  // 0. a cosa serviva la seduta (il perche' fisiologico)
+  const scopo = {
+    facile: L('Le corse facili sono l’80% dell’allenamento dei migliori runner (Seiler): costruiscono capillari e mitocondri, il motore della resistenza.', 'Easy runs make up 80% of top runners’ training (Seiler): they build capillaries and mitochondria, the engine of endurance.'),
+    lungo: L('Il lungo allena il cuore a pompare più sangue a ogni battito e i muscoli a usare i grassi: è la seduta che ti porta al traguardo.', 'The long run trains your heart to pump more blood per beat and your muscles to burn fat: it’s the session that gets you to the finish line.'),
+    'corsa-cammino': L('Alternare corsa e cammino lascia a tendini e articolazioni il tempo di adattarsi: è il modo più sicuro per costruire la corsa continua.', 'Alternating running and walking gives tendons and joints time to adapt: it’s the safest way to build continuous running.'),
+    qualita: L('Il lavoro intenso alza la soglia e il VO₂max: ti rende più veloce a parità di fatica.', 'Hard work raises your threshold and VO₂max: it makes you faster for the same effort.'),
+    recupero: L('La corsa di recupero fa circolare il sangue senza aggiungere fatica: il corpo ripara e si rinforza.', 'A recovery run gets blood flowing without adding fatigue: your body repairs and gets stronger.'),
+  }[tipo];
+
+  // 1. la seduta: fatta come previsto?
+  if (pr && pr.durata_min && tipo !== 'gara') {
+    const r = minGiorno / pr.durata_min;
+    if (r >= 0.9 && r <= 1.25) punti.push({ tono: 'ok', testo: L(`${nomeS(pr.titolo)} completata: ${minGiorno}′ su ${pr.durata_min}′. ${scopo || ''}`, `${nomeS(pr.titolo)} completed: ${minGiorno}′ of ${pr.durata_min}′. ${scopo || ''}`).trim() });
+    else if (r < 0.9) {
+      punti.push({ tono: 'info', testo: L(`${nomeS(pr.titolo)}: ${minGiorno}′ su ${pr.durata_min}′. Conta comunque: ogni uscita aggiunge un mattone.`, `${nomeS(pr.titolo)}: ${minGiorno}′ of ${pr.durata_min}′. It still counts: every run adds a brick.`) });
+      consigli.push(L('Se ti sei fermato per stanchezza, la prossima volta parti più piano: è il ritmo dell’inizio che decide come finisci.', 'If you stopped because you were tired, start slower next time: the opening pace decides how you finish.'));
+    } else {
+      tono = 'warn';
+      punti.push({ tono: 'warn', testo: L(`${minGiorno}′ invece di ${pr.durata_min}′. L’entusiasmo è un ottimo segno, ma i tessuti si adattano più lentamente del fiato.`, `${minGiorno}′ instead of ${pr.durata_min}′. Enthusiasm is a great sign, but your tissues adapt more slowly than your lungs.`) });
+      consigli.push(L('Fermati al tempo previsto: gli infortuni da corsa nascono quasi sempre da aumenti troppo rapidi (al massimo +10% alla volta).', 'Stop at the planned time: running injuries almost always come from building up too fast (at most +10% at a time).'));
+    }
+  } else if (!pr) {
+    punti.push({ tono: 'info', testo: L('Corsa fuori piano: conta per la settimana. Bella iniziativa, ma ricorda che il recupero fa parte dell’allenamento.', 'Off-plan run: it counts for the week. Nice initiative, but remember recovery is part of training.') });
+  }
+
+  // 2. l'intensita'
+  const tz = c.tempo_zone;
+  const lim = soglieFcPiano().facile;
+  if (tz && tz.totale > 300 && pr) {
+    const sopra = tz.zone.slice(2).reduce((t, z) => t + z.sec, 0);
+    const pct = Math.round((sopra / tz.totale) * 100);
+    if (['facile', 'lungo', 'recupero', 'corsa-cammino'].includes(tipo)) {
+      if (pct <= 10) punti.push({ tono: 'ok', testo: L(`Intensità perfetta: ${100 - pct}% del tempo sotto ${lim} bpm. Correre piano oggi è quello che ti farà correre forte domani.`, `Perfect intensity: ${100 - pct}% of the time below ${lim} bpm. Running slow today is what makes you fast tomorrow.`) });
+      else if (pct <= 30) {
+        punti.push({ tono: 'info', testo: L(`${minuti(sopra)}′ sopra ${lim} bpm (${pct}% del tempo): un po’ sopra il ritmo facile.`, `${minuti(sopra)}′ above ${lim} bpm (${pct}% of the time): a bit above easy pace.`) });
+        consigli.push(L('In salita e nell’ultimo terzo accorcia il passo e rallenta: se riesci a parlare a frasi intere sei nella zona giusta.', 'On climbs and in the last third shorten your stride and slow down: if you can talk in full sentences you’re in the right zone.'));
+      } else {
+        tono = 'warn';
+        punti.push({ tono: 'warn', testo: L(`Troppo forte per una seduta facile: ${minuti(sopra)}′ sopra ${lim} bpm (${pct}%). Così si accumula fatica senza costruire la base aerobica.`, `Too hard for an easy session: ${minuti(sopra)}′ above ${lim} bpm (${pct}%). That piles up fatigue without building your aerobic base.`) });
+        consigli.push(L(`La prossima volta guarda l’orologio e resta sotto ${lim} bpm, anche camminando qualche secondo: sembra lento, ma è così che il cuore diventa più efficiente.`, `Next time watch your heart rate and stay below ${lim} bpm, even walking for a few seconds: it feels slow, but that’s how your heart becomes more efficient.`));
+      }
+    } else if (tipo === 'qualita') {
+      const z4 = tz.zone[3].sec + tz.zone[4].sec;
+      if (z4 >= 240) punti.push({ tono: 'ok', testo: L(`${minuti(z4)}′ in Z4–Z5: lavoro di qualità centrato. È qui che alzi la soglia.`, `${minuti(z4)}′ in Z4–Z5: quality work on target. This is where you raise your threshold.`) });
+      else {
+        punti.push({ tono: 'info', testo: L(`Solo ${minuti(z4)}′ in Z4–Z5: i tratti veloci sono rimasti un po’ tranquilli.`, `Only ${minuti(z4)}′ in Z4–Z5: the fast parts stayed a bit easy.`) });
+        consigli.push(L('Nei tratti veloci spingi fino a respirare a fondo e parlare a fatica: poche parole, non frasi. Nei recuperi invece rallenta davvero.', 'In the fast parts push until you breathe hard and can only say a few words. In the recoveries, really slow down.'));
+      }
+    }
+  }
+
+  // 3. efficienza (velocita' per battito) rispetto alle ultime corse
+  if (cf && cf.corse >= 3 && cf.ef && c.efficiency_factor) {
+    const d = (c.efficiency_factor / cf.ef - 1) * 100;
+    if (d >= 3) punti.push({ tono: 'ok', testo: L(`Efficienza +${Math.round(d)}% sulle tue ultime ${cf.corse} corse: più veloce con lo stesso battito. Il lavoro sta pagando.`, `Efficiency +${Math.round(d)}% over your last ${cf.corse} runs: faster at the same heart rate. The work is paying off.`) });
+    else if (d <= -6) {
+      if (c.meteo && c.meteo.temp >= 24) punti.push({ tono: 'info', testo: L(`Efficienza più bassa del solito, ma con ${Math.round(c.meteo.temp)}° è fisiologico: col caldo il cuore batte di più per raffreddarti.`, `Efficiency lower than usual, but at ${Math.round(c.meteo.temp)}° that’s physiology: in the heat your heart beats faster to cool you down.`) });
+      else {
+        punti.push({ tono: 'info', testo: L(`Efficienza ${Math.round(d)}% rispetto al solito. Un giorno così capita: conta la tendenza delle prossime settimane.`, `Efficiency ${Math.round(d)}% vs usual. Days like this happen: the trend over the next weeks is what counts.`) });
+        consigli.push(L('Stanchezza, poco sonno o salite? Stanotte punta a 7–9 ore: è dormendo che il corpo assimila l’allenamento.', 'Fatigue, short sleep or hills? Aim for 7–9 hours tonight: it’s while you sleep that your body absorbs training.'));
+      }
+    }
+  }
+
+  // 4. cadenza, deriva cardiaca, record
+  const cad = c.cadenza;
+  if (cad && cad >= 120 && cad < 160 && tipo !== 'corsa-cammino') consigli.push(L(`Cadenza ${Math.round(cad)} passi al minuto: prova ad aumentarla del 5–10% con passi più corti e leggeri. Riduce il carico su ginocchia e anche (Heiderscheit, 2011).`, `Cadence ${Math.round(cad)} steps per minute: try raising it by 5–10% with shorter, lighter steps. It reduces load on knees and hips (Heiderscheit, 2011).`));
+  if (c.decoupling != null && c.tempo >= 2400) {
+    if (c.decoupling <= 5) punti.push({ tono: 'ok', testo: L(`Deriva cardiaca ${num(c.decoupling)}%: il cuore è rimasto stabile fino alla fine. Segno di una buona resistenza aerobica.`, `Cardiac drift ${num(c.decoupling)}%: your heart stayed steady to the end. A sign of good aerobic endurance.`) });
+    else consigli.push(L(`Deriva cardiaca ${num(c.decoupling)}%: nella seconda parte il cuore ha faticato di più. Parti più piano e bevi già prima di uscire.`, `Cardiac drift ${num(c.decoupling)}%: your heart worked harder in the second half. Start slower and drink before you head out.`));
+  }
+  const piuLunga = db.prepare("SELECT MAX(distanza) AS m FROM attivita WHERE origine = 'intervals' AND (data < ? OR (data = ? AND id <> ?))").get(c.data, c.data, c.id).m;
+  const record = Boolean(c.distanza && piuLunga && c.distanza > piuLunga);
+  if (record) punti.unshift({ tono: 'ok', testo: L(`La tua corsa più lunga di sempre: ${num(c.distanza)} km! 🎉 Un mese fa non era possibile.`, `Your longest run ever: ${num(c.distanza)} km! 🎉 A month ago this wasn’t possible.`) });
+
+  // 5. il consiglio del coach (uno solo, il piu' utile) e il recupero
+  if (!consigli.length) consigli.push(tipo === 'qualita' || tipo === 'lungo' || minGiorno >= 60
+    ? L('Nei 30–60 minuti dopo mangia carboidrati e un po’ di proteine, e bevi: è la finestra in cui il muscolo si ricarica meglio.', 'In the 30–60 minutes after, eat carbs and some protein, and drink: that’s when your muscles refuel best.')
+    : L('Ripeti la stessa ricetta: la costanza batte l’intensità. Tre uscite facili alla settimana per mesi fanno più di una corsa eroica.', 'Repeat the same recipe: consistency beats intensity. Three easy runs a week for months do more than one heroic run.'));
+
+  // 6. la chiusa: settimana e prossima seduta
+  const p = costruisciProgramma(oggiStr);
+  let chiusa = null;
+  if (p && p.attivo) {
+    const st = p.settimana, prox = p.prossime.find((x) => x.data > c.data && !x.fatta);
+    const sett = st && st.sedute ? (st.fatte >= st.sedute ? L(`Settimana completa: ${st.fatte} sedute su ${st.sedute}. Si avanza!`, `Week complete: ${st.fatte} of ${st.sedute} sessions. Moving forward!`)
+      : st.fatte >= Math.max(2, st.sedute - 1) ? L(`${st.fatte} sedute su ${st.sedute}: la settimana è già salva.`, `${st.fatte} of ${st.sedute} sessions: the week is already in the bag.`)
+      : L(`${st.fatte} sedute su ${st.sedute} questa settimana.`, `${st.fatte} of ${st.sedute} sessions this week.`)) : '';
+    chiusa = [sett, prox ? L(`Prossima: ${giornoSettimana(prox.data)}, ${nomeS(prox.titolo)} ${prox.durata_min}′.`, `Next: ${giornoSettimana(prox.data)}, ${nomeS(prox.titolo)} ${prox.durata_min}′.`) : ''].filter(Boolean).join(' ');
+  }
+
+  const titolo = tono === 'warn' ? L('Corsa fatta, ma ascoltami', 'Run done, but listen to me')
+    : record ? L('Che corsa! 🎉', 'What a run! 🎉')
+    : punti.some((x) => x.tono === 'ok') ? L('Bella corsa! 👏', 'Nice run! 👏') : L('Corsa fatta 💪', 'Run done 💪');
+  return { id: c.id, data: c.data, titolo, tono, punti, consiglio: consigli[0], chiusa, km: c.distanza, tempo: c.tempo };
+}
+
+// Dopo il sync: per ogni corsa nuova di oggi o ieri il coach manda il suo parere (una volta, tramite il diario)
+function notificaCorseNuove(utenteId, ids) {
+  if (!utenteId || !ids || !ids.length) return;
+  const ieri = addDays(oggi(), -1);
+  const ins = db.prepare('INSERT OR IGNORE INTO diario (quando, tipo, chiave, titolo, testo, titolo_en, testo_en) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  const prima = LINGUA;
+  for (const id of ids) {
+    const r = db.prepare("SELECT id, data FROM attivita WHERE id = ? AND origine = 'intervals'").get(id);
+    if (!r || r.data < ieri) continue;
+    let it, en;
+    try { LINGUA = 'it'; it = parereCorsa(id); LINGUA = 'en'; en = parereCorsa(id); } finally { LINGUA = prima; }
+    if (!it || !en) continue;
+    // diario: tutto; notifica: il punto principale, il consiglio e la chiusa (il resto nel dettaglio della corsa)
+    const cons = (x, l) => (x.consiglio ? (l === 'en' ? 'Tip: ' : 'Il consiglio: ') + x.consiglio : '');
+    const testo = (x, l) => [...x.punti.map((p) => p.testo), cons(x, l), x.chiusa || ''].filter(Boolean).join(' ');
+    const breve = (x, l) => [x.punti[0] ? x.punti[0].testo : '', cons(x, l), x.chiusa || ''].filter(Boolean).join(' ');
+    const km = (x, l) => `${String(round(x.km, 1)).replace('.', l === 'en' ? '.' : ',')} km`;
+    if (!ins.run(new Date().toISOString(), 'corsa', `corsa:${id}`, `${it.titolo} · ${km(it, 'it')}`, testo(it, 'it'), `${en.titolo} · ${km(en, 'en')}`, testo(en, 'en')).changes) continue;
+    if (!notifiche.haIscrizioni(utenteId)) continue; // senza telefono iscritto resta nel diario e nel dettaglio della corsa
+    notifiche.avvisa(utenteId, (lingua) => {
+      const x = lingua === 'en' ? en : it;
+      return { title: `${x.titolo} · ${km(x, lingua)}`, body: breve(x, lingua), tag: `corsa-${id}`, url: `/#seduta/${encodeURIComponent(id)}` };
+    }).catch((e) => console.warn('[notifiche] corsa', e.message));
+  }
+}
+
 // Testo delle notifiche (solo seduta o settimana, niente dati di salute). Sincrono: LINGUA torna com'era.
 function testoNotifica(u, tipo, lingua) {
   const prima = LINGUA;
@@ -1412,6 +1555,11 @@ async function eseguiSync(origine) {
     } catch (e) {
       console.warn(`[meteo] ${e.message}`);
     }
+    // il parere del coach sulle corse appena arrivate (notifica + diario), dopo analisi e meteo
+    try {
+      const st = contesto.getStore();
+      if (st && st.utente && typeof st.utente.id === 'number') notificaCorseNuove(st.utente.id, idsNuove);
+    } catch (e) { console.warn(`[parere] ${e.message}`); }
 
     const esito = {
       ok: true,
@@ -4230,6 +4378,7 @@ function creaApp() {
     try {
       const a = costruisciAttivita(req.params.id, oggi());
       if (!a) return res.status(404).json({ errore: L('Allenamento non trovato', 'Workout not found') });
+      try { a.parere = parereCorsa(req.params.id, oggi(), a); } catch (e) { console.warn('[parere]', e.message); }
       res.json(a);
     } catch (e) {
       console.error('[api] attivita:', e);
@@ -4359,7 +4508,7 @@ module.exports = {
   analizzaStream,
   testoNotifica, // testi delle notifiche (verifiche)
   aggiornaDiariTutti, // diario e avvisi dopo la sincronizzazione (verifiche)
-  stessaUscita, caricoDaFc, unisciDoppioni, // doppioni Intervals/Strava e carico stimato (verifiche)
+  stessaUscita, caricoDaFc, unisciDoppioni, parereCorsa, // verifiche // doppioni Intervals/Strava e carico stimato (verifiche)
   // zone cardiache (usate anche nei test)
   fcMaxTanaka,
   soglieZone,
