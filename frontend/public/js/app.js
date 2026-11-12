@@ -799,14 +799,6 @@
     '</section>';
   }
 
-  // Accesso alla chat del coach: in fondo a Oggi (niente icona in intestazione, scelta dell'utente)
-  function renderChiediCoach() {
-    if (!ME) return '';
-    return '<button type="button" class="gc-cta chiedi-cta" data-apri-chat><span class="cc-lab">' + ICO_FUMETTO +
-      T('Hai un dubbio? Chiedi al coach', 'Got a question? Ask the coach') + '</span>' + FRECCIA + '</button>';
-  }
-  const ICO_FUMETTO = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.6-.8L3 21l1.9-5.1A8.4 8.4 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg>';
-
   /* ---- Avvisi in Oggi: corse da Strava e carico in crescita troppo rapida ---- */
   function renderAvvisi(d) {
     let h = '';
@@ -1760,14 +1752,12 @@
   let chiudiRivivi = null; // replay aperto: "Indietro" lo chiude invece di uscire dal dettaglio corsa
   function rotta() {
     if (chiudiRivivi) { const f = chiudiRivivi; chiudiRivivi = null; f(); return; }
-    document.body.classList.toggle('chat-open', location.hash === '#coach');
     const sh = $('#sheet');
     if (location.hash === '#account') { apriAccount(); return; }
     if (location.hash === '#admin') { apriAdmin(); return; }
     if (location.hash === '#collega') { apriCollega(); return; }
     if (location.hash === '#guida-strava') { apriGuidaStrava(); return; }
     if (location.hash === '#diario') { apriDiario(); return; }
-    if (location.hash === '#coach') { apriChat(); return; }
     const mu = location.hash.match(/^#uso\/(\d+)$/);
     if (mu) { apriUso(mu[1]); return; }
     const mc = location.hash.match(/^#condividi\/(.+)$/);
@@ -2849,65 +2839,6 @@
     aggiornaPallinoDiario();
   }
 
-  /* ---- Chiedi al coach: il server capisce l'argomento e risponde con i tuoi dati ---- */
-  // ultimo = tema dell'ultima risposta, rimandato al server per capire i seguiti ("e domani?")
-  const CHAT = { msg: [], sugg: [], attesa: false, tema: null, ultimo: null };
-  const bolla = (m) => m.da === 'io'
-    ? '<div class="ch-m ch-io"><p>' + esc(m.testo) + '</p></div>'
-    : '<div class="ch-m ch-coach"><span class="ch-av" aria-hidden="true">' + ICO.logo + '</span><div class="ch-b">' + m.testo.map((x) => '<p>' + esc(x) + '</p>').join('') + fontiChat(m.fonti) + '</div></div>';
-  // fonti scientifiche, solo quando la risposta riporta un dato preso da uno studio (le sceglie il server)
-  const fontiChat = (f) => (Array.isArray(f) && f.length
-    ? '<p class="ch-fonti">' + T('Fonti: ', 'Sources: ') + f.filter((x) => /^https:\/\//.test(x.url)).map((x) => '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.titolo) + '</a>').join(' · ') + '</p>'
-    : '');
-  function disegnaChat() {
-    const log = $('#ch-log');
-    if (!log) return;
-    log.innerHTML = CHAT.msg.map(bolla).join('') + (CHAT.attesa ? '<div class="ch-m ch-coach"><span class="ch-av" aria-hidden="true">' + ICO.logo + '</span><div class="ch-b ch-dots" aria-label="' + T('Il coach sta scrivendo', 'The coach is typing') + '"><i></i><i></i><i></i></div></div>' : '');
-    $('#ch-sugg').innerHTML = CHAT.attesa ? '' : CHAT.sugg.map((s) => '<button type="button" class="ch-chip" data-chat-tema="' + esc(s.tema) + '">' + esc(s.label) + '</button>').join('');
-    const ultimo = log.lastElementChild;
-    // la risposta del coach si legge dall'inizio; il proprio messaggio e i puntini restano in fondo
-    if (ultimo) ultimo.scrollIntoView({ block: CHAT.attesa || ultimo.classList.contains('ch-io') ? 'end' : 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
-  }
-  async function chiediCoach(corpo, mio) {
-    if (CHAT.attesa) return;
-    if (mio) CHAT.msg.push({ da: 'io', testo: mio });
-    CHAT.attesa = true; disegnaChat();
-    let r;
-    try { r = await inviaJson('POST', '/api/coach/chat', corpo); } catch (_) { r = { ok: false, out: {} }; }
-    // una piccola pausa: la risposta arriva come da una persona, non a scatto
-    await new Promise((ok) => setTimeout(ok, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 450));
-    CHAT.attesa = false;
-    if (r.ok && r.out && Array.isArray(r.out.testo)) { CHAT.msg.push({ da: 'coach', testo: r.out.testo, fonti: r.out.fonti || [] }); CHAT.sugg = r.out.suggerimenti || []; CHAT.ultimo = typeof r.out.tema === 'string' ? r.out.tema : null; }
-    else CHAT.msg.push({ da: 'coach', testo: [r.out && r.out.errore ? r.out.errore : T('Non riesco a risponderti ora: riprova tra poco.', 'I can’t answer right now: try again shortly.')] });
-    if (CHAT.msg.length > 60) CHAT.msg.splice(0, CHAT.msg.length - 60);
-    disegnaChat();
-  }
-  function apriChat() {
-    mostraSheet(T('Chiedi al coach', 'Ask the coach'),
-      '<div class="ch-wrap"><p class="ch-nota">' + T('Il coach risponde con le regole di AAC e i tuoi dati. Non sostituisce il parere di un medico.', 'The coach answers with AAC’s rules and your data. It doesn’t replace a doctor’s advice.') + '</p>' +
-      '<div id="ch-log" class="ch-log" role="log" aria-live="polite"></div>' +
-      '<div id="ch-sugg" class="ch-sugg"></div>' +
-      '<form id="ch-form" class="ch-form" autocomplete="off"><input id="ch-in" type="text" maxlength="300" enterkeyhint="send" placeholder="' + T('Scrivi al coach…', 'Message the coach…') + '" aria-label="' + T('Messaggio al coach', 'Message to the coach') + '">' +
-      '<button type="submit" class="ch-send" aria-label="' + T('Invia', 'Send') + '"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/></svg></button></form></div>');
-    const tema = CHAT.tema; CHAT.tema = null;
-    if (!CHAT.msg.length) chiediCoach({ tema: 'benvenuto' }).then(() => { if (tema) chiediCoach({ tema }, (CHAT.sugg.find((s) => s.tema === tema) || {}).label || null); });
-    else { disegnaChat(); if (tema) chiediCoach({ tema }, null); }
-  }
-  $('#sheet-body').addEventListener('submit', (e) => {
-    if (e.target.id !== 'ch-form') return;
-    e.preventDefault();
-    const inp = $('#ch-in'), t = inp.value.trim().slice(0, 300);
-    if (!t || CHAT.attesa) return;
-    inp.value = '';
-    chiediCoach(CHAT.ultimo ? { testo: t, prima: CHAT.ultimo } : { testo: t }, t);
-  });
-  document.addEventListener('click', (e) => {
-    const c = e.target.closest('[data-chat-tema]');
-    if (c && $('#ch-log')) { chiediCoach({ tema: c.dataset.chatTema }, c.textContent); return; }
-    const a = e.target.closest('[data-apri-chat]');
-    if (a) { CHAT.tema = a.dataset.apriChat || null; apriSheet('#coach'); }
-  });
-
   async function apriAccount() {
     { try { ME = await caricaJson('/api/me'); aggiornaAvatar(); } catch (e) { mostraSheet('Account', '<div class="card empty">' + esc(e.message) + '</div>'); return; } }
     mostraSheet(T('Account', 'Account'), renderAccount());
@@ -3054,7 +2985,6 @@
       '<ul class="pc-list">' + pc.punti.map((x) => '<li class="pc-' + esc(x.tono) + '"><i aria-hidden="true">' + (ico[x.tono] || '•') + '</i><p>' + esc(x.testo) + '</p></li>').join('') + '</ul>' +
       (pc.consiglio ? '<div class="pc-tip"><b>' + T('Il consiglio del coach', 'Coach’s tip') + '</b><p>' + esc(pc.consiglio) + '</p></div>' : '') +
       (pc.chiusa ? '<p class="pc-chiusa">' + esc(pc.chiusa) + '</p>' : '') +
-      '<button type="button" class="pc-chat" data-apri-chat>' + T('Chiedi al coach ›', 'Ask the coach ›') + '</button>' +
     '</section>';
   }
 
@@ -4220,7 +4150,7 @@
       '<div class="pane-head"><h1>' + titolo + '</h1>' + (sotto ? '<span>' + sotto + '</span>' : '') + '</div>' + html + '</div>';
     $('#main').innerHTML =
       pane('oggi', T('Oggi', 'Today'), esc(fmtDataLunga(d.oggi)).replace(/^./, (x) => x.toUpperCase()),
-        renderAttivaNotifiche() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderComeStai(d) + renderOggi(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d) + renderChiediCoach()) +
+        renderAttivaNotifiche() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderComeStai(d) + renderOggi(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
         renderProgramma(d) + renderGuidaCard()) +

@@ -336,7 +336,6 @@ account.eventi.stravaDisponibile = () => strava.attivo;
 
 // Notifiche push (seduta del mattino, riepilogo della domenica): vedi notifiche.js
 const { creaNotifiche } = require('./notifiche');
-const chat = require('./chat');
 const notifiche = creaNotifiche({
   sis: account.sistema, cifra: account.cifra, decifra: account.decifra,
   soggetto: /^https:\/\//.test(BASE.publicUrl || '') ? BASE.publicUrl : 'https://aac.run',
@@ -4406,33 +4405,6 @@ function creaApp() {
   // ---- Scarpe ----
   const jsonBody = express.json({ limit: '8kb' });
   const soloCoach = (req, res, next) => (req.get('x-requested-with') === 'coach' ? next() : res.status(400).json({ errore: L('Richiesta non valida', 'Invalid request') }));
-  // Chiedi al coach (backend/chat.js + capire.js): il testo serve solo a capire l'argomento,
-  // le risposte sono frasi scritte con i dati dell'utente. Il testo non viene salvato ne' scritto
-  // nei log. Permessa anche nella demo (non modifica nulla).
-  app.post('/api/coach/chat', soloCoach, jsonBody, async (req, res) => {
-    res.set('Cache-Control', 'no-store');
-    if (!chat.consenti(req.demo ? 'demo:' + (req.get('cf-connecting-ip') || req.get('x-real-ip') || req.ip || '') : 'u' + req.vero.id)) {
-      return res.status(429).json({ errore: L('Facciamo una pausa: riprova tra qualche minuto.', 'Let’s take a breather: try again in a few minutes.') });
-    }
-    try {
-      const lingua = LINGUA;
-      const { temi, info } = await chat.capisciDomanda(req.body);
-      LINGUA = lingua; // LINGUA e' globale: durante l'attesa un'altra richiesta puo' averla cambiata
-      const d = costruisciCoachData();
-      const nome = String((req.utente && req.utente.nome) || '').trim().split(/\s+/)[0].slice(0, 30);
-      const h = {
-        L, fmtPasso, giornoSettimana, addDays, demo: Boolean(req.demo), nome: req.demo ? '' : nome,
-        parere: (id) => { try { return parereCorsa(id, d.oggi); } catch (_) { return null; } },
-        scarpe: () => { try { return elencoScarpe(); } catch (_) { return []; } },
-        cadenze: () => db.prepare("SELECT cadenza FROM attivita WHERE origine = 'intervals' AND cadenza >= 120 ORDER BY data DESC, id DESC LIMIT 5").all().map((r) => r.cadenza),
-      };
-      res.json(chat.rispondi(h, d, temi, info));
-    } catch (e) {
-      console.error('[api] chat:', e.message);
-      res.status(500).json({ errore: L('Il coach non riesce a rispondere ora: riprova tra poco.', 'The coach can’t answer right now: try again shortly.') });
-    }
-  });
-
   app.get('/api/scarpe', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ scarpe: elencoScarpe() }); });
   app.post('/api/scarpe', soloCoach, jsonBody, (req, res) => {
     const r = salvaScarpa(null, req.body || {});

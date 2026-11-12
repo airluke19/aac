@@ -596,8 +596,8 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
     app.use((req, res, next) => {
       if (PUBBLICI.has(req.path) || req.path.startsWith('/auth/')) return next();
       if (demo && leggiCookie(req, 'aac_demo') === '1') {
-        // sola lettura: nessuna scrittura, sincronizzazione o modifica del profilo (la chat del coach non scrive nulla)
-        if (req.method !== 'GET' && req.method !== 'HEAD' && !(req.method === 'POST' && req.path === '/api/coach/chat')) return res.status(403).json({ errore: L('Nella demo non si possono fare modifiche', 'Changes are disabled in the demo'), demo: true });
+        // sola lettura: nessuna scrittura, sincronizzazione o modifica del profilo
+        if (req.method !== 'GET' && req.method !== 'HEAD') return res.status(403).json({ errore: L('Nella demo non si possono fare modifiche', 'Changes are disabled in the demo'), demo: true });
         req.demo = true;
         req.vero = req.utente = demo.utente;
         return contesto.run(demo.contestoDemo(), next);
