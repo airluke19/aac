@@ -558,7 +558,11 @@ function parereCorsa(id, oggiStr = oggi(), gia = null) {
   }
   const piuLunga = db.prepare("SELECT MAX(distanza) AS m FROM attivita WHERE origine = 'intervals' AND (data < ? OR (data = ? AND id <> ?))").get(c.data, c.data, c.id).m;
   const record = Boolean(c.distanza && piuLunga && c.distanza > piuLunga);
-  if (record) punti.unshift({ tono: 'ok', testo: L(`La tua corsa più lunga di sempre: ${num(c.distanza)} km! 🎉 Un mese fa non era possibile.`, `Your longest run ever: ${num(c.distanza)} km! 🎉 A month ago this wasn’t possible.`) });
+  if (record) {
+    punti.unshift({ tono: 'ok', testo: L(`La tua corsa più lunga di sempre: ${num(c.distanza)} km! 🎉 Ogni chilometro in più è resistenza nuova.`, `Your longest run ever: ${num(c.distanza)} km! 🎉 Every extra kilometre is new endurance.`) });
+    // salto oltre il 10% sulla piu' lunga precedente: prima si consolida (Frandsen et al., BJSM 2025)
+    if (c.distanza > piuLunga * 1.1) consigli.unshift(L(`È il ${Math.round((c.distanza / piuLunga - 1) * 100)}% in più della tua corsa più lunga precedente: per un paio di settimane non allungare ancora. Il rischio di infortunio sale quando una corsa supera di oltre il 10% la più lunga del mese prima.`, `That’s ${Math.round((c.distanza / piuLunga - 1) * 100)}% more than your previous longest run: don’t go longer for a couple of weeks. Injury risk rises when a run exceeds the previous month’s longest by more than 10%.`));
+  }
 
   // 5. il consiglio del coach (uno solo, il piu' utile) e il recupero
   if (!consigli.length) consigli.push(tipo === 'qualita' || tipo === 'lungo' || minGiorno >= 60
@@ -573,7 +577,7 @@ function parereCorsa(id, oggiStr = oggi(), gia = null) {
     const st = p.settimana, prox = p.prossime.find((x) => x.data > c.data && !x.fatta);
     const sett = st && st.sedute ? (st.fatte >= st.sedute ? L(`Settimana completa: ${st.fatte} sedute su ${st.sedute}. Si avanza!`, `Week complete: ${st.fatte} of ${st.sedute} sessions. Moving forward!`)
       : st.fatte >= Math.max(2, st.sedute - 1) ? L(`${st.fatte} sedute su ${st.sedute}: la settimana è già salva.`, `${st.fatte} of ${st.sedute} sessions: the week is already in the bag.`)
-      : L(`${st.fatte} sedute su ${st.sedute} questa settimana.`, `${st.fatte} of ${st.sedute} sessions this week.`)) : '';
+      : L(`${st.fatte} ${st.fatte === 1 ? 'seduta' : 'sedute'} su ${st.sedute} questa settimana: avanti così.`, `${st.fatte} of ${st.sedute} sessions this week: keep it up.`)) : '';
     chiusa = [sett, prox ? L(`Prossima: ${giornoSettimana(prox.data)}, ${nomeS(prox.titolo)} ${prox.durata_min}′.`, `Next: ${giornoSettimana(prox.data)}, ${nomeS(prox.titolo)} ${prox.durata_min}′.`) : ''].filter(Boolean).join(' ');
   }
 
