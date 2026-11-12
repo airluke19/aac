@@ -117,7 +117,8 @@ services:
       # CA aggiuntiva (proxy aziendale) per le chiamate a Intervals.icu
       NODE_EXTRA_CA_CERTS: /etc/extra-ca.pem
     logging: *logging
-    mem_limit: 768m
+    # ~1 GB in piu' mentre la chat ha caricato il modello (si libera dopo 10' senza domande)
+    mem_limit: 1536m
     pids_limit: 128
     volumes:
       - coach-db:/data

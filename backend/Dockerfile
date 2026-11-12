@@ -16,12 +16,12 @@ RUN --mount=type=secret,id=extra_ca,required=false \
     && cd node_modules/onnxruntime-node/bin/napi-v6 \
     && rm -rf darwin win32 linux/arm64 linux/x64/libonnxruntime_providers_cuda.so linux/x64/libonnxruntime_providers_tensorrt.so
 
-# Chat: modello di embedding multilingual-e5-small (MIT, ONNX quantizzato) per capire le domande.
+# Chat: modello di embedding multilingual-e5-large (MIT, ONNX int8, ~560 MB) per capire le domande.
 # Revisione Hugging Face fissata e checksum SHA-256 verificati in build; a runtime niente rete.
-ARG E5=https://huggingface.co/Xenova/multilingual-e5-small/resolve/761b726dd34fb83930e26aab4e9ac3899aa1fa78
-ADD --checksum=sha256:f80102d3f2a1229f387d3c81909990d8945513e347b0eab049f7de3c6f98c193 ${E5}/onnx/model_quantized.onnx modello/onnx/model_quantized.onnx
-ADD --checksum=sha256:0b44a9d7b51c3c62626640cda0e2c2f70fdacdc25bbbd68038369d14ebdf4c39 ${E5}/tokenizer.json modello/tokenizer.json
-ADD --checksum=sha256:a1d6bc8734a6f635dc158508bef000f8e2e5a759c7d92f984b2c86e5ff53425b ${E5}/tokenizer_config.json modello/tokenizer_config.json
+ARG E5=https://huggingface.co/Xenova/multilingual-e5-large/resolve/00fc3aeb3dbb95842de2ac1961d33c6319acf57b
+ADD --checksum=sha256:0a8d65db9a36f810ba5da15249f13145fcdc7890e6656f1fd38cd8b7c4db1fca ${E5}/onnx/model_quantized.onnx modello/onnx/model_quantized.onnx
+ADD --checksum=sha256:62c24cdc13d4c9952d63718d6c9fa4c287974249e16b7ade6d5a85e7bbb75626 ${E5}/tokenizer.json modello/tokenizer.json
+ADD --checksum=sha256:efb5c0d09722e5fe59a462cd2a9976ee216d55b037597d997cd3fe833216da15 ${E5}/tokenizer_config.json modello/tokenizer_config.json
 # vettori delle frasi d'esempio calcolati qui una volta, non alla prima domanda
 COPY capire.js chat-esempi.js ./
 RUN chmod -R a+rX modello \

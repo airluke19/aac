@@ -799,6 +799,14 @@
     '</section>';
   }
 
+  // Accesso alla chat del coach: in fondo a Oggi (niente icona in intestazione, scelta dell'utente)
+  function renderChiediCoach() {
+    if (!ME) return '';
+    return '<button type="button" class="gc-cta chiedi-cta" data-apri-chat><span class="cc-lab">' + ICO_FUMETTO +
+      T('Hai un dubbio? Chiedi al coach', 'Got a question? Ask the coach') + '</span>' + FRECCIA + '</button>';
+  }
+  const ICO_FUMETTO = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9 9 0 0 1-3.6-.8L3 21l1.9-5.1A8.4 8.4 0 0 1 3.5 11.5 8.5 8.5 0 0 1 12 3a8.5 8.5 0 0 1 9 8.5z"/><path d="M8.5 11.5h.01M12 11.5h.01M15.5 11.5h.01"/></svg>';
+
   /* ---- Avvisi in Oggi: corse da Strava e carico in crescita troppo rapida ---- */
   function renderAvvisi(d) {
     let h = '';
@@ -1989,7 +1997,6 @@
   }
   $('#btn-account').addEventListener('click', () => apriSheet('#account'));
   $('#btn-diario').addEventListener('click', () => apriSheet('#diario'));
-  $('#btn-chat').addEventListener('click', () => apriSheet('#coach'));
   $('#btn-admin').addEventListener('click', () => apriSheet('#admin'));
   // il conteggio si aggiorna quando torni sull'app
   document.addEventListener('visibilitychange', () => { if (!document.hidden && ME) caricaJson('/api/me').then((m) => { ME = m; aggiornaAvatar(); }).catch(() => {}); });
@@ -2817,8 +2824,6 @@
     const b = $('#btn-diario');
     if (!b) return;
     b.hidden = !ME || Boolean(ME.demo);
-    const bc = $('#btn-chat');
-    if (bc) { bc.hidden = !ME; bc.title = T('Chiedi al coach', 'Ask the coach'); bc.setAttribute('aria-label', bc.title); }
     const ultimo = ultimiDati && ultimiDati.diario_ultimo;
     b.querySelector('.diario-dot').hidden = !ultimo || ultimo <= leggiVisto();
   }
@@ -2849,7 +2854,11 @@
   const CHAT = { msg: [], sugg: [], attesa: false, tema: null, ultimo: null };
   const bolla = (m) => m.da === 'io'
     ? '<div class="ch-m ch-io"><p>' + esc(m.testo) + '</p></div>'
-    : '<div class="ch-m ch-coach"><span class="ch-av" aria-hidden="true">' + ICO.logo + '</span><div class="ch-b">' + m.testo.map((x) => '<p>' + esc(x) + '</p>').join('') + '</div></div>';
+    : '<div class="ch-m ch-coach"><span class="ch-av" aria-hidden="true">' + ICO.logo + '</span><div class="ch-b">' + m.testo.map((x) => '<p>' + esc(x) + '</p>').join('') + fontiChat(m.fonti) + '</div></div>';
+  // fonti scientifiche, solo quando la risposta riporta un dato preso da uno studio (le sceglie il server)
+  const fontiChat = (f) => (Array.isArray(f) && f.length
+    ? '<p class="ch-fonti">' + T('Fonti: ', 'Sources: ') + f.filter((x) => /^https:\/\//.test(x.url)).map((x) => '<a href="' + esc(x.url) + '" target="_blank" rel="noopener noreferrer">' + esc(x.titolo) + '</a>').join(' · ') + '</p>'
+    : '');
   function disegnaChat() {
     const log = $('#ch-log');
     if (!log) return;
@@ -2868,7 +2877,7 @@
     // una piccola pausa: la risposta arriva come da una persona, non a scatto
     await new Promise((ok) => setTimeout(ok, matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 450));
     CHAT.attesa = false;
-    if (r.ok && r.out && Array.isArray(r.out.testo)) { CHAT.msg.push({ da: 'coach', testo: r.out.testo }); CHAT.sugg = r.out.suggerimenti || []; CHAT.ultimo = typeof r.out.tema === 'string' ? r.out.tema : null; }
+    if (r.ok && r.out && Array.isArray(r.out.testo)) { CHAT.msg.push({ da: 'coach', testo: r.out.testo, fonti: r.out.fonti || [] }); CHAT.sugg = r.out.suggerimenti || []; CHAT.ultimo = typeof r.out.tema === 'string' ? r.out.tema : null; }
     else CHAT.msg.push({ da: 'coach', testo: [r.out && r.out.errore ? r.out.errore : T('Non riesco a risponderti ora: riprova tra poco.', 'I can’t answer right now: try again shortly.')] });
     if (CHAT.msg.length > 60) CHAT.msg.splice(0, CHAT.msg.length - 60);
     disegnaChat();
@@ -4211,7 +4220,7 @@
       '<div class="pane-head"><h1>' + titolo + '</h1>' + (sotto ? '<span>' + sotto + '</span>' : '') + '</div>' + html + '</div>';
     $('#main').innerHTML =
       pane('oggi', T('Oggi', 'Today'), esc(fmtDataLunga(d.oggi)).replace(/^./, (x) => x.toUpperCase()),
-        renderAttivaNotifiche() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderComeStai(d) + renderOggi(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d)) +
+        renderAttivaNotifiche() + renderAvvisi(d) + renderObiettivoBreve(d) + renderLivello() + renderComeStai(d) + renderOggi(d) + '<div id="ultima-wrap"></div>' + renderSettimana(d) + renderChiediCoach()) +
       pane('salute', T('Salute', 'Health'), '', renderSalute(d)) +
       pane('piano', T('Piano', 'Plan'), d.programma ? T('Settimana ', 'Week ') + d.programma.settimana_piano + T(' di ', ' of ') + d.programma.totale_settimane : '',
         renderProgramma(d) + renderGuidaCard()) +

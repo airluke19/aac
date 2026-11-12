@@ -22,7 +22,7 @@ const trova = (t, kw) => t.includes(' ' + kw);
 
 // Argomenti in ordine di priorita' (a parita' di punteggio vince il primo)
 const ARGOMENTI = [
-  { id: 'urgente', kw: ['dolore al petto', 'dolore toracico', 'male al petto', 'chest pain', 'petto ', 'torace', 'chest ', 'svenu', 'svengo', 'faint', 'vertigin', 'dizz', 'palpitaz', 'palpitat', 'tachicard', 'aritmi', 'arrhythm'] },
+  { id: 'urgente', kw: ['dolore al petto', 'dolore toracico', 'male al petto', 'chest pain', 'petto ', 'torace', 'chest ', 'svenu', 'svengo', 'faint', 'vertigin', 'dizz', 'palpitaz', 'palpitat', 'tachicard', 'aritmi', 'arrhythm', 'gira la testa', 'mi gira tutto', 'vista annebbiat', 'vedo nero', 'vedo appannato', 'cuore a mille', 'cuore impazzit', 'blurred vision', 'head is spinning', 'heart is racing'] },
   { id: 'meta', kw: ['che modello', 'quale modello', 'modello linguistico', 'modello di ia', 'modello di ai', 'what model', 'which model', 'language model', 'gpt', 'chatgpt', 'openai', 'anthropic', 'claude', 'llm ', 'llama', 'gemini', 'mistral', 'prompt', 'istruzioni di sistema', 'tue istruzioni', 'your instructions', 'ignora ', 'ignore ', 'dimentica le', 'forget your', 'jailbreak', 'hack', 'exploit', 'vulnerab', 'bypass', 'sql', 'database', 'codice sorgente', 'source code', 'tuo codice', 'your code', 'password', 'admin', 'amministrat', 'funzioni segrete', 'tuoi segreti', 'your secrets', 'secret feature', 'secret function', 'sviluppator', 'developer', 'chi ti ha', 'who made you', 'who built you', 'who created you', 'sei un ia', 'sei una ia', 'sei un ai', 'sei una ai', 'sei un bot', 'are you an ai', 'are you a bot', 'intelligenza artificial', 'artificial intelligence', 'fingi di', 'pretend', 'roleplay', 'modalita sviluppatore', 'developer mode', 'altri utenti', 'other users', 'dati di altri', 'server ', 'api ', 'token '] },
   { id: 'ostile', kw: ['sei stupid', 'sei un idiot', 'sei inutile', 'sei scem', 'sei un cretin', 'sei deficient', 'you are stupid', 'youre stupid', 'you re stupid', 'you are useless', 'youre useless', 'you are an idiot', 'fai schifo', 'you suck', 'cazz', 'merda', 'vaffanculo', 'fanculo', 'fuck', 'shit', 'stronz', 'ti cancello', 'ti disinstallo', 'delete you', 'ti odio', 'i hate you'] },
   { id: 'dolore', kw: ['dolore', 'dolori', 'fa male', 'fanno male', 'ho male', 'mi duole', 'pain', 'hurt', 'sore ', 'fastidio', 'infortun', 'injur', 'ginocch', 'knee', 'tendin', 'tendon', 'achille', 'caviglia', 'ankle', 'schiena', 'back pain', 'polpacc', 'calf', 'fascit', 'plantar', 'periostit', 'shin ', 'shins', 'stinco', 'anca ', 'hip ', 'crampi', 'cramp', 'contrattur', 'stiramento', 'strain'] },
@@ -70,6 +70,25 @@ function scegliTema(testo) {
   return best || 'boh';
 }
 
+// Fonti verificate il 12 nov 2026 (DOI su Crossref, numeri controllati sul testo o sull'abstract).
+// Si citano solo insieme alla frase che riporta il loro dato: niente fonte sulle risposte fatte
+// solo dei dati dell'utente. Una fonte nuova va verificata prima di aggiungerla qui.
+const FONTI = {
+  tanaka: ['Tanaka et al., J Am Coll Cardiol 2001', 'https://doi.org/10.1016/S0735-1097(00)01054-8'],
+  karvonen: ['Karvonen et al., Ann Med Exp Biol Fenn 1957', 'https://pubmed.ncbi.nlm.nih.gov/13470504/'],
+  heiderscheit: ['Heiderscheit et al., Med Sci Sports Exerc 2011', 'https://doi.org/10.1249/MSS.0b013e3181ebedf4'],
+  frandsen: ['Frandsen et al., Br J Sports Med 2025', 'https://doi.org/10.1136/bjsports-2024-109380'],
+  seiler: ['Seiler, Int J Sports Physiol Perform 2010', 'https://doi.org/10.1123/ijspp.5.3.276'],
+  sonno: ['National Sleep Foundation, Sleep Health 2015', 'https://doi.org/10.1016/j.sleh.2014.12.010'],
+  nutrizione: ['ACSM, Academy of Nutrition and Dietetics, Dietitians of Canada, 2016', 'https://doi.org/10.1016/j.jand.2015.12.006'],
+  caldo: ['Racinais et al., consensus, Br J Sports Med 2015', 'https://doi.org/10.1136/bjsports-2015-094915'],
+  stretching: ['Behm et al., CSEP, Appl Physiol Nutr Metab 2016', 'https://doi.org/10.1139/apnm-2015-0235'],
+  forza: ['Lauersen et al., Br J Sports Med 2014', 'https://doi.org/10.1136/bjsports-2013-092538'],
+  scarpe: ['American Academy of Podiatric Sports Medicine', 'https://www.aapsm.org/replace_shoes.html'],
+  scarpe_alternate: ['Malisoux et al., Scand J Med Sci Sports 2015', 'https://doi.org/10.1111/sms.12154'],
+  peso: ['CDC, Losing Weight', 'https://www.cdc.gov/healthy-weight-growth/losing-weight/index.html'],
+};
+
 // h = helper del server: L, fmtPasso, giornoSettimana, parere(id), scarpe(), cadenze(), nome
 function creaRisposta(h, d, tema, info = {}) {
   const { L } = h;
@@ -91,6 +110,8 @@ function creaRisposta(h, d, tema, info = {}) {
   const carico = p.carico || {};
   const out = [];
   let sugg = [];
+  const fonti = new Set();
+  const cita = (...k) => { k.forEach((x) => fonti.add(x)); return ''; }; // '' per usarla dentro un'espressione
 
   const descSeduta = (s) => {
     const corsa = s.corsa_min && s.corsa_min < s.durata_min ? L(`, di cui ${s.corsa_min}′ di corsa`, `, ${s.corsa_min}′ of it running`) : '';
@@ -191,6 +212,7 @@ function creaRisposta(h, d, tema, info = {}) {
       if (segnali.length) out.push(L(`I tuoi dati lo confermano: ${segnali.join(', ')}. Per questo la prossima seduta è più leggera.`, `Your data confirms it: ${segnali.join(', ')}. That’s why your next session is lighter.`));
       else out.push(L('I tuoi dati di stamattina sono nella norma, ma come ti senti conta quanto i numeri.', 'This morning’s data looks normal, but how you feel matters as much as the numbers.'));
       out.push(L('La regola dei 10 minuti: esci per la seduta facile e ascolta le gambe. Se dopo 10′ va meglio, continua piano; se è ancora pesante, accorcia e torna a casa. Hai comunque vinto.', 'The 10-minute rule: head out for the easy session and listen to your legs. If it’s better after 10′, carry on slowly; if it still feels heavy, cut it short and go home. You still won.'));
+      cita('sonno');
       out.push(L('Con febbre o sintomi sotto il collo (petto, tosse, dolori muscolari) non si corre. Stanotte punta a 7–9 ore di sonno: è lì che il corpo assimila l’allenamento.', 'With a fever or symptoms below the neck (chest, cough, muscle aches) you don’t run. Tonight aim for 7–9 hours of sleep: that’s where your body absorbs training.'));
       sugg = ['sonno', 'carico', 'saltata'];
       break;
@@ -233,8 +255,10 @@ function creaRisposta(h, d, tema, info = {}) {
     case 'fc': {
       const fi = at.fc_max_info || {};
       if (!fi.valore || !lim) { out.push(L('Mi servono età o FC massima nel profilo per calcolare le tue zone.', 'I need your age or max HR in your profile to work out your zones.')); break; }
+      if (fi.fonte !== 'misurata') cita('tanaka');
       const orig = fi.fonte === 'misurata' ? L(`dalla tua FC massima misurata, ${fi.valore} bpm`, `your measured max HR, ${fi.valore} bpm`) : L(`dalla FC massima stimata con Tanaka (208 − 0,7 × età): ${fi.valore} bpm`, `max HR estimated with Tanaka (208 − 0.7 × age): ${fi.valore} bpm`);
       out.push(L(`Il tuo limite per la corsa facile è ${lim} bpm. Parto ${orig}.`, `Your easy-run limit is ${lim} bpm. I start from ${orig}.`));
+      if (fi.metodo === 'riserva' && fi.fc_riposo) cita('karvonen');
       if (fi.metodo === 'riserva' && fi.fc_riposo) out.push(L(`Poi uso la tua FC a riposo (${fi.fc_riposo} bpm) con il metodo di Karvonen: ${fi.fc_riposo} + 70% × (${fi.valore} − ${fi.fc_riposo}) ≈ ${lim}. Così il limite è tuo, non di una tabella: due persone con la stessa età ma cuori diversi hanno limiti diversi.`, `Then I use your resting HR (${fi.fc_riposo} bpm) with the Karvonen method: ${fi.fc_riposo} + 70% × (${fi.valore} − ${fi.fc_riposo}) ≈ ${lim}. So the limit is yours, not a table’s: two people the same age with different hearts get different limits.`));
       else out.push(L('Appena avrò almeno 5 misure di FC a riposo negli ultimi 28 giorni, userò anche quella (metodo di Karvonen) per un limite ancora più tuo.', 'As soon as I have at least 5 resting HR readings in the last 28 days, I’ll use them too (Karvonen method) for an even more personal limit.'));
       if (fi.fonte !== 'misurata') out.push(L('Se conosci la tua FC massima vera (da una gara o un test), scrivila nel profilo: è il dato che rende tutto più preciso.', 'If you know your real max HR (from a race or a test), add it to your profile: it’s what makes everything more precise.'));
@@ -254,6 +278,7 @@ function creaRisposta(h, d, tema, info = {}) {
       } else {
         out.push(L(`Per calcolare il tuo passo mi servono ${ps && ps.richieste ? ps.richieste : 3} corse con almeno 10′ di corsa vera (senza camminare).${ps && ps.max_corsa_min ? ` La tua corsa continua migliore finora: ${ps.max_corsa_min}′.` : ''} Ci arriverai seguendo il piano: è questione di settimane.`, `To work out your pace I need ${ps && ps.richieste ? ps.richieste : 3} runs with at least 10′ of real running (no walking).${ps && ps.max_corsa_min ? ` Your best continuous run so far: ${ps.max_corsa_min}′.` : ''} You’ll get there by following the plan: it’s a matter of weeks.`));
       }
+      cita('seiler');
       out.push(L('Paradosso dei runner: per correre più veloce, la maggior parte delle corse va fatta piano (80/20, Seiler).', 'The runner’s paradox: to run faster, most of your runs must be slow (80/20, Seiler).'));
       sugg = ['obiettivo', 'fc', 'cadenza'];
       break;
@@ -277,6 +302,7 @@ function creaRisposta(h, d, tema, info = {}) {
       if (s && s.valore) out.push(L(`Sonno: ${durata(s.valore)}${s.media_28g ? ` (media ${durata(s.media_28g)})` : ''}.`, `Sleep: ${durata(s.valore)}${s.media_28g ? ` (average ${durata(s.media_28g)})` : ''}.`) + ' ' + (s.valore < 6 * 3600 ? L('Poco: il recupero ne risente. Stasera prova ad andare a letto 30′ prima.', 'Short: recovery suffers. Tonight try going to bed 30′ earlier.') : L('Bene così.', 'Good.')));
       if (fr && fr.valore) out.push(L(`FC a riposo: ${fr.valore} bpm${fr.media_28g ? ` (media ${Math.round(fr.media_28g)})` : ''}. ${fr.delta >= 5 ? 'È alta: segno di fatica, stress o un malanno in arrivo.' : 'Nella norma: il cuore è recuperato.'}`, `Resting HR: ${fr.valore} bpm${fr.media_28g ? ` (average ${Math.round(fr.media_28g)})` : ''}. ${fr.delta >= 5 ? 'It’s high: a sign of fatigue, stress or something coming on.' : 'Normal: your heart has recovered.'}`));
       if (hv && hv.valore) out.push(L(`HRV: ${Math.round(hv.valore)} ms${hv.media_28g ? ` (media ${Math.round(hv.media_28g)})` : ''}. ${hv.media_28g && hv.valore <= hv.media_28g * 0.85 ? 'Bassa: il sistema nervoso è sotto stress.' : 'Buona: il sistema nervoso è in equilibrio.'}`, `HRV: ${Math.round(hv.valore)} ms${hv.media_28g ? ` (average ${Math.round(hv.media_28g)})` : ''}. ${hv.media_28g && hv.valore <= hv.media_28g * 0.85 ? 'Low: your nervous system is under stress.' : 'Good: your nervous system is balanced.'}`));
+      cita('sonno');
       out.push(L('Il miglior integratore per un runner è gratis: 7–9 ore di sonno, a orari regolari.', 'The best supplement for a runner is free: 7–9 hours of sleep, at regular times.'));
       sugg = ['stanco', 'alleggerita', 'carico'];
       break;
@@ -292,15 +318,17 @@ function creaRisposta(h, d, tema, info = {}) {
     }
     case 'lungo': {
       if (carico.limite_lungo_km) out.push(L(`La tua corsa più lunga degli ultimi 30 giorni è di ${n1(carico.lungo_max_30)} km: la prossima non dovrebbe superare ${n1(carico.limite_lungo_km)} km.`, `Your longest run in the last 30 days is ${n1(carico.lungo_max_30)} km: the next shouldn’t exceed ${n1(carico.limite_lungo_km)} km.`));
+      cita('frandsen');
       out.push(L('La regola: mai più del 10% oltre la corsa più lunga del mese prima. Uno studio su oltre 5.000 runner (Frandsen, BJSM 2025) ha visto che è proprio il salto della singola corsa, più dei km settimanali, ad aumentare il rischio di infortunio.', 'The rule: never more than 10% beyond your longest run of the previous month. A study of over 5,000 runners (Frandsen, BJSM 2025) found that it’s the jump in a single run, more than weekly mileage, that raises injury risk.'));
       out.push(L('Il lungo si corre piano, sotto il limite facile: l’obiettivo è il tempo in piedi, non la velocità.', 'Long runs are run slow, below the easy limit: the goal is time on your feet, not speed.'));
       sugg = ['alimentazione', 'carico', 'fc'];
       break;
     }
     case 'alimentazione':
-      out.push(L('Prima: un pasto leggero con carboidrati 2–3 ore prima, oppure uno spuntino (banana, fette biscottate) 30–60′ prima. Evita grassi e fibre in abbondanza.', 'Before: a light carb meal 2–3 hours before, or a snack (banana, toast) 30–60′ before. Avoid lots of fat and fibre.'));
-      out.push(L('Durante: sotto i 60–75′ basta l’acqua. Nei lunghi oltre i 75–90′ servono 30–60 g di carboidrati all’ora (gel, bevande sportive).', 'During: under 60–75′ water is enough. On long runs over 75–90′ you need 30–60 g of carbs per hour (gels, sports drinks).'));
-      out.push(L('Dopo: entro 30–60′ carboidrati e circa 20 g di proteine (yogurt e frutta, un panino, latte e cereali), e bevi finché le urine sono chiare.', 'After: within 30–60′ carbs and about 20 g of protein (yoghurt and fruit, a sandwich, milk and cereal), and drink until your urine is pale.'));
+      cita('nutrizione');
+      out.push(L('Prima delle corse oltre l’ora: un pasto con carboidrati 1–4 ore prima; se esci presto basta uno spuntino leggero (banana, fette biscottate). Evita grassi e fibre in abbondanza.', 'Before runs over an hour: a carb meal 1–4 hours before; if you head out early a light snack is enough (banana, toast). Avoid lots of fat and fibre.'));
+      out.push(L('Durante: sotto i 45′ non servono carboidrati. Tra 1 e 2,5 ore 30–60 g all’ora (gel, bevande sportive); oltre le 2,5–3 ore fino a 90 g.', 'During: under 45′ you don’t need carbs. From 1 to 2.5 hours 30–60 g per hour (gels, sports drinks); beyond 2.5–3 hours up to 90 g.'));
+      out.push(L('Dopo: nelle 2 ore successive carboidrati e 15–25 g di proteine (yogurt e frutta, un panino, latte e cereali), e bevi finché le urine sono chiare.', 'After: within the next 2 hours carbs and 15–25 g of protein (yoghurt and fruit, a sandwich, milk and cereal), and drink until your urine is pale.'));
       out.push(L('Sono indicazioni generali: per esigenze specifiche rivolgiti a un nutrizionista.', 'These are general guidelines: for specific needs see a nutritionist.'));
       sugg = ['lungo', 'peso', 'meteo'];
       break;
@@ -308,7 +336,8 @@ function creaRisposta(h, d, tema, info = {}) {
       const c = sal.corpo || {};
       if (c.bmi) out.push(L(`Il tuo BMI è ${n1(c.bmi)} (${c.categoria ? c.categoria.nome : ''}).`, `Your BMI is ${n1(c.bmi)} (${c.categoria ? c.categoria.nome : ''}).`));
       out.push(L('La corsa facile è perfetta per il peso: si brucia soprattutto grasso e si può fare spesso senza farsi male. Funziona insieme all’alimentazione, non al suo posto.', 'Easy running is perfect for weight: you burn mostly fat and can do it often without getting hurt. It works alongside your diet, not instead of it.'));
-      out.push(L('Non tagliare i carboidrati prima delle sedute lunghe o intense: senza benzina l’allenamento rende meno e il rischio di infortunio sale. Meglio un deficit piccolo e costante (0,5 kg a settimana al massimo).', 'Don’t cut carbs before long or hard sessions: without fuel training works less well and injury risk rises. Better a small, steady deficit (0.5 kg a week at most).'));
+      out.push(L('Non tagliare i carboidrati prima delle sedute lunghe o intense: senza benzina l’allenamento rende meno e il rischio di infortunio sale. Meglio un calo graduale e costante, circa 0,5–1 kg a settimana: è quello che si mantiene nel tempo.', 'Don’t cut carbs before long or hard sessions: without fuel training works less well and injury risk rises. Better a gradual, steady loss, about 0.5–1 kg a week: that’s what lasts.'));
+      cita('peso');
       sugg = ['alimentazione', 'oggi'];
       break;
     }
@@ -317,7 +346,7 @@ function creaRisposta(h, d, tema, info = {}) {
       if (cad.length) {
         const m = Math.round(cad.reduce((t, x) => t + x, 0) / cad.length);
         out.push(L(`La tua cadenza media nelle ultime corse: ${m} passi al minuto.`, `Your average cadence over recent runs: ${m} steps per minute.`) + ' ' + (m < 160
-          ? L(`Prova ad aumentarla del 5–10% (verso ${Math.round(m * 1.05)}–${Math.round(m * 1.1)}) con passi più corti e leggeri: riduce il carico su ginocchia e anche (Heiderscheit, 2011).`, `Try raising it by 5–10% (towards ${Math.round(m * 1.05)}–${Math.round(m * 1.1)}) with shorter, lighter steps: it reduces load on knees and hips (Heiderscheit, 2011).`)
+          ? cita('heiderscheit') + L(`Prova ad aumentarla del 5–10% (verso ${Math.round(m * 1.05)}–${Math.round(m * 1.1)}) con passi più corti e leggeri: riduce il carico su ginocchia e anche (Heiderscheit, 2011).`, `Try raising it by 5–10% (towards ${Math.round(m * 1.05)}–${Math.round(m * 1.1)}) with shorter, lighter steps: it reduces load on knees and hips (Heiderscheit, 2011).`)
           : L('Buona: passi rapidi e leggeri, così proteggi le articolazioni.', 'Good: quick, light steps protect your joints.')));
       } else out.push(L('Non ho ancora dati di cadenza dalle tue corse.', 'I don’t have cadence data from your runs yet.'));
       out.push(L('Tecnica in tre punti: appoggia il piede sotto il corpo (non davanti), busto alto e leggermente in avanti, braccia rilassate a 90°. Cambia una cosa alla volta, nelle corse facili.', 'Form in three points: land with your foot under your body (not in front), tall torso leaning slightly forward, relaxed arms at 90°. Change one thing at a time, on easy runs.'));
@@ -325,7 +354,8 @@ function creaRisposta(h, d, tema, info = {}) {
       break;
     }
     case 'meteo':
-      out.push(L('Caldo: sopra i 24° il cuore batte di più per raffreddarti, quindi rallenta e segui la FC, non il passo. Esci presto o la sera, bevi prima e, oltre i 45–60′, anche durante.', 'Heat: above 24° your heart beats faster to cool you down, so slow down and follow your heart rate, not your pace. Go early or in the evening, drink before and, beyond 45–60′, during.'));
+      cita('caldo');
+      out.push(L('Caldo: il cuore batte di più per raffreddarti, quindi rallenta e segui la FC, non il passo. Esci presto o la sera, parti ben idratato e nelle uscite lunghe bevi anche durante. Il corpo si abitua al caldo in 1–2 settimane di uscite.', 'Heat: your heart beats faster to cool you down, so slow down and follow your heart rate, not your pace. Go early or in the evening, start well hydrated and drink during long runs too. Your body adapts to heat over 1–2 weeks of runs.'));
       out.push(L('Freddo: vestiti a strati come se ci fossero 10° in più, riscaldati più a lungo e copri mani e orecchie. La pioggia va benissimo, il ghiaccio no.', 'Cold: dress in layers as if it were 10° warmer, warm up longer and cover hands and ears. Rain is fine, ice isn’t.'));
       out.push(L('Il meteo di ogni corsa lo vedi nel dettaglio: quando valuto la tua efficienza tengo conto del caldo.', 'You see the weather of every run in its detail: when I assess your efficiency I account for the heat.'));
       sugg = ['fc', 'alimentazione', 'oggi'];
@@ -334,14 +364,16 @@ function creaRisposta(h, d, tema, info = {}) {
       const sc = h.scarpe().filter((s) => s.attiva);
       if (sc.length) sc.slice(0, 3).forEach((s) => out.push(`${s.nome}: ${Math.round(s.km)} km ${L('su', 'of')} ${Math.round(s.limite_km)}. ` + (s.km >= s.limite_km ? L('È ora di cambiarle: l’ammortizzazione è finita.', 'Time to replace them: the cushioning is gone.') : s.km >= s.limite_km * 0.85 ? L('Quasi a fine vita: inizia a pensare alle prossime.', 'Nearly worn out: start thinking about the next pair.') : L('Hanno ancora strada da fare.', 'Still plenty of miles left.'))));
       else out.push(L('Non hai ancora scarpe nel profilo: aggiungile e conto io i chilometri di ogni paio.', 'You have no shoes in your profile yet: add them and I’ll count the kilometres for each pair.'));
-      out.push(L('In genere una scarpa da corsa dura 500–800 km. Alternare due paia aiuta: la schiuma ha tempo di riprendersi.', 'A running shoe usually lasts 500–800 km. Rotating two pairs helps: the foam has time to recover.'));
+      cita('scarpe', 'scarpe_alternate');
+      out.push(L('In genere una scarpa da corsa dura 480–800 km, e dopo un anno conviene controllarla anche se sembra a posto. Alternare più paia aiuta: in uno studio su 264 runner chi lo faceva si è infortunato circa il 39% in meno.', 'A running shoe usually lasts 480–800 km, and after a year it’s worth checking even if it looks fine. Rotating pairs helps: in a study of 264 runners, those who did had about 39% fewer injuries.'));
       sugg = ['dolore', 'cadenza'];
       break;
     }
     case 'riscaldamento':
       out.push(L('Riscaldamento: 5′ di camminata svelta o corsa lentissima, poi qualche esercizio dinamico (skip, calciata, slanci delle gambe). Prima delle sedute veloci aggiungi 3–4 allunghi da 20″.', 'Warm-up: 5′ of brisk walking or very slow running, then a few dynamic drills (high knees, butt kicks, leg swings). Before fast sessions add 3–4 strides of 20″.'));
-      out.push(L('Dopo: 5′ di cammino e allungamento leggero di polpacci, quadricipiti e flessori. Lo stretching statico è meglio dopo, non prima.', 'After: 5′ of walking and gentle stretching of calves, quads and hamstrings. Static stretching is better after, not before.'));
-      out.push(L('Bonus da coach: 2 sedute di forza a settimana da 20′ (squat, affondi, ponte, polpacci) riducono gli infortuni e rendono la corsa più economica.', 'Coach’s bonus: 2 strength sessions a week of 20′ (squats, lunges, bridges, calf raises) reduce injuries and make running more economical.'));
+      cita('stretching', 'forza');
+      out.push(L('Dopo: 5′ di cammino e, se ti fa stare bene, allungamento leggero di polpacci, quadricipiti e flessori. Prima di correre meglio gli esercizi dinamici: lo stretching statico lungo (oltre 60″ per muscolo) subito prima toglie un po’ di forza.', 'After: 5′ of walking and, if it feels good, gentle stretching of calves, quads and hamstrings. Before running, dynamic drills are better: long static stretching (over 60″ per muscle) right before costs a little power.'));
+      out.push(L('Bonus da coach: 2 sedute di forza a settimana da 20′ (squat, affondi, ponte, polpacci) fanno la differenza: negli studi sullo sport l’allenamento di forza ha ridotto gli infortuni a meno di un terzo.', 'Coach’s bonus: 2 strength sessions a week of 20′ (squats, lunges, bridges, calf raises) make a difference: in sports studies strength training cut injuries to under a third.'));
       sugg = ['oggi', 'cadenza', 'dolore'];
       break;
     case 'collegamento': {
@@ -391,7 +423,7 @@ function creaRisposta(h, d, tema, info = {}) {
       sugg = ['oggi', 'problemi', 'ultima', 'obiettivo'];
   }
   if (!sugg.length) sugg = ['oggi', 'problemi'];
-  return { tema, testo: out, suggerimenti: sugg.filter((x) => x !== tema).slice(0, 4).map((t) => ({ tema: t, label: etichetta(L, t) })) };
+  return { tema, testo: out, fonti: [...fonti].map((k) => ({ titolo: FONTI[k][0], url: FONTI[k][1] })), suggerimenti: sugg.filter((x) => x !== tema).slice(0, 4).map((t) => ({ tema: t, label: etichetta(L, t) })) };
 }
 
 function etichetta(L, t) {
@@ -499,7 +531,8 @@ function rispondi(h, d, temi, info) {
   const r2 = creaRisposta(h, d, temi[1], info);
   const visti = new Set(temi), sugg = [];
   for (const s of r.suggerimenti.concat(r2.suggerimenti)) if (!visti.has(s.tema)) { visti.add(s.tema); sugg.push(s); }
-  return { tema: temi[0], temi, testo: r.testo.concat(r2.testo.filter((x) => !r.testo.includes(x))), suggerimenti: sugg.slice(0, 4) };
+  const fonti = r.fonti.concat(r2.fonti.filter((f) => !r.fonti.some((x) => x.url === f.url)));
+  return { tema: temi[0], temi, testo: r.testo.concat(r2.testo.filter((x) => !r.testo.includes(x))), fonti, suggerimenti: sugg.slice(0, 4) };
 }
 
-module.exports = { creaRisposta, rispondi, capisciDomanda, scegliTema, contaParole, consenti, MAX_TESTO };
+module.exports = { creaRisposta, rispondi, capisciDomanda, scegliTema, contaParole, giornoChiesto, norm, consenti, MAX_TESTO };

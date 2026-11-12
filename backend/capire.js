@@ -1,12 +1,14 @@
 'use strict';
 // ---------------------------------------------------------------------------
 // Capire le domande della chat con un modello di embedding locale e open-source
-// (multilingual-e5-small, licenza MIT, ONNX quantizzato, ~120 MB, in /app/modello).
+// (multilingual-e5-large, licenza MIT, ONNX quantizzato int8, ~560 MB, in /app/modello).
+// Scelto il 12 nov 2026 tra 7 modelli: 38/40 domande mai viste al primo tema, contro 32/40
+// di e5-small, ~330 ms a domanda con 2 thread, ~1 GB di RAM mentre e' caricato.
 // Il modello trasforma una frase in un vettore di significato: confrontandolo con le
 // frasi d'esempio di chat-esempi.js troviamo il tema (o i due temi) della domanda.
 // NON genera testo: le risposte restano frasi scritte in chat.js con i dati dell'utente,
 // quindi niente invenzioni. Gira tutto sul server, senza rete (telemetria ORT spenta).
-// Si carica alla prima domanda e si libera dopo 15 minuti senza domande (RAM).
+// Si carica alla prima domanda e si libera dopo 10 minuti senza domande (RAM).
 // Se il modello manca o fallisce, chat.js torna alle parole chiave.
 // I vettori delle frasi d'esempio si calcolano nella build: `node capire.js --vettori <file>`.
 // ---------------------------------------------------------------------------
@@ -19,17 +21,18 @@ const { ESEMPI } = require('./chat-esempi');
 process.env.ORT_DISABLE_TELEMETRY = '1';
 const DIR = process.env.CHAT_MODELLO_DIR || path.join(__dirname, 'modello');
 const FILE_VETTORI = process.env.CHAT_VETTORI || path.join(__dirname, 'chat-vettori.json');
-const RIPOSO_MS = 15 * 60 * 1000;
+const RIPOSO_MS = 10 * 60 * 1000;
 const PREFISSO = 'query: '; // e5: stesso prefisso per frasi da confrontare tra loro
 
-// Soglie (coseno, scala compressa di e5: frasi estranee ~0,78, stesso tema ~0,88+)
-const SOGLIA = 0.835; // sotto: non ho capito
-const MARGINE = 0.006; // un secondo tema entro questo distacco viene trattato insieme al primo
-const BONUS_PAROLA = 0.015; // per ogni parola chiave del tema presente nel testo (max 3)
-const BONUS_PRIMA = 0.012; // messaggi brevi: favorisce il tema della domanda precedente
+// Soglie tarate su 75 domande e verificate su 40 mai viste (scala compressa di e5: ~0,80–0,96).
+// Se cambi modello vanno ritarate: i valori dipendono dalla scala dei coseni.
+const SOGLIA = 0.816; // sotto: non ho capito
+const MARGINE = 0.003; // un secondo tema entro questo distacco viene trattato insieme al primo
+const BONUS_PAROLA = 0.01; // per ogni parola chiave del tema presente nel testo (max 3)
+const BONUS_PRIMA = 0.013; // messaggi brevi: favorisce il tema della domanda precedente
 const MAI_SECONDI = new Set(['saluto', 'grazie', 'chi_sei', 'fuori', 'meta', 'ostile']);
 
-const firma = () => crypto.createHash('sha256').update('e5-small-q8|' + JSON.stringify(ESEMPI)).digest('hex').slice(0, 16);
+const firma = () => crypto.createHash('sha256').update('e5-large-q8|' + JSON.stringify(ESEMPI)).digest('hex').slice(0, 16);
 
 let stato = null; // Promise<{ vec, rif }>
 let sessione = null;
