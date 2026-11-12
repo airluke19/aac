@@ -123,7 +123,8 @@ async function capisci(testo, { paroleChiave, prima, bonus = {} } = {}) {
   const [t1, s1] = punti[0];
   // 'urgente' solo se e' il primo: i casi chiari li prende gia' il controllo a parole chiave in chat.js
   if (t1 === 'urgente' && s1 >= SOGLIA) return { temi: ['urgente'], punti: punti.slice(0, 3) };
-  if (t1 === 'fuori' || s1 < SOGLIA) return { temi: ['boh'], punti: punti.slice(0, 3) };
+  if (s1 < SOGLIA) return { temi: ['boh'], punti: punti.slice(0, 3) };
+  if (t1 === 'fuori') return { temi: ['fuori'], punti: punti.slice(0, 3) };
   const temi = [t1];
   const sec = punti.find((p, i) => i > 0 && !MAI_SECONDI.has(p[0]) && p[0] !== 'urgente');
   if (!MAI_SECONDI.has(t1) && sec && sec[1] >= s1 - MARGINE && sec[1] >= SOGLIA) temi.push(sec[0]);

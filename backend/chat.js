@@ -99,8 +99,8 @@ function creaRisposta(h, d, tema, info = {}) {
   };
   const perAlleggerita = (s) => {
     const a = s.adattata;
-    return L(`L’ho alleggerita io: ${a.motivi.join(', ')}. Era prevista ${a.originale_titolo ? a.originale_titolo + ', ' : ''}${a.originale}; oggi ${s.durata_min}′. Non è un passo indietro: il piano non cambia, ti faccio solo arrivare alla prossima seduta più fresco.`,
-      `I lightened it: ${a.motivi.join(', ')}. Planned: ${a.originale_titolo ? a.originale_titolo + ', ' : ''}${a.originale}; today ${s.durata_min}′. It’s not a step back: your plan doesn’t change, I’m just getting you to the next session fresher.`);
+    return L(`L’ho alleggerita io: ${a.motivi.join(', ')}. Era prevista ${a.originale_titolo ? a.originale_titolo + ', ' : ''}${a.originale}; ${s.data && s.data !== oggiStr ? quando(s.data) : 'oggi'} ${s.durata_min}′. Non è un passo indietro: il piano non cambia, ti faccio solo arrivare alla prossima seduta più fresco.`,
+      `I lightened it: ${a.motivi.join(', ')}. Planned: ${a.originale_titolo ? a.originale_titolo + ', ' : ''}${a.originale}; ${s.data && s.data !== oggiStr ? quando(s.data) : 'today'} ${s.durata_min}′. It’s not a step back: your plan doesn’t change, I’m just getting you to the next session fresher.`);
   };
   const nessunPiano = () => out.push(L('Il tuo piano non è ancora partito: nel tab Piano scegli obiettivo, giorni e prima seduta, e da lì ti seguo ogni giorno.', 'Your plan hasn’t started yet: in the Plan tab choose your goal, days and first session, and I’ll follow you every day from there.'));
 
