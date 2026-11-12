@@ -84,6 +84,7 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
     if (!col.has('giorni_modo')) sis.exec('ALTER TABLE utenti ADD COLUMN giorni_modo TEXT'); // preferiti (proposta, default) | fissi (obbligatori)
     if (!col.has('riparti_data')) sis.exec('ALTER TABLE utenti ADD COLUMN riparti_data TEXT');
     if (!col.has('riparti_settimana')) sis.exec('ALTER TABLE utenti ADD COLUMN riparti_settimana INTEGER');
+    if (!col.has('intervals_sedute')) sis.exec('ALTER TABLE utenti ADD COLUMN intervals_sedute TEXT'); // sedute inviate al calendario di Intervals: lingua dei testi (it|en), vuoto = spento
     if (!col.has('giorni_sedute')) sis.exec('ALTER TABLE utenti ADD COLUMN giorni_sedute TEXT'); // giorni preferiti per le sedute, es. "1,3,5" (0 = domenica); vuoto = sceglie il coach
   }
   // Utilizzo dell'app per le statistiche dell'amministratore: un record per utente e giorno (ora locale).
@@ -367,6 +368,7 @@ function creaAccount({ BASE, dbPer, chiudiDb, contesto, cambioObiettivo }) {
       profilo: {
         athlete_id: u.athlete_id || '',
         ha_chiave: Boolean(u.intervals_key),
+        invia_sedute: Boolean(u.intervals_sedute), // sedute del piano nel calendario di Intervals (spento di default)
         eta: u.data_nascita ? etaDa(u.data_nascita) : u.eta || null,
         data_nascita: u.data_nascita || null,
         programma_inizio: u.programma_inizio || null,

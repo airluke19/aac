@@ -2275,11 +2275,22 @@
         '<p>' + T('Corse <b>e dati di salute</b>: FC a riposo, HRV e sonno. Servono al coach per adattare la seduta ogni mattina e per le tue zone cardiache personali.', 'Runs <b>and health data</b>: resting HR, HRV and sleep. The coach uses them to adapt your session every morning and for your personal heart-rate zones.') + '</p>' +
         (sv.disponibile ? '' : '<p class="fonte-no">' + T('Usi Strava? Collega lo stesso orologio anche a Intervals.icu: le corse arrivano a tutti e due e Strava non cambia. Le corse che Intervals importa da Strava, invece, ad AAC non arrivano (regole di Strava).', 'Using Strava? Connect the same watch to Intervals.icu too: runs reach both and Strava doesn’t change. Runs that Intervals imports from Strava, though, don’t reach AAC (Strava’s rules).') + '</p>') +
         '<div class="fonte-az"><button type="button" class="acc-guida" data-apri-sheet="#collega">' + ICO.share + '<span>' + T('Collega l’orologio a Intervals', 'Connect your watch to Intervals') + '</span></button></div>' +
+        (haInt
+          ? '<label class="nt-riga fonte-sedute"><span><b>' + T('Sedute del piano su Intervals', 'Plan sessions on Intervals') + '</b><small>' +
+              T('I prossimi 7 giorni nel tuo calendario Intervals.icu, con i tuoi limiti di FC. Se il coach cambia una seduta, si aggiorna da sola.', 'The next 7 days in your Intervals.icu calendar, with your heart-rate limits. If the coach changes a session, it updates by itself.') +
+              '</small></span><input type="checkbox" id="acc-sedute" class="nt-sw"' + (p.invia_sedute ? ' checked' : '') + (u.demo || u.impersonato_da ? ' disabled' : '') + '></label>' +
+            '<details class="more fonte-sedute-come"><summary>' + T('Come arrivano all’orologio', 'How they reach your watch') + '</summary><ul>' +
+              '<li>' + T('<b>Garmin</b>: nel collegamento Garmin di Intervals.icu attiva l’invio degli allenamenti pianificati. Le sedute arrivano nel calendario di Garmin Connect e da lì all’orologio.', '<b>Garmin</b>: in Intervals.icu’s Garmin connection turn on uploading planned workouts. Sessions reach your Garmin Connect calendar and then your watch.') + '</li>' +
+              '<li>' + T('<b>Apple Watch</b>: serve un’app sull’iPhone che legga il calendario di Intervals.icu e passi le sedute all’app Allenamento (per esempio Intervals.icu Companion). A volte bisogna aprirla perché la seduta aggiornata arrivi.', '<b>Apple Watch</b>: you need an iPhone app that reads your Intervals.icu calendar and sends sessions to the Workout app (for example Intervals.icu Companion). Sometimes you need to open it for the updated session to arrive.') + '</li>' +
+              '<li>' + T('<b>Altri orologi</b>: dipende da cosa Intervals.icu sincronizza con la loro app.', '<b>Other watches</b>: it depends on what Intervals.icu syncs with their app.') + '</li>' +
+              '<li>' + T('AAC tocca solo le sue sedute (nome che finisce con «· AAC»): quelle che aggiungi tu restano. Spegnendo l’interruttore, le sedute di AAC da oggi in poi spariscono da Intervals.', 'AAC only touches its own sessions (name ending in “· AAC”): the ones you add stay. Turning it off removes AAC’s sessions from today onwards from Intervals.') + '</li>' +
+            '</ul></details>'
+          : '') +
         '<details class="more fonte-chiave"' + (haInt ? '' : ' open') + '><summary>' + (haInt ? T('Athlete ID e API key', 'Athlete ID and API key') : T('Inserisci Athlete ID e API key', 'Enter Athlete ID and API key')) + '</summary>' +
           '<form id="acc-int-form" class="acc-form" autocomplete="off">' +
             '<p class="fine">' + T('Su intervals.icu apri <b>Settings → Developer Settings</b>: copia l’Athlete ID e genera una API key.', 'On intervals.icu open <b>Settings → Developer Settings</b>: copy the Athlete ID and generate an API key.') + '</p>' +
             campo('acc-ath', 'Athlete ID', '<input id="acc-ath" name="athlete_id" inputmode="text" placeholder="i123456" value="' + esc(p.athlete_id) + '">') +
-            campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata solo per leggere i tuoi dati.', 'Stored encrypted, used only to read your data.')) +
+            campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata per leggere i tuoi dati (e per scrivere le sedute del piano, solo se lo attivi qui sotto).', 'Stored encrypted, used to read your data (and to write your plan sessions, only if you turn it on below).')) +
             '<p class="acc-err" hidden></p><button type="submit" class="btn-primary">' + T('Salva Intervals.icu', 'Save Intervals.icu') + '</button>' +
           '</form></details></div>' +
     '</section>';
@@ -2762,6 +2773,25 @@
     }
   });
   document.addEventListener('change', (e) => { if (e.target.closest('#nt-mattina, #nt-domenica, #nt-avvisi, #nt-ora')) salvaPreferenzeNotifiche(); });
+  // Sedute del piano nel calendario di Intervals (profilo, scheda Intervals)
+  document.addEventListener('change', async (e) => {
+    const sw = e.target.closest('#acc-sedute');
+    if (!sw) return;
+    const attivo = sw.checked;
+    sw.disabled = true;
+    const r = await inviaJson('PUT', '/api/intervals/sedute', { attivo, lingua: LANG });
+    sw.disabled = false;
+    if (r.ok) {
+      ME.profilo.invia_sedute = attivo;
+      toast(attivo ? T('Sedute inviate a Intervals.icu', 'Sessions sent to Intervals.icu') : T('Sedute tolte da Intervals.icu', 'Sessions removed from Intervals.icu'), 'ok');
+    } else if (r.out && typeof r.out.attivo === 'boolean') {
+      ME.profilo.invia_sedute = r.out.attivo; // scelta salvata, Intervals non ha risposto: si riprova al prossimo sync
+      toast(r.out.errore || T('Scelta salvata', 'Choice saved'), 'err');
+    } else {
+      sw.checked = !attivo;
+      toast((r.out && r.out.errore) || T('Non è stato possibile salvare', 'Could not save'), 'err');
+    }
+  });
 
 
 

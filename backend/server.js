@@ -880,6 +880,181 @@ async function intervalsGetAttivita(id, percorso, params) {
   return res.json();
 }
 
+// ---------------------------------------------------------------------------
+// Sedute del piano nel calendario di Intervals.icu (interruttore nel profilo, spento di default)
+// Intervals le passa da solo a Garmin Connect; per Apple Watch serve un'app che legga il calendario
+// di Intervals. AAC tocca solo i suoi eventi (external_id "aac-AAAA-MM-GG"), mai quelli dell'utente.
+// Si inviano i prossimi 7 giorni dopo ogni sync, solo se qualcosa e' cambiato.
+// ---------------------------------------------------------------------------
+const SEDUTE_INTERVALS_GIORNI = 7;
+const idEventoAac = (data) => `aac-${data}`;
+
+async function intervalsScrivi(metodo, percorso, corpo) {
+  const url = `${CONFIG.intervalsBase}/api/v1/athlete/${encodeURIComponent(CONFIG.athleteId)}${percorso}`;
+  const auth = Buffer.from(`API_KEY:${CONFIG.apiKey}`).toString('base64');
+  const res = await fetch(url, {
+    method: metodo,
+    headers: { Authorization: `Basic ${auth}`, Accept: 'application/json', 'Content-Type': 'application/json' },
+    body: JSON.stringify(corpo),
+    signal: AbortSignal.timeout(30000),
+  });
+  if (!res.ok) throw new Error(`Intervals.icu ha risposto ${res.status} su ${percorso}`);
+  return res.json().catch(() => null);
+}
+
+const lingueSeduteIntervals = new Set(['it', 'en']);
+function linguaSeduteIntervals(id) {
+  const u = account.sistema.prepare('SELECT intervals_sedute FROM utenti WHERE id = ?').get(id);
+  return u && lingueSeduteIntervals.has(u.intervals_sedute) ? u.intervals_sedute : null;
+}
+
+// "120–140" -> [120, 140]; "< 140" -> [inizio Z1, 139]
+function intervalloFc(txt) {
+  const t = String(txt || '');
+  const r = t.match(/(\d{2,3})\s*[–-]\s*(\d{2,3})/);
+  if (r) return [Number(r[1]), Number(r[2])];
+  const s = t.match(/<\s*(\d{2,3})/);
+  if (s) return [limitiZone()[0].da, Number(s[1]) - 1];
+  return null;
+}
+
+// Un passo nella sintassi di Intervals: "- Testo 10m 120-140bpm HR". Il testo non deve contenere numeri
+// (Intervals li leggerebbe come durata o intensita'). modo 'pct' = % della FC max (riserva, vedi sotto).
+function passoIntervals(testo, min, fc, modo) {
+  let t = '';
+  if (fc && modo === 'pct') t = ` ${Math.round((fc[0] / CONFIG.fcMax) * 100)}-${Math.round((fc[1] / CONFIG.fcMax) * 100)}% HR`;
+  else if (fc) t = ` ${fc[0]}-${fc[1]}bpm HR`;
+  const durata = min >= 60 ? `${Math.floor(min / 60)}h${min % 60 ? `${min % 60}m` : ''}` : `${min}m`;
+  return `- ${testo} ${durata}${t}`;
+}
+
+// Seduta del calendario -> descrizione strutturata per Intervals (ripetute raggruppate con "Nx")
+function descrizioneIntervals(s, modo) {
+  const qualita = s.tipo === 'qualita' || s.tipo === 'gara';
+  const fcSeduta = intervalloFc(s.fc_target);
+  const fcFacileR = [limitiZone()[0].da, soglieFcPiano().facile - 1];
+  const nomeForte = /4×4|4x4/.test(s.titolo) ? L('Forte', 'Hard') : s.tipo === 'gara' ? L('Gara', 'Race') : /fartlek/i.test(s.titolo) ? L('Brillante', 'Lively') : L('Ritmo', 'Pace');
+  const segs = s.segmenti || [];
+  const passo = (g, i) => {
+    if (g.tipo === 'walk') return passoIntervals(i === 0 && segs.length > 1 ? L('Riscaldamento camminando', 'Warm-up walk') : L('Camminata', 'Walk'), g.min, null, modo);
+    if (g.tipo === 'cool') return passoIntervals(L('Defaticamento camminando', 'Cool-down walk'), g.min, null, modo);
+    if (g.tipo === 'fast') return passoIntervals(nomeForte, g.min, fcSeduta, modo);
+    if (s.tipo === 'gara') return passoIntervals(L('Gara', 'Race'), g.min, fcSeduta, modo);
+    if (qualita) return passoIntervals(L('Corsa facile', 'Easy run'), g.min, fcFacileR, modo);
+    return passoIntervals(s.tipo === 'corsa-cammino' ? L('Corsa lenta', 'Slow run') : L('Corsa facile', 'Easy run'), g.min, fcSeduta || fcFacileR, modo);
+  };
+  const righe = segs.map(passo);
+  // coppie che si ripetono (corsa-cammino, fartlek, ritmo, 4×4) -> blocco "Nx"
+  const out = [];
+  for (let i = 0; i < righe.length;) {
+    let n = 1;
+    while (i + 2 * n + 1 < righe.length && righe[i + 2 * n] === righe[i] && righe[i + 2 * n + 1] === righe[i + 1]) n++;
+    if (n >= 2) {
+      out.push('', `${n}x`, righe[i], righe[i + 1], '');
+      i += 2 * n;
+    } else {
+      out.push(righe[i]);
+      i++;
+    }
+  }
+  const testo = [
+    s.blocchi,
+    s.fc_target ? `${L('FC', 'HR')}: ${s.fc_target} bpm` : null,
+    s.adattata ? L(`Alleggerita dal coach: ${s.adattata.motivi.join(', ')}.`, `Lightened by the coach: ${s.adattata.motivi.join(', ')}.`) : null,
+    s.nota || null,
+  ].filter(Boolean);
+  const coda = L('Dal piano di AAC: se il coach cambia la seduta, si aggiorna da sola.', 'From your AAC plan: if the coach changes the session, it updates by itself.');
+  return [...testo, '', ...out, '', coda].join('\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+
+function eventiSeduteIntervals(oggiStr, modo) {
+  const p = costruisciProgramma(oggiStr);
+  if (!p) return [];
+  const fine = addDays(oggiStr, SEDUTE_INTERVALS_GIORNI - 1);
+  const [hh, mm] = String(CONFIG.programmaOra || '06:30').split(':');
+  return p.calendario
+    .filter((s) => s.data >= oggiStr && s.data <= fine && !s.fatta)
+    .map((s) => ({
+      category: 'WORKOUT',
+      type: s.tipo === 'recupero' ? 'Walk' : 'Run',
+      start_date_local: `${s.data}T${pad(Number(hh) || 6)}:${pad(Number(mm) || 0)}:00`,
+      name: `${s.titolo.replace(/^(Sett\.|Wk) \d+ · /, '')} · AAC`,
+      description: descrizioneIntervals(s, modo),
+      moving_time: s.durata_min * 60,
+      external_id: idEventoAac(s.data),
+    }));
+}
+
+// Il passo ha capito i limiti di FC? (Intervals restituisce la seduta gia' interpretata in workout_doc)
+function fcCapita(eventi) {
+  const docs = (Array.isArray(eventi) ? eventi : []).map((e) => e && e.workout_doc).filter(Boolean);
+  if (!docs.length) return null; // risposta senza workout_doc: non si puo' dire
+  const passi = (l) => (l || []).flatMap((x) => [x, ...passi(x.steps)]);
+  return docs.some((d) => passi(d.steps).some((x) => x && Object.keys(x).some((k) => /^hr|heart/i.test(k))));
+}
+
+// Invia (o toglie) le sedute dei prossimi giorni. Chiamata dopo ogni sync dell'utente, dentro il suo contesto.
+async function aggiornaSeduteIntervals(forza) {
+  const st = contesto.getStore();
+  const id = st && st.utente && st.utente.id;
+  if (typeof id !== 'number' || !intervalsConfigurato() || CONFIG.seedMock) return null;
+  const lingua = linguaSeduteIntervals(id);
+  const oggiStr = oggi();
+  let stato = {};
+  try { stato = JSON.parse(getMeta('intervals_sedute') || '{}') || {}; } catch (_) { stato = {}; }
+  const inviate = Array.isArray(stato.date) ? stato.date.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)) : [];
+  if (!lingua) return null;
+  const modo = stato.modo === 'pct' ? 'pct' : 'bpm';
+
+  // i testi nella lingua scelta quando l'utente ha acceso l'interruttore (il cron gira senza richiesta)
+  const prima = LINGUA;
+  let eventi;
+  LINGUA = lingua;
+  try { eventi = eventiSeduteIntervals(oggiStr, modo); } finally { LINGUA = prima; }
+
+  const date = eventi.map((e) => e.start_date_local.slice(0, 10));
+  // sedute inviate prima e sparite dal piano (giorno cambiato, piano ricalcolato): si tolgono, solo da oggi in poi
+  const fatteOggi = new Set();
+  const via = inviate.filter((d) => d >= oggiStr && !date.includes(d));
+  const firma = crypto.createHash('sha256').update(JSON.stringify([eventi, via])).digest('hex').slice(0, 16);
+  if (!forza && firma === stato.firma) return { inviate: 0, tolte: 0 };
+
+  if (via.length) {
+    // non togliere la seduta di oggi se e' gia' stata fatta: resta nel calendario accanto alla corsa
+    const p = costruisciProgramma(oggiStr);
+    for (const s of (p && p.calendario) || []) if (s.data === oggiStr && s.fatta) fatteOggi.add(s.data);
+    const daTogliere = via.filter((d) => !fatteOggi.has(d));
+    if (daTogliere.length) await intervalsScrivi('PUT', '/events/bulk-delete', daTogliere.map((d) => ({ external_id: idEventoAac(d) })));
+  }
+  let risposta = eventi.length ? await intervalsScrivi('POST', '/events/bulk?upsert=true', eventi) : null;
+  // Riserva: se Intervals non riconosce la FC in bpm, si passa alla % della FC max
+  if (modo === 'bpm' && eventi.length && fcCapita(risposta) === false) {
+    console.warn(`[intervals:sedute] u${id}: FC in bpm non riconosciuta, uso la % della FC max`);
+    LINGUA = lingua;
+    try { eventi = eventiSeduteIntervals(oggiStr, 'pct'); } finally { LINGUA = prima; }
+    risposta = await intervalsScrivi('POST', '/events/bulk?upsert=true', eventi);
+    stato.modo = 'pct';
+  }
+  const tenute = [...new Set([...inviate.filter((d) => d < oggiStr || fatteOggi.has(d)), ...date])].sort().slice(-60);
+  setMeta('intervals_sedute', JSON.stringify({ modo: stato.modo || modo, firma, date: tenute, quando: new Date().toISOString() }));
+  console.log(`[intervals:sedute] u${id}: ${eventi.length} sedute inviate, ${via.length} tolte`);
+  return { inviate: eventi.length, tolte: via.length };
+}
+
+// Interruttore spento: via dal calendario di Intervals le sedute di AAC da oggi in poi (quelle passate restano)
+async function togliSeduteIntervals() {
+  if (!intervalsConfigurato()) return 0;
+  const oggiStr = oggi();
+  let stato = {};
+  try { stato = JSON.parse(getMeta('intervals_sedute') || '{}') || {}; } catch (_) { stato = {}; }
+  const future = new Set((Array.isArray(stato.date) ? stato.date : []).filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d) && d >= oggiStr));
+  // anche i prossimi giorni, nel caso la memoria locale sia incompleta: gli id che non esistono vengono ignorati
+  for (let i = 0; i < SEDUTE_INTERVALS_GIORNI; i++) future.add(addDays(oggiStr, i));
+  await intervalsScrivi('PUT', '/events/bulk-delete', [...future].map((d) => ({ external_id: idEventoAac(d) })));
+  setMeta('intervals_sedute', JSON.stringify({ modo: stato.modo, date: (stato.date || []).filter((d) => d < oggiStr) }));
+  return future.size;
+}
+
 /**
  * Analizza i dati secondo per secondo di una corsa: separa corsa e camminata
  * (cadenza >= 140 passi/min, oppure velocità >= 1,9 m/s se la cadenza manca)
@@ -1565,6 +1740,10 @@ async function eseguiSync(origine) {
       const st = contesto.getStore();
       if (st && st.utente && typeof st.utente.id === 'number') notificaCorseNuove(st.utente.id, idsNuove);
     } catch (e) { console.warn(`[parere] ${e.message}`); }
+    // le sedute dei prossimi giorni nel calendario di Intervals (solo se l'utente l'ha acceso nel profilo)
+    if (haInt) {
+      try { await aggiornaSeduteIntervals(false); } catch (e) { console.warn(`[intervals:sedute] ${e.message}`); }
+    }
 
     const esito = {
       ok: true,
@@ -4405,6 +4584,27 @@ function creaApp() {
   // ---- Scarpe ----
   const jsonBody = express.json({ limit: '8kb' });
   const soloCoach = (req, res, next) => (req.get('x-requested-with') === 'coach' ? next() : res.status(400).json({ errore: L('Richiesta non valida', 'Invalid request') }));
+  // Sedute del piano nel calendario di Intervals.icu (interruttore nel profilo, sezione Intervals).
+  // Scrive nel calendario dell'utente: mai in demo (gia' bloccato) ne' durante "Vedi come".
+  app.put('/api/intervals/sedute', soloCoach, jsonBody, async (req, res) => {
+    res.set('Cache-Control', 'no-store');
+    if (req.demo || req.vero !== req.utente) return res.status(403).json({ ok: false, errore: L('Non disponibile qui', 'Not available here') });
+    const b = req.body || {};
+    if (typeof b.attivo !== 'boolean') return res.status(400).json({ ok: false, errore: L('Richiesta non valida', 'Invalid request') });
+    if (b.attivo && !intervalsConfigurato()) return res.status(400).json({ ok: false, errore: L('Prima collega Intervals.icu', 'Connect Intervals.icu first') });
+    const id = req.utente.id;
+    const lingua = b.lingua === 'en' ? 'en' : b.lingua === 'it' ? 'it' : LINGUA === 'en' ? 'en' : 'it';
+    account.sistema.prepare('UPDATE utenti SET intervals_sedute = ? WHERE id = ?').run(b.attivo ? lingua : null, id);
+    try {
+      const r = b.attivo ? await aggiornaSeduteIntervals(true) : { tolte: await togliSeduteIntervals() };
+      res.json({ ok: true, attivo: b.attivo, ...(r || {}) });
+    } catch (e) {
+      console.warn(`[intervals:sedute] u${id}: ${e.message}`);
+      // la scelta resta salvata: al prossimo sync (ogni 15 minuti) si riprova
+      res.status(502).json({ ok: false, attivo: b.attivo, errore: L('Scelta salvata, ma Intervals.icu non ha risposto: riprovo al prossimo aggiornamento.', 'Choice saved, but Intervals.icu didn’t answer: I’ll retry at the next sync.') });
+    }
+  });
+
   app.get('/api/scarpe', (req, res) => { res.set('Cache-Control', 'no-store'); res.json({ scarpe: elencoScarpe() }); });
   app.post('/api/scarpe', soloCoach, jsonBody, (req, res) => {
     const r = salvaScarpa(null, req.body || {});
@@ -4513,6 +4713,7 @@ module.exports = {
   analizzaStream,
   testoNotifica, // testi delle notifiche (verifiche)
   aggiornaDiariTutti, // diario e avvisi dopo la sincronizzazione (verifiche)
+  descrizioneIntervals, eventiSeduteIntervals, // sedute inviate a Intervals (verifiche)
   stessaUscita, caricoDaFc, unisciDoppioni, parereCorsa, // verifiche // doppioni Intervals/Strava e carico stimato (verifiche)
   // zone cardiache (usate anche nei test)
   fcMaxTanaka,
