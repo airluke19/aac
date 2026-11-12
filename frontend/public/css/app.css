@@ -807,7 +807,9 @@ body.sheet-open { overflow: hidden; }
 .rc-m { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
 .rc-m b { font-size: .97rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rc-m small { font-size: .78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
-.rc-m small .meteo { color: var(--text-2); }
+.rc-t { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.rc-t b { min-width: 0; }
+.rc-t .meteo { flex: none; font-size: .78rem; color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rc-n { text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .rc-n b { font-family: var(--f-num); font-size: 1.4rem; font-weight: 600; letter-spacing: -0.025em; line-height: 1; color: var(--accent); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .rc-n > small { display: inline-flex; align-items: center; gap: 8px; font-size: .78rem; color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }

@@ -1437,11 +1437,11 @@
       const id = 'corsa:' + x.id;
       const aperta = apertaId === id;
       const zn = x.zona ? x.zona.slice(1) : '';
-      const info = [x.ora_inizio ? esc(x.ora_inizio) : '', x.tempo ? fmtDurata(x.tempo) : ''].filter(Boolean).join(' · ') + (x.meteo ? ' · ' + meteoBreve(x.meteo) : '');
+      const info = [x.ora_inizio ? esc(x.ora_inizio) : '', x.tempo ? fmtDurata(x.tempo) : ''].filter(Boolean).join(' · ');
       return '<div class="run' + (aperta ? ' open' : '') + '">' +
         '<button type="button" class="rc" data-corsa="' + esc(id) + '" aria-expanded="' + aperta + '">' +
           '<span class="rc-g"><b>' + Number(x.data.slice(8)) + '</b><small>' + esc(giornoSett(x.data)) + '</small></span>' +
-          '<span class="rc-m"><b>' + esc(x.nome || T('Corsa', 'Run')) + '</b><small>' + (info || '&nbsp;') + '</small></span>' +
+          '<span class="rc-m"><span class="rc-t"><b>' + esc(x.nome || T('Corsa', 'Run')) + '</b>' + (x.meteo ? meteoBreve(x.meteo) : '') + '</span><small>' + (info || '&nbsp;') + '</small></span>' +
           '<span class="rc-n"><b>' + (x.distanza ? fmt1(x.distanza) + '<small>km</small>' : (x.tempo ? fmtDurata(x.tempo) : '–')) + '</b>' +
             '<small>' + fmtPasso(x.passo_corsa || x.passo_medio) + '/km' + (zn ? '<i class="rc-z" style="--zc:var(--zone-' + zn + ')">' + esc(x.zona) + '</i>' : '') + '</small></span>' +
         '</button></div>';
