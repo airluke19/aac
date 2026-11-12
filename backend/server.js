@@ -1251,6 +1251,8 @@ async function eseguiSync(origine) {
     const ultimaStrava = daStrava.reduce((m, g) => { const d = String(g.start_date_local || '').slice(0, 10); return /^\d{4}-\d{2}-\d{2}$/.test(d) && d > m ? d : m; }, (stravaPrec && stravaPrec.ultima) || '');
     if (haInt) setMeta('strava_bloccate', JSON.stringify({ ultima: ultimaStrava || null, nella_finestra: daStrava.length, controllo: oggiStr }));
 
+    // attivita' presenti oggi su Intervals (per togliere da AAC quelle cancellate li')
+    const idsIntervals = new Set(grezze.filter(Boolean).map((g) => String(g.id)));
     // la stessa uscita caricata da due app: ne resta una (la piu' completa)
     const doppioni = unisciDoppioni(grezze);
     grezze = doppioni.tenute;
@@ -1345,6 +1347,13 @@ async function eseguiSync(origine) {
       const pred = db.prepare('SELECT id FROM scarpe WHERE predefinita = 1 AND attiva = 1').get();
       if (pred) for (const id of idsNuove) db.prepare('UPDATE attivita SET scarpa_id = ? WHERE id = ? AND scarpa_id IS NULL').run(pred.id, id);
 
+      // Attivita' cancellate su Intervals (es. un doppione tolto a mano): spariscono anche da AAC.
+      // Solo nella finestra appena scaricata e solo se Intervals ha risposto con almeno un'attivita'.
+      if (haInt && idsIntervals.size) {
+        const sparite = (t) => db.prepare(`SELECT id FROM ${t} WHERE id LIKE 'i%' AND data >= ? AND data <= ?`).all(oldest, oggiStr).filter((r) => !idsIntervals.has(String(r.id)));
+        for (const r of sparite('attivita')) db.prepare("DELETE FROM attivita WHERE id = ? AND origine = 'intervals'").run(r.id);
+        for (const r of sparite('altre_attivita')) db.prepare('DELETE FROM altre_attivita WHERE id = ?').run(r.id);
+      }
       // Doppioni tolti: la scarpa scelta a mano passa alla corsa che resta, poi l'altra si cancella
       for (const d of doppioni.scartate) {
         db.prepare('UPDATE attivita SET scarpa_id = COALESCE(scarpa_id, (SELECT scarpa_id FROM attivita WHERE id = ?)) WHERE id = ?').run(d.id, d.tenuta);
