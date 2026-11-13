@@ -2783,7 +2783,10 @@
     sw.disabled = false;
     if (r.ok) {
       ME.profilo.invia_sedute = attivo;
-      toast(attivo ? T('Sedute inviate a Intervals.icu', 'Sessions sent to Intervals.icu') : T('Sedute tolte da Intervals.icu', 'Sessions removed from Intervals.icu'), 'ok');
+      const n = r.out.inviate || 0;
+      toast(!attivo ? T('Sedute tolte da Intervals.icu', 'Sessions removed from Intervals.icu')
+        : n ? T(n === 1 ? '1 seduta inviata a Intervals.icu' : n + ' sedute inviate a Intervals.icu', n === 1 ? '1 session sent to Intervals.icu' : n + ' sessions sent to Intervals.icu')
+          : T('Nessuna seduta nei prossimi 7 giorni: le invio appena il piano ne ha', 'No sessions in the next 7 days: I’ll send them as soon as the plan has some'), 'ok');
     } else if (r.out && typeof r.out.attivo === 'boolean') {
       ME.profilo.invia_sedute = r.out.attivo; // scelta salvata, Intervals non ha risposto: si riprova al prossimo sync
       toast(r.out.errore || T('Scelta salvata', 'Choice saved'), 'err');

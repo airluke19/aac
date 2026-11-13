@@ -997,7 +997,7 @@ function fcCapita(eventi) {
 async function aggiornaSeduteIntervals(forza) {
   const st = contesto.getStore();
   const id = st && st.utente && st.utente.id;
-  if (typeof id !== 'number' || !intervalsConfigurato() || CONFIG.seedMock) return null;
+  if (typeof id !== 'number' || !intervalsConfigurato()) return null;
   const lingua = linguaSeduteIntervals(id);
   const oggiStr = oggi();
   let stato = {};
@@ -4597,7 +4597,8 @@ function creaApp() {
     account.sistema.prepare('UPDATE utenti SET intervals_sedute = ? WHERE id = ?').run(b.attivo ? lingua : null, id);
     try {
       const r = b.attivo ? await aggiornaSeduteIntervals(true) : { tolte: await togliSeduteIntervals() };
-      res.json({ ok: true, attivo: b.attivo, ...(r || {}) });
+      if (!r) throw new Error('nessun invio');
+      res.json({ ok: true, attivo: b.attivo, ...r });
     } catch (e) {
       console.warn(`[intervals:sedute] u${id}: ${e.message}`);
       // la scelta resta salvata: al prossimo sync (ogni 15 minuti) si riprova
