@@ -181,7 +181,7 @@
   const TIPI_SEDUTA_DEF = [
     { tipo: 'corsa-cammino', sigla: ['CC', 'RW'], nome: ['Corsa e cammino', 'Run-walk'], testo: ['Brevi frazioni di corsa lenta alternate a camminata. Abitua cuore, muscoli e tendini a correre senza sovraccaricarli: è la base della ripartenza.', 'Short bouts of slow running alternated with walking. It gets heart, muscles and tendons used to running without overloading them: the foundation of your comeback.'] },
     { tipo: 'facile', sigla: ['F', 'E'], nome: ['Corsa facile', 'Easy run'], testo: ['Corsa continua a ritmo da conversazione (Z2). È l’80% del lavoro: costruisce la resistenza aerobica. Con “allunghi” chiudi con 4 accelerazioni da 20″ per la tecnica.', 'Continuous running at conversational pace (Z2). It is 80% of the work: it builds aerobic endurance. With “strides” you finish with 4 × 20″ accelerations for technique.'] },
-    { tipo: 'lungo', sigla: ['L', 'L'], nome: ['Lungo', 'Long run'], testo: ['La seduta chiave, di preferenza nel weekend: corsa lenta e costante che cresce di settimana in settimana fino a quasi 2 ore. Prepara il corpo a durare 21 km.', 'The key session, preferably at the weekend: slow, steady running that grows week by week up to almost 2 hours. It prepares your body to last 21 km.'] },
+    { tipo: 'lungo', sigla: ['L', 'L'], nome: ['Lungo', 'Long run'], testo: ['La sessione chiave, di preferenza nel weekend: corsa lenta e costante che cresce di settimana in settimana fino a quasi 2 ore. Prepara il corpo a durare 21 km.', 'The key session, preferably at the weekend: slow, steady running that grows week by week up to almost 2 hours. It prepares your body to last 21 km.'] },
     { tipo: 'qualita', sigla: ['Q', 'Q'], nome: ['Qualità', 'Quality'], testo: ['Fartlek (tratti brillanti liberi), 4×4 norvegese (4 blocchi da 4′ all’85–95% della FC max con 3′ di corsetta: alza il VO₂max) o frazioni a ritmo medio / ritmo gara. Insegnano a tenere un passo più sostenuto senza andare in crisi. Solo dalla fase 2.', 'Fartlek (free lively bursts), Norwegian 4×4 (four 4′ blocks at 85–95% of max HR with 3′ jogging: raises VO₂max) or reps at steady / race pace. They teach you to hold a faster pace without blowing up. Only from phase 2.'] },
     { tipo: 'recupero', sigla: ['R', 'R'], nome: ['Recupero', 'Recovery'], testo: ['Camminata tranquilla: aiuta a smaltire la fatica senza aggiungere carico.', 'Easy walk: helps clear fatigue without adding load.'] },
     { tipo: 'gara', sigla: ['🏁', '🏁'], nome: ['Gara', 'Race'], testo: ['La gara del tuo obiettivo, a ritmo costante: 5 km, 10 km, mezza o maratona.', 'The race of your goal, at a steady pace: 5K, 10K, half or marathon.'] },
@@ -226,7 +226,7 @@
     }
 
     const x = perData.get(giornoSel);
-    let det = '<div class="empty">' + T('Tocca un giorno colorato per vedere la seduta.', 'Tap a coloured day to see the session.') + '</div>';
+    let det = '<div class="empty">' + T('Tocca un giorno colorato per vedere la sessione.', 'Tap a coloured day to see the session.') + '</div>';
     if (x) {
       const stato = x.fatta ? ['fatta', x.manuale ? T('✓ Fatta (a mano)', '✓ Done (manual)') : T('✓ Fatta', '✓ Done')] : x.passata ? ['saltata', T('Saltata', 'Missed')] : x.data === d.oggi ? ['oggi', T('Oggi', 'Today')] : ['futura', quando(d.oggi, x.data)];
       const tipo = tipiSeduta().find((t) => t.tipo === x.tipo);
@@ -253,8 +253,8 @@
       '<div class="tipo-s' + (x && x.tipo === t.tipo ? ' on' : '') + '"><span class="sig">' + t.sigla + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('');
 
     return '<section class="card cal" id="cal">' +
-      '<div class="cal-top"><div><h3>' + T('Calendario allenamenti', 'Training calendar') + '</h3><p class="sub" style="margin:0">' + p.calendario.length + T(' sedute alla gara · ' + ((p.frequenza && p.frequenza.attuale) || 3) + ' a settimana', ' sessions to race day · ' + ((p.frequenza && p.frequenza.attuale) || 3) + ' a week') + '</p></div>' +
-        '<a class="btn-mini" href="' + conLang('/api/programma.ics') + '" download title="' + T('Scarica le sedute in programma per Calendario iPhone/Mac, Google o Outlook', 'Download planned sessions for iPhone/Mac Calendar, Google or Outlook') + '">' + ICO.cal + T('Esporta', 'Export') + '</a></div>' +
+      '<div class="cal-top"><div><h3>' + T('Calendario allenamenti', 'Training calendar') + '</h3><p class="sub" style="margin:0">' + p.calendario.length + T(' sessioni alla gara · ' + ((p.frequenza && p.frequenza.attuale) || 3) + ' a settimana', ' sessions to race day · ' + ((p.frequenza && p.frequenza.attuale) || 3) + ' a week') + '</p></div>' +
+        '<a class="btn-mini" href="' + conLang('/api/programma.ics') + '" download title="' + T('Scarica le sessioni in programma per Calendario iPhone/Mac, Google o Outlook', 'Download planned sessions for iPhone/Mac Calendar, Google or Outlook') + '">' + ICO.cal + T('Esporta', 'Export') + '</a></div>' +
       '<div class="cal-layout"><div class="cal-left">' +
         '<div class="cal-head"><button type="button" class="icon-btn sm" data-mese="-1" aria-label="' + T('Mese precedente', 'Previous month') + '"' + (meseCal <= minMese ? ' disabled' : '') + '>‹</button>' +
           '<h3>' + esc(titolo) + '</h3>' +
@@ -293,7 +293,7 @@
       const res = await fetch(conLang('/api/seduta/' + data + '/fatta'), { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'coach' } });
       const out = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(out.errore || T('Operazione non riuscita', 'Operation failed'));
-      toast(out.fatta ? T('Seduta segnata come fatta', 'Session marked as done') : T('Segnatura annullata', 'Mark removed'), 'ok');
+      toast(out.fatta ? T('Sessione segnata come fatta', 'Session marked as done') : T('Segnatura annullata', 'Mark removed'), 'ok');
       await caricaDati(true);
     } catch (e) { toast(e.message, 'err'); }
   }
@@ -342,7 +342,7 @@
     const usati = new Set(s.segmenti.map((x) => x.tipo));
     const leg = [['run', nomi.run, 'var(--accent)'], ['fast', nomi.fast, 'var(--orange)'], ['walk', nomi.walk, 'color-mix(in srgb, var(--muted) 45%, transparent)'], ['cool', nomi.cool, 'color-mix(in srgb, var(--accent-2) 55%, transparent)']]
       .filter((l) => usati.has(l[0])).map((l) => '<span><i style="background:' + l[2] + '"></i>' + l[1] + '</span>').join('');
-    return '<div class="timeline" role="img" aria-label="' + T('Struttura della seduta', 'Session structure') + '">' + segs + '</div><div class="legend-inline">' + leg + '</div>';
+    return '<div class="timeline" role="img" aria-label="' + T('Struttura della sessione', 'Session structure') + '">' + segs + '</div><div class="legend-inline">' + leg + '</div>';
   }
 
   // compatto (scheda Oggi): un numero grande, struttura e consigli si aprono con un tocco
@@ -400,11 +400,11 @@
     const qualita = a.originale_tipo === 'qualita';
     const pct = a.originale_min ? Math.round(s.durata_min / a.originale_min * 100) : null;
     const cosa = qualita
-      ? T('La seduta intensa diventa <b>' + s.durata_min + '′ di corsa facile</b>: niente lavoro di qualità con il corpo non recuperato.', 'The hard session becomes <b>' + s.durata_min + '′ of easy running</b>: no quality work while your body is not recovered.')
-      : T('Stessa seduta, più corta: <b>' + s.durata_min + '′</b> invece di ' + (a.originale_min || '') + '′' + (pct ? ' (circa il ' + pct + '%)' : '') + ', allo stesso ritmo tranquillo.', 'Same session, shorter: <b>' + s.durata_min + '′</b> instead of ' + (a.originale_min || '') + '′' + (pct ? ' (about ' + pct + '%)' : '') + ', at the same easy pace.');
+      ? T('La sessione intensa diventa <b>' + s.durata_min + '′ di corsa facile</b>: niente lavoro di qualità con il corpo non recuperato.', 'The hard session becomes <b>' + s.durata_min + '′ of easy running</b>: no quality work while your body is not recovered.')
+      : T('Stessa sessione, più corta: <b>' + s.durata_min + '′</b> invece di ' + (a.originale_min || '') + '′' + (pct ? ' (circa il ' + pct + '%)' : '') + ', allo stesso ritmo tranquillo.', 'Same session, shorter: <b>' + s.durata_min + '′</b> instead of ' + (a.originale_min || '') + '′' + (pct ? ' (about ' + pct + '%)' : '') + ', at the same easy pace.');
     // compatto: una riga con il pallino che pulsa ("ti ho ascoltato"), il dettaglio si apre con un tocco
     const breve = qualita ? T(s.durata_min + '′ facili', s.durata_min + '′ easy') : T(s.durata_min + '′ invece di ' + (a.originale_min || '') + '′', s.durata_min + '′ instead of ' + (a.originale_min || '') + '′');
-    return '<details class="adapt adapt-x"><summary><span class="ax-dot" aria-hidden="true"></span><b>' + T('Seduta alleggerita', 'Session eased') + '</b><span class="ax-breve">' + breve + '</span></summary>' +
+    return '<details class="adapt adapt-x"><summary><span class="ax-dot" aria-hidden="true"></span><b>' + T('Sessione alleggerita', 'Session eased') + '</b><span class="ax-breve">' + breve + '</span></summary>' +
       '<div class="ax-body">' +
         '<div class="ax-r"><span>' + T('Perché', 'Why') + '</span><p>' + esc(a.motivi.join(' · ')) + '</p></div>' +
         '<div class="ax-r"><span>' + T('Prevista', 'Planned') + '</span><p>' + esc((a.originale_titolo ? a.originale_titolo + ': ' : '') + a.originale) + '</p></div>' +
@@ -448,7 +448,7 @@
       '<p>' + T('Una tabella non sa come hai dormito, quanto sei allenato o se la settimana è andata storta. AAC sì: ogni giorno guarda cosa fai e come stai, e cambia il piano per te.', 'A fixed plan doesn’t know how you slept, how fit you are or whether your week went wrong. AAC does: every day it looks at what you do and how you feel, and changes the plan for you.') + '</p>' +
       '<ol class="nf-loop">' +
         step(G.target, T('Valuta', 'Assess'), T('da dove parti', 'where you start')) +
-        step(G.run, T('Allena', 'Train'), T('3 sedute a settimana', '3 sessions a week')) +
+        step(G.run, T('Allena', 'Train'), T('3 sessioni a settimana', '3 sessions a week')) +
         step(G.wave, T('Ascolta', 'Listen'), T('FC, HRV e sonno', 'HR, HRV and sleep')) +
         step(G.adapt, T('Adatta', 'Adapt'), T('giorno e settimana', 'day and week')) +
       '</ol></section>';
@@ -461,7 +461,7 @@
     const nCuore = (v, l, n) => '<div class="nf-hc"><b>' + v + '</b><span>' + l + '</span>' + (n ? '<small>' + n + '</small>' : '') + '</div>';
     const cuore = '<section class="card nf-card nf-cuore"><div class="nf-when">' + T('Prima di tutto', 'First of all') + '</div>' +
       '<h3>' + T('Il tuo cuore, non una tabella', 'Your heart, not a table') + '</h3>' +
-      '<p class="nf-lead">' + T('Ogni seduta ha un limite di battiti da rispettare. Non lo prendiamo da una tabella uguale per l’età: lo costruiamo sul <b>tuo</b> cuore, con due numeri.', 'Every session has a heart-rate limit to respect. We don’t take it from a one-size-fits-all age table: we build it on <b>your</b> heart, from two numbers.') + '</p>' +
+      '<p class="nf-lead">' + T('Ogni sessione ha un limite di battiti da rispettare. Non lo prendiamo da una tabella uguale per l’età: lo costruiamo sul <b>tuo</b> cuore, con due numeri.', 'Every session has a heart-rate limit to respect. We don’t take it from a one-size-fits-all age table: we build it on <b>your</b> heart, from two numbers.') + '</p>' +
       '<div class="nf-hcs">' +
         nCuore(fcMax, T('FC massima', 'Max HR'), fmiC && fmiC.fonte === 'misurata' ? T('misurata da te', 'measured by you') : T('Tanaka: 208 − 0,7 × ', 'Tanaka: 208 − 0.7 × ') + (eta || 33)) +
         nCuore(riposo || '–', T('FC a riposo', 'Resting HR'), riposo ? T('mediana di 28 giorni', '28-day median') : T('in arrivo dall’orologio', 'coming from your watch')) +
@@ -481,7 +481,7 @@
     const sig = (v, l, cat) => '<div class="nf-sig cat-' + cat + '"><b>' + v + '</b><span>' + l + '</span></div>';
     const esito = (cls, ico, tit, v) => '<li class="' + cls + '"><span class="nf-e">' + ico + '</span><b>' + tit + '</b><small>' + v + '</small></li>';
     const regole = '<div class="nf-grid">' +
-      '<section class="card nf-card"><div class="nf-when">' + T('Ogni mattina', 'Every morning') + '</div><h3>' + T('La seduta segue come stai', 'The session follows how you feel') + '</h3>' +
+      '<section class="card nf-card"><div class="nf-when">' + T('Ogni mattina', 'Every morning') + '</div><h3>' + T('La sessione segue come stai', 'The session follows how you feel') + '</h3>' +
         '<div class="nf-sigs">' + sig('+5', T('FC riposo', 'Resting HR'), 'cuore') + sig('−15%', 'HRV', 'cuore') + sig('&lt;5h30′', T('Sonno', 'Sleep'), 'sonno') + sig('&lt;−25', T('Forma', 'Form'), 'attivita') + '</div>' +
         '<div class="nf-then"><span>' + T('Basta un segnale', 'One signal is enough') + '</span><b>60%</b></div>' +
         '<p class="nf-foot">' + T('Confronto con la <b>tua</b> media di 28 giorni, non con quella di altri. La qualità diventa 25′ facili; il piano non cambia: è solo oggi.', 'Compared with <b>your</b> 28-day average, not anyone else’s. Quality becomes 25′ easy; the plan doesn’t change: it’s just today.') + '</p></section>' +
@@ -505,7 +505,7 @@
     const vs = (cosa, fisso, aac) => '<div class="in-vs-r"><b>' + cosa + '</b><span class="in-vs-f">' + fisso + '</span><span class="in-vs-a">' + aac + '</span></div>';
     const perche = '<div class="in-vs"><div class="in-vs-r in-vs-h"><span></span><span>' + T('Tabella fissa', 'Fixed plan') + '</span><span>AAC</span></div>' +
       vs(T('Partenza', 'Start'), T('uguale per tutti', 'same for all'), T('dalle tue corse', 'from your runs')) +
-      vs(T('Giorno storto', 'Off day'), T('seduta uguale', 'same session'), T('ridotta al 60%', 'cut to 60%')) +
+      vs(T('Giorno storto', 'Off day'), T('sessione uguale', 'same session'), T('ridotta al 60%', 'cut to 60%')) +
       vs(T('Settimana saltata', 'Missed week'), T('vai avanti', 'move on'), T('la ripeti', 'repeat it')) +
       vs(T('Zone cardiache', 'HR zones'), T('% dell’età', '% of age'), T('sul tuo cuore', 'on your heart')) +
       vs(T('Passo', 'Pace'), T('generico', 'generic'), T('dalle tue corse', 'from your runs')) +
@@ -526,12 +526,12 @@
       const qui = settAtt && settAtt >= da && settAtt <= a;
       return '<li class="' + (qui ? 'qui' : settAtt && settAtt > a ? 'fatta' : '') + '"><span class="in-ph-n">' + (i + 1) + '</span><div><b>' + f[0] + (qui ? '<em>' + T('sei qui', 'you are here') + '</em>' : '') + '</b><small>' + T('settimane ', 'weeks ') + da + '–' + a + '</small><p>' + f[1] + '</p></div></li>';
     }).join('') + '</ol>' +
-      '<h4 class="in-h">' + T('Quante sedute e in che giorni', 'How many sessions, on which days') + '</h4>' +
+      '<h4 class="in-h">' + T('Quante sessioni e in che giorni', 'How many sessions, on which days') + '</h4>' +
       '<ul class="in-list">' +
-        '<li>' + T('Si parte con <b>3 sedute</b> a settimana. La 4ª (e la 5ª per mezza e maratona) si guadagna: 3 settimane di fila tutte fatte, senza fatica e con il carico che cresce in modo sicuro (rapporto carico acuto/cronico ≤ 1,3). Il tetto dipende da obiettivo, fase e intensità: “Ambiziosa” una in più, “Tranquilla” una in meno.', 'You start with <b>3 sessions</b> a week. The 4th (and the 5th for half and marathon) is earned: 3 weeks in a row all done, without fatigue and with load rising safely (acute/chronic load ratio ≤ 1.3). The cap depends on goal, phase and intensity: “Ambitious” one more, “Easy-going” one fewer.') + '</li>' +
-        '<li>' + T('Le sedute in più sono corse facili in Z2: più volume, non più intensità (principio 80/20). Con segnali di fatica, o se per 2 settimane non entrano, il coach la toglie. Scarico, gara e corsa-cammino restano a 3.', 'Extra sessions are easy Z2 runs: more volume, not more intensity (80/20 principle). With signs of fatigue, or if they do not fit for 2 weeks, the coach removes one. Recovery, race and run-walk weeks stay at 3.') + '</li>' +
-        '<li>' + T('I giorni li sceglie il coach: mai due sedute impegnative (lungo, ritmo, gara) in giorni di fila, il lungo di preferenza nel weekend, i tuoi giorni preferiti (Piano → Rivedi il piano con il coach) quando possibile. Se corri in un altro giorno la seduta va lì; se ne salti una, passa ai giorni che restano della settimana.', 'The coach picks the days: never two hard sessions (long, pace, race) on consecutive days, the long run preferably at the weekend, your preferred days (Plan → Review the plan with the coach) whenever possible. If you run on another day the session moves there; if you miss one, it moves to the remaining days of the week.') + '</li>' +
-        '<li>' + T('Giorni <b>obbligatori</b> (Piano → Rivedi il piano con il coach): il coach usa solo quelli, una seduta per giorno. Con 2 giorni tiene le sedute più importanti (lungo e qualità) e salta una corsa facile; se sono attaccati, il secondo è sempre facile. Con 1 giorno fai una seduta per volta e ogni settimana del piano dura 2 settimane: l’obiettivo slitta, e la data stimata lo mostra.', '<b>Fixed</b> days (Plan → Review the plan with the coach): the coach only uses those, one session per day. With 2 days it keeps the key sessions (long run and quality) and skips an easy run; if they are back to back, the second is always easy. With 1 day you do one session at a time and each plan week lasts 2 weeks: your goal moves later, and the estimated date shows it.') + '</li>' +
+        '<li>' + T('Si parte con <b>3 sessioni</b> a settimana. La 4ª (e la 5ª per mezza e maratona) si guadagna: 3 settimane di fila tutte fatte, senza fatica e con il carico che cresce in modo sicuro (rapporto carico acuto/cronico ≤ 1,3). Il tetto dipende da obiettivo, fase e intensità: “Ambiziosa” una in più, “Tranquilla” una in meno.', 'You start with <b>3 sessions</b> a week. The 4th (and the 5th for half and marathon) is earned: 3 weeks in a row all done, without fatigue and with load rising safely (acute/chronic load ratio ≤ 1.3). The cap depends on goal, phase and intensity: “Ambitious” one more, “Easy-going” one fewer.') + '</li>' +
+        '<li>' + T('Le sessioni in più sono corse facili in Z2: più volume, non più intensità (principio 80/20). Con segnali di fatica, o se per 2 settimane non entrano, il coach la toglie. Scarico, gara e corsa-cammino restano a 3.', 'Extra sessions are easy Z2 runs: more volume, not more intensity (80/20 principle). With signs of fatigue, or if they do not fit for 2 weeks, the coach removes one. Recovery, race and run-walk weeks stay at 3.') + '</li>' +
+        '<li>' + T('I giorni li sceglie il coach: mai due sessioni impegnative (lungo, ritmo, gara) in giorni di fila, il lungo di preferenza nel weekend, i tuoi giorni preferiti (Piano → Rivedi il piano con il coach) quando possibile. Se corri in un altro giorno la sessione va lì; se ne salti una, passa ai giorni che restano della settimana.', 'The coach picks the days: never two hard sessions (long, pace, race) on consecutive days, the long run preferably at the weekend, your preferred days (Plan → Review the plan with the coach) whenever possible. If you run on another day the session moves there; if you miss one, it moves to the remaining days of the week.') + '</li>' +
+        '<li>' + T('Giorni <b>obbligatori</b> (Piano → Rivedi il piano con il coach): il coach usa solo quelli, una sessione per giorno. Con 2 giorni tiene le sessioni più importanti (lungo e qualità) e salta una corsa facile; se sono attaccati, il secondo è sempre facile. Con 1 giorno fai una sessione per volta e ogni settimana del piano dura 2 settimane: l’obiettivo slitta, e la data stimata lo mostra.', '<b>Fixed</b> days (Plan → Review the plan with the coach): the coach only uses those, one session per day. With 2 days it keeps the key sessions (long run and quality) and skips an easy run; if they are back to back, the second is always easy. With 1 day you do one session at a time and each plan week lasts 2 weeks: your goal moves later, and the estimated date shows it.') + '</li>' +
         '<li>' + T('Per avanzare contano le corse fatte nella settimana, in qualunque giorno.', 'To move forward, the runs done during the week count, on any day.') + '</li>' +
       '</ul>' +
       '<p class="in-p">' + T('Fonti: progressione di frequenza dei piani di Daniels, Pfitzinger e Higdon; carico acuto/cronico (Gabbett, 2016); distribuzione 80/20 (Seiler).', 'Sources: frequency progression from the Daniels, Pfitzinger and Higdon plans; acute/chronic load (Gabbett, 2016); 80/20 distribution (Seiler).') + '</p>';
@@ -567,18 +567,18 @@
       '<button type="button" class="gc-cta" data-apri-sheet="#collega"><span>' + T('Guida: collega l’orologio', 'Guide: connect your watch') + '</span>' + FRECCIA + '</button>';
 
     const carico = kv(T('Carico recente', 'Recent load'), T('ultimi 7 giorni ÷ ultime 6 settimane (ACWR): sicuro 0,8–1,3', 'last 7 days ÷ last 6 weeks (ACWR): safe 0.8–1.3')) +
-      kv(T('Oltre 1,5', 'Above 1.5'), T('la prossima seduta viene alleggerita', 'your next session is lightened')) +
+      kv(T('Oltre 1,5', 'Above 1.5'), T('la prossima sessione viene alleggerita', 'your next session is lightened')) +
       kv(T('Km settimanali', 'Weekly km'), T('avviso oltre +30% sulla media delle 4 settimane prima', 'warning above +30% over the previous 4 weeks’ average')) +
       kv(T('Corsa più lunga', 'Longest run'), T('avviso oltre +10% sulla più lunga dei 30 giorni prima', 'warning above +10% over the longest of the previous 30 days')) +
       kv(T('Prossimo lungo', 'Next long run'), T('al massimo +10% sulla corsa più lunga del mese', 'at most +10% over the month’s longest run')) +
       '<p class="in-p">' + T('La maggior parte degli infortuni da corsa nasce da aumenti troppo rapidi di volume o di una singola uscita. Uno studio su oltre 5.000 runner (Frandsen e colleghi, BJSM 2025) ha visto che il rischio sale quando una corsa supera di oltre il 10% la più lunga del mese precedente. Sono indicazioni, non una diagnosi: se senti dolore, fermati.',
         'Most running injuries come from increasing volume, or a single run, too quickly. A study of over 5,000 runners (Frandsen et al., BJSM 2025) found risk rises when one run exceeds the longest of the previous month by more than 10%. These are guidelines, not a diagnosis: if you feel pain, stop.') + '</p>';
 
-    const strumenti = kv(T('Calendario', 'Calendar'), T('tocca un giorno per la seduta', 'tap a day for the session')) +
+    const strumenti = kv(T('Calendario', 'Calendar'), T('tocca un giorno per la sessione', 'tap a day for the session')) +
       kv(T('Esporta', 'Export'), T('.ics per il tuo calendario', '.ics for your calendar')) +
-      kv(T('Segna come fatta', 'Mark as done'), T('per le sedute senza orologio', 'for sessions without a watch')) +
-      kv(T('Condividi', 'Share'), T('immagine di una seduta fatta, per post o storie', 'image of a completed session, for posts or stories')) +
-      kv(T('Copia per AI', 'Copy for AI'), T('i dati di una seduta fatta, con età, altezza, peso e BMI se presenti', 'data of a completed session, with age, height, weight and BMI when available'));
+      kv(T('Segna come fatta', 'Mark as done'), T('per le sessioni senza orologio', 'for sessions without a watch')) +
+      kv(T('Condividi', 'Share'), T('immagine di una sessione fatta, per post o storie', 'image of a completed session, for posts or stories')) +
+      kv(T('Copia per AI', 'Copy for AI'), T('i dati di una sessione fatta, con età, altezza, peso e BMI se presenti', 'data of a completed session, with age, height, weight and BMI when available'));
 
     const limiti = li(T([
       '<b>Piano su misura</b>: si adatta ai tuoi dati e ogni cambiamento ha un motivo scritto.',
@@ -586,7 +586,7 @@
       'Non sostituisce il medico: se senti dolore, fermati.',
       'Dati su un server privato, un database per utente, chiave Intervals cifrata.',
       'L’amministratore vede quando usi l’app (giorni e minuti, finché hai l’account), mai cosa guardi.',
-      'Notifiche (se le attivi): solo la seduta del giorno e il riepilogo della settimana, niente dati di salute. Passano dal servizio di notifiche del tuo telefono (Apple o Google).'
+      'Notifiche (se le attivi): solo la sessione del giorno e il riepilogo della settimana, niente dati di salute. Passano dal servizio di notifiche del tuo telefono (Apple o Google).'
     ], [
       '<b>Tailored plan</b>: it adapts to your data and every change comes with a written reason.',
       'Without your max HR it uses the age-based estimate.',
@@ -599,8 +599,8 @@
     const elenco = '<div class="sec-title"><h2>' + T('Approfondisci', 'Learn more') + '</h2></div><section class="nf-list">' +
       voce('vantaggio', G.star, 'var(--accent)', T('Perché AAC', 'Why AAC'), T('Rispetto a una tabella fissa', 'Compared with a fixed plan'), perche) +
       voce('partenza', G.flag, '#ff9500', T('Punto di partenza', 'Starting point'), T('La settimana da cui parti', 'The week you start from'), partenza) +
-      voce('piano', G.cal, '#5856d6', T('Il piano', 'The plan'), tot + T(' settimane · 3 sedute alle ', ' weeks · 3 sessions at ') + esc(ora), fasi) +
-      voce('sedute', G.list, '#007aff', T('Le sedute', 'Sessions'), T('Cosa significano le sigle', 'What the codes mean'), '<div class="in-tipi">' + tipiSeduta().map((t) => '<div class="in-tipo"><span class="sig">' + esc(t.sigla) + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('') + '</div>') +
+      voce('piano', G.cal, '#5856d6', T('Il piano', 'The plan'), tot + T(' settimane · 3 sessioni alle ', ' weeks · 3 sessions at ') + esc(ora), fasi) +
+      voce('sedute', G.list, '#007aff', T('Le sessioni', 'Sessions'), T('Cosa significano le sigle', 'What the codes mean'), '<div class="in-tipi">' + tipiSeduta().map((t) => '<div class="in-tipo"><span class="sig">' + esc(t.sigla) + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('') + '</div>') +
       voce('zone', G.heart, '#ff3b30', T('Zone e passo', 'Zones and pace'), T('Dalla tua FC a riposo e massima', 'From your resting and max HR'), zone) +
       voce('bmi', G.heart, '#ff2d55', 'BMI', T('Peso e altezza, in Salute', 'Weight and height, in Health'), bmi) +
       voce('carico', G.shield, '#ff9500', T('Carico e infortuni', 'Load and injuries'), T('Crescere senza farsi male', 'Build up without getting hurt'), carico) +
@@ -678,9 +678,9 @@
     const ps = d.passo;
     if (!ps) return '';
     const how = comeCalcolo(T(
-      'Per ogni corsa delle ultime 6 settimane calcolo l’<b>efficienza</b>: velocità ÷ battiti (nelle sedute corsa-cammino uso <b>solo i tratti di corsa</b>, riconosciuti dalla cadenza o dalla velocità). Prendo la mediana delle ultime 8 corse e la trasformo in passo per ogni fascia di frequenza: ' +
+      'Per ogni corsa delle ultime 6 settimane calcolo l’<b>efficienza</b>: velocità ÷ battiti (nelle sessioni corsa-cammino uso <b>solo i tratti di corsa</b>, riconosciuti dalla cadenza o dalla velocità). Prendo la mediana delle ultime 8 corse e la trasformo in passo per ogni fascia di frequenza: ' +
       '<b>facile</b> Z2 (60–70% della riserva cardiaca, o della FC max se mancano i dati a riposo), <b>ritmo medio</b> Z3 (70–80%), <b>ritmo gara</b> (la zona del tuo obiettivo). Il <b>passo gara</b> viene dalla previsione del tempo (se disponibile) oppure dall’80% della FC con un 4% di margine per la fatica. ' +
-      'È un’indicazione: se il cuore supera la soglia della seduta, conta il cuore.',
+      'È un’indicazione: se il cuore supera la soglia della sessione, conta il cuore.',
       'For each run in the last 6 weeks I compute <b>efficiency</b>: speed ÷ heart rate (in run-walk sessions I use <b>only the running parts</b>, detected from cadence or speed). I take the median of the last 8 runs and turn it into a pace for each heart-rate band: ' +
       '<b>easy</b> Z2 (60–70% of heart-rate reserve, or of max HR without resting data), <b>steady</b> Z3 (70–80%), <b>race pace</b> (your goal’s zone). <b>Race pace</b> comes from the time forecast (when available) or from 80% HR with a 4% fatigue margin. ' +
       'It is a guide: if your heart goes above the session threshold, your heart wins.'));
@@ -689,7 +689,7 @@
       return '<section class="card pace-card"><div class="pv-head"><div><h3>⏱️ ' + T('Il tuo passo', 'Your pace') + '</h3><p class="sub">' + T('Quanto tempo impieghi per fare 1 km', 'How long you take to run 1 km') + '</p></div>' + pillAff('nessuna') + '</div>' +
         (ps.ultimo ? '<div class="pace-last"><small>' + T('Ultima corsa', 'Last run') + ' · ' + esc(fmtData(ps.ultimo.data)) + '</small><b>' + fmtPasso(ps.ultimo.passo) + '/km</b><span>' + (ps.ultimo.solo_corsa ? T('solo tratti di corsa', 'running parts only') : T('camminata compresa', 'walking included')) + '</span></div>' : '') +
         dots(Math.min(ps.corse, ps.richieste), ps.richieste) +
-        semplice(T('Dopo <b>' + ps.richieste + ' corse</b> (anche corsa-cammino, purché con almeno 10′ di corsa effettiva) stimo il tuo passo facile, il ritmo medio e il passo gara, e li mostro in ogni seduta come indicazione. Nelle prime settimane conta soprattutto restare a ritmo da conversazione.',
+        semplice(T('Dopo <b>' + ps.richieste + ' corse</b> (anche corsa-cammino, purché con almeno 10′ di corsa effettiva) stimo il tuo passo facile, il ritmo medio e il passo gara, e li mostro in ogni sessione come indicazione. Nelle prime settimane conta soprattutto restare a ritmo da conversazione.',
           'After <b>' + ps.richieste + ' runs</b> (run-walk counts too, with at least 10′ of actual running) I estimate your easy pace, steady pace and race pace, and show them in every session as a guide. In the first weeks what matters most is staying at conversational pace.')) + how + '</section>';
     }
     const z = ps.zone;
@@ -708,7 +708,7 @@
         riga(T('Ritmo medio', 'Steady'), z.medio, T('frazioni “ritmo medio” (fase 3)', '“steady pace” reps (phase 3)')) +
         riga(ps.obiettivo ? esc(ps.obiettivo.ritmo) : T('Ritmo gara', 'Race pace'), z.mezza, T('frazioni a ritmo gara e gara', 'race-pace reps and race')) +
       '</div>' +
-      semplice(T('Il passo è quanto tempo impieghi per fare 1 km: più è basso, più vai veloce. Oggi a ritmo facile corri tra <b>' + rangePasso(z.facile) + '</b> al km. In ogni seduta trovi il passo indicativo, ma <b>comanda il cuore</b>: se la FC supera la soglia, rallenta anche se sei “in passo”.',
+      semplice(T('Il passo è quanto tempo impieghi per fare 1 km: più è basso, più vai veloce. Oggi a ritmo facile corri tra <b>' + rangePasso(z.facile) + '</b> al km. In ogni sessione trovi il passo indicativo, ma <b>comanda il cuore</b>: se la FC supera la soglia, rallenta anche se sei “in passo”.',
         'Pace is how long you take to run 1 km: the lower, the faster. Today at easy effort you run between <b>' + rangePasso(z.facile) + '</b> per km. Every session shows a guide pace, but <b>your heart is in charge</b>: if HR goes above the threshold, slow down even if you are “on pace”.')) +
       how + '</section>';
   }
@@ -742,7 +742,7 @@
         '<div><b class="num">' + sett + '<small>/' + tot + '</small></b><span>' + T('settimana', 'week') + '</span></div>' +
         (o.previsione_tempo ? '<div><b class="num">' + fmtDurata(o.previsione_tempo.tempo_sec) + '</b><span>' + T('tempo stimato*', 'estimated time*') + '</span></div>' : '') +
       '</div>' + fasi + rigaInt +
-      '<details class="more"><summary>' + T('Come si calcola', 'How it is calculated') + '</summary><p class="fine">' + (o.previsione_tempo ? notaPrev + ' ' : '') + T('Data e piano si ricalcolano ogni settimana in base a sedute fatte, frequenza cardiaca e recupero', 'Date and plan are recalculated every week from completed sessions, heart rate and recovery') +
+      '<details class="more"><summary>' + T('Come si calcola', 'How it is calculated') + '</summary><p class="fine">' + (o.previsione_tempo ? notaPrev + ' ' : '') + T('Data e piano si ricalcolano ogni settimana in base a sessioni fatte, frequenza cardiaca e recupero', 'Date and plan are recalculated every week from completed sessions, heart rate and recovery') +
         (o.stima_da_dati ? T(' (stai avanzando nel ' + o.ritmo_avanzamento_pct + '% delle settimane).', ' (you are moving forward in ' + o.ritmo_avanzamento_pct + '% of weeks).') : T('; dalla 3ª settimana la data sarà stimata dai tuoi dati reali.', '; from week 3 the date will be estimated from your real data.')) + '</p></details>' +
     '</section>';
   }
@@ -755,7 +755,7 @@
       archi += '<circle cx="50" cy="50" r="' + r + '" class="' + (i < fatte ? 'on' : '') + '" stroke-dasharray="' + seg.toFixed(2) + ' ' + (C - seg).toFixed(2) + '" stroke-dashoffset="' + (-(i * C / tot) - gap / 2).toFixed(2) + '"/>';
     }
     return '<svg class="ring" viewBox="0 0 100 100" aria-hidden="true"><g transform="rotate(-90 50 50)">' + archi + '</g>' +
-      '<text x="50" y="49" class="ring-n">' + fatte + '<tspan class="ring-t">/' + tot + '</tspan></text><text x="50" y="66" class="ring-l">' + T('sedute', 'sessions') + '</text></svg>';
+      '<text x="50" y="49" class="ring-n">' + fatte + '<tspan class="ring-t">/' + tot + '</tspan></text><text x="50" y="66" class="ring-l">' + T('sessioni', 'sessions') + '</text></svg>';
   }
 
   function renderSettimana(d) {
@@ -767,8 +767,8 @@
     let msg;
     if (!w.iniziato) msg = T('Il piano parte ' + fmtDataLunga(p.inizio) + '.', 'The plan starts on ' + fmtDataLunga(p.inizio) + '.');
     else if (w.sedute === 1) msg = w.fatte >= 1
-      ? (w.una_su_due === 2 ? T('Fatta: dalla prossima settimana passi alla settimana ' + prossima + '.', 'Done: next week you move on to week ' + prossima + '.') : T('Fatta: la prossima settimana fai l’altra seduta di questa settimana del piano.', 'Done: next week you do the other session of this plan week.'))
-      : T('Una seduta entro ' + decide + (w.una_su_due === 2 ? ' per passare alla settimana ' + prossima + '.' : ': è la ' + w.una_su_due + 'ª di 2 di questa settimana del piano.'), 'One session by ' + decide + (w.una_su_due === 2 ? ' to move on to week ' + prossima + '.' : ': it is #' + w.una_su_due + ' of 2 in this plan week.'));
+      ? (w.una_su_due === 2 ? T('Fatta: dalla prossima settimana passi alla settimana ' + prossima + '.', 'Done: next week you move on to week ' + prossima + '.') : T('Fatta: la prossima settimana fai l’altra sessione di questa settimana del piano.', 'Done: next week you do the other session of this plan week.'))
+      : T('Una sessione entro ' + decide + (w.una_su_due === 2 ? ' per passare alla settimana ' + prossima + '.' : ': è la ' + w.una_su_due + 'ª di 2 di questa settimana del piano.'), 'One session by ' + decide + (w.una_su_due === 2 ? ' to move on to week ' + prossima + '.' : ': it is #' + w.una_su_due + ' of 2 in this plan week.'));
     else if (w.fatte >= 2) msg = T('Settimana ' + prossima + ' da ' + decide + (w.fatte === 2 && (w.sedute || 3) > 2 ? '. Le altre sono un di più.' : '.'), 'Week ' + prossima + ' from ' + decide + (w.fatte === 2 && (w.sedute || 3) > 2 ? '. The rest are a bonus.' : '.'));
     else if (w.fatte === 1) msg = T('Ancora <b>1</b> entro ' + decide + ' per la settimana ' + prossima + '.', '<b>1 more</b> by ' + decide + ' for week ' + prossima + '.');
     else msg = T('<b>2</b> entro ' + decide + ' per la settimana ' + prossima + '.', '<b>2</b> by ' + decide + ' for week ' + prossima + '.');
@@ -817,7 +817,7 @@
       h += '<section class="avviso ' + (alto ? 'bad' : 'warn') + '"><div class="av-h">' + ICO.flame + '<h3>' + (alto ? T('Carico troppo alto', 'Load too high') : T('Carico in crescita rapida', 'Load rising fast')) + '</h3></div>' +
         '<ul>' + c.segnali.map((x) => '<li>' + esc(x) + '</li>').join('') + '</ul>' +
         '<p class="g-note">' + (alto && d.programma.prossime[0] && d.programma.prossime[0].adattata
-          ? T('Ho già alleggerito la prossima seduta. ', 'I have already lightened your next session. ') : '') +
+          ? T('Ho già alleggerito la prossima sessione. ', 'I have already lightened your next session. ') : '') +
           T('Gli infortuni da corsa arrivano quasi sempre da aumenti troppo rapidi. Se senti dolore, fermati.', 'Running injuries almost always come from building up too fast. If you feel pain, stop.') + '</p></section>';
     }
     return h;
@@ -951,14 +951,14 @@
     const m = s.metriche, r = s.recupero;
     const segnali = r ? r.segnali : [];
     let cls, titolo, testo;
-    if (!r) { cls = ''; titolo = T('Dati di recupero in arrivo', 'Recovery data on its way'); testo = T('Per ora il piano segue le sedute fatte.', 'For now the plan follows completed sessions.'); }
-    else if (segnali.length) { cls = 'warn'; titolo = T('Seduta alleggerita', 'Session eased'); testo = esc(segnali.join(' · ')); }
+    if (!r) { cls = ''; titolo = T('Dati di recupero in arrivo', 'Recovery data on its way'); testo = T('Per ora il piano segue le sessioni fatte.', 'For now the plan follows completed sessions.'); }
+    else if (segnali.length) { cls = 'warn'; titolo = T('Sessione alleggerita', 'Session eased'); testo = esc(segnali.join(' · ')); }
     else if (r.base_fc_riposo == null && r.base_hrv == null) { cls = ''; titolo = T('Sto imparando i tuoi valori', 'Learning your baseline'); testo = T('Servono 5 giorni di dati.', '5 days of data needed.'); }
     else {
       // recupero ok, ma la seduta puo' essere alleggerita per altri motivi (carico, forma): niente "seduta piena"
       const s0 = d.programma && d.programma.prossime && d.programma.prossime[0];
       cls = 'ok'; titolo = T('Recuperato', 'Recovered');
-      testo = s0 && s0.adattata ? T('Seduta alleggerita per il carico', 'Session eased for load') : T('Seduta piena', 'Full session');
+      testo = s0 && s0.adattata ? T('Sessione alleggerita per il carico', 'Session eased for load') : T('Sessione piena', 'Full session');
     }
     const val = (k, ico, nome, v, un) => '<button type="button" class="cs-v cat-' + METRICHE[k].cat + '" data-salute="' + k + '"' + (m[k] ? ' title="' + esc(quando(d.oggi, m[k].data)) + '"' : '') + '><span class="cs-l"><i>' + ico + '</i>' + nome + '</span><b>' + v + (v !== '–' && un ? '<small>' + un + '</small>' : '') + '</b>' + (m[k] && giorniDa(m[k].data, d.oggi) > 1 ? '<span class="cs-q">' + esc(quando(d.oggi, m[k].data)) + '</span>' : '') + '</button>';
     return '<section class="card come-stai ' + cls + '">' +
@@ -1029,7 +1029,7 @@
     const ps = d.passo, p = d.programma, t = d.previsioni && d.previsioni.tempo;
     // il passo si stima solo da corse con almeno 10′ di corsa vera (anche a tratti): con meno la FC non si stabilizza
     if (ps && !ps.disponibile) items.push([T('Il tuo passo al km', 'Your pace per km'),
-      T('passo facile, ritmo medio e passo gara, in ogni seduta. Conta solo una corsa con almeno 10′ di corsa (anche a tratti, senza la camminata): con meno la FC non fa in tempo a stabilizzarsi e il passo sarebbe sbagliato.', 'easy, steady and race pace, in every session. Only a run with at least 10′ of actual running counts (intervals too, walking excluded): with less, heart rate has no time to settle and the pace would be wrong.') +
+      T('passo facile, ritmo medio e passo gara, in ogni sessione. Conta solo una corsa con almeno 10′ di corsa (anche a tratti, senza la camminata): con meno la FC non fa in tempo a stabilizzarsi e il passo sarebbe sbagliato.', 'easy, steady and race pace, in every session. Only a run with at least 10′ of actual running counts (intervals too, walking excluded): with less, heart rate has no time to settle and the pace would be wrong.') +
         (ps.corse_totali > ps.corse && ps.max_corsa_min != null ? ' <b>' + T('Finora la tua corsa più lunga ha ' + ps.max_corsa_min + '′ di corsa: arriverà quando i tratti si allungano.', 'So far your longest run has ' + ps.max_corsa_min + '′ of running: it will come as the running parts get longer.') + '</b>' : ''),
       Math.min(ps.corse, ps.richieste), ps.richieste, T('corse da 10′', '10′ runs')]);
     if (t && !t.disponibile) items.push([T('Tempo previsto · ', 'Predicted time · ') + esc(obNome()), T('con una fascia di affidabilità', 'with a confidence range'), Math.min(t.corse_continue, t.richieste), t.richieste, T('corse continue', 'continuous runs')]);
@@ -1048,7 +1048,7 @@
     const storia = p.storia.length
       ? p.storia.map((w) => '<div class="week"><div class="wn">S' + w.numero + '</div><div><h4>' + esc(fmtData(w.da)) + ' – ' + esc(fmtData(w.a)) + '</h4><p>' +
           (w.settimana_piano !== w.numero ? T('piano sett. ', 'plan wk ') + w.settimana_piano + ' · ' : '') + esc(w.motivi.join(', ')) + '</p></div><span class="pill ' + icona[w.esito][0] + '">' + icona[w.esito][1] + '</span></div>').join('')
-      : '<div class="empty" style="padding:14px">' + T('Il primo adattamento arriva a fine della prima settimana: in base a sedute fatte, FC e recupero il coach decide se avanzare, ripetere o alleggerire.', 'The first adaptation comes at the end of week one: based on completed sessions, HR and recovery the coach decides whether to move forward, repeat or ease off.') + '</div>';
+      : '<div class="empty" style="padding:14px">' + T('Il primo adattamento arriva a fine della prima settimana: in base a sessioni fatte, FC e recupero il coach decide se avanzare, ripetere o alleggerire.', 'The first adaptation comes at the end of week one: based on completed sessions, HR and recovery the coach decides whether to move forward, repeat or ease off.') + '</div>';
 
     return renderCalendario(d) +
       '<div class="sec-title"><h2>' + T('Adattamenti', 'Adaptations') + '</h2><span>' + p.sedute_fatte + '/' + p.sedute_passate + (p.aderenza_pct != null ? ' · ' + p.aderenza_pct + '%' : '') + '</span></div>' +
@@ -1141,7 +1141,7 @@
       ? '<div class="pv-warn">⚠️ ' + T('Settimane con crescita rapida del fitness (oltre +5 in 7 giorni): ', 'Weeks with fast fitness growth (over +5 in 7 days): ') + c.avvisi.map((a) => esc(fmtData(a.inizio)) + ' (+' + fmt1(a.ramp) + ')').join(', ') + T('. Lì il coach farà più attenzione ai segnali di fatica.', '. There the coach will watch fatigue signals more closely.') + '</div>'
       : '<div class="pv-ok">✓ ' + T('Nessuna settimana con crescita troppo rapida del carico.', 'No week with an overly fast load increase.') + '</div>';
     const card2 = '<section class="card pv-card"><div class="pv-head"><div><h3>' + T('Come crescerà la tua forma', 'How your fitness will grow') + '</h3>' +
-        '<p class="sub">' + T('Proiezione seduta per seduta fino alla gara · tratteggiato = previsto', 'Session-by-session projection to race day · dashed = projected') + '</p></div>' + pillAff('modello') + '</div>' +
+        '<p class="sub">' + T('Proiezione sessione per sessione fino alla gara · tratteggiato = previsto', 'Session-by-session projection to race day · dashed = projected') + '</p></div>' + pillAff('modello') + '</div>' +
       '<div class="grid-2 pv-charts"><div><div class="pv-lbl">' + T('Fitness (CTL)', 'Fitness (CTL)') + '</div><div class="chart-box sm"><canvas id="chart-pv-ctl" role="img" aria-label="CTL"></canvas></div></div>' +
         '<div><div class="pv-lbl">' + T('Forma (TSB) ogni mattina', 'Form (TSB) each morning') + '</div><div class="chart-box sm"><canvas id="chart-pv-tsb" role="img" aria-label="TSB"></canvas></div></div></div>' +
       avvisi +
@@ -1151,9 +1151,9 @@
         '<b>Fitness</b> is how much training you have built over the last ~6 weeks: today ' + fmt1(oggiCtl) + ', on race day about <b>' + fmt1(c.gara && c.gara.ctl) + '</b>' + (c.picco ? ' (peak ' + fmt1(c.picco.ctl) + ' on ' + esc(fmtData(c.picco.data)) + ')' : '') + '. ' +
         '<b>Form</b> is fitness minus last week’s fatigue: on race morning it is projected at <b>' + fmtSigned(c.gara && c.gara.tsb) + '</b>, meaning ' + esc(forma[1]) + '. That is the effect of the lighter weeks before the race.')) +
       comeCalcolo(T(
-        'Stimo il carico di ogni seduta futura come nel TSS: ore × intensità² × 100, con intensità 0,5 camminata, 0,75 corsa facile, 0,9 tratti veloci, 0,82 gara. ' +
+        'Stimo il carico di ogni sessione futura come nel TSS: ore × intensità² × 100, con intensità 0,5 camminata, 0,75 corsa facile, 0,9 tratti veloci, 0,82 gara. ' +
         'Il fitness è una media che “dimentica” in 42 giorni, la fatica in 7 (lo stesso modello di Intervals.icu). Parto dal tuo ultimo valore reale' + (c.partenza.da_dati ? '' : ' (ora 0, perché non ci sono ancora dati di carico)') + '. ' +
-        (c.calibrazione.sedute >= 3 ? 'Taratura personale: le tue sedute reali pesano ' + fmt1(c.calibrazione.fattore) + '× la mia stima (su ' + c.calibrazione.sedute + ' sedute), e correggo il futuro di conseguenza.' : 'Dopo 3 sedute registrate confronterò il carico reale con la mia stima e la tarerò su di te.') +
+        (c.calibrazione.sedute >= 3 ? 'Taratura personale: le tue sessioni reali pesano ' + fmt1(c.calibrazione.fattore) + '× la mia stima (su ' + c.calibrazione.sedute + ' sessioni), e correggo il futuro di conseguenza.' : 'Dopo 3 sessioni registrate confronterò il carico reale con la mia stima e la tarerò su di te.') +
         ' La proiezione presume che tu segua il piano senza ripetere settimane.',
         'I estimate each future session’s load like TSS: hours × intensity² × 100, with intensity 0.5 walking, 0.75 easy running, 0.9 fast bits, 0.82 race. ' +
         'Fitness is an average that “forgets” over 42 days, fatigue over 7 (the same model as Intervals.icu). I start from your latest real value' + (c.partenza.da_dati ? '' : ' (0 for now, as there is no load data yet)') + '. ' +
@@ -1179,7 +1179,7 @@
           (migliora ? 'you are improving by ' + fmt0(Math.abs(t.tendenza_sett_sec)) + '″/km per week. ' : 'you are not improving yet. ') +
           'Projecting cautiously to race day you reach ' + fmtPasso(t.passo_ref_gara) + '/km: estimated time <b>' + fmtDurataHM(t.tempo_sec) + '</b>, with an 8 in 10 chance between ' + fmtDurataHM(t.tempo_min_sec) + ' and ' + fmtDurataHM(t.tempo_max_sec) + '.')) +
         comeCalcolo(T(
-          'Per ogni corsa continua (almeno 15′, sedute corsa-cammino escluse) calcolo l’efficienza: velocità ÷ battiti. Moltiplicata per ' + t.fc_ref + ' bpm dà il passo che terresti a quella frequenza. ' +
+          'Per ogni corsa continua (almeno 15′, sessioni corsa-cammino escluse) calcolo l’efficienza: velocità ÷ battiti. Moltiplicata per ' + t.fc_ref + ' bpm dà il passo che terresti a quella frequenza. ' +
           'Sulle ultime 8 settimane traccio una retta di tendenza (' + t.corse_usate + ' corse) e la proietto in avanti per al massimo 8 settimane, con un tetto del +10%: oltre, assumo che il miglioramento si stabilizzi. ' +
           'Tolgo il 4% per la deriva cardiaca di una gara lunga. La fascia viene dalla dispersione delle tue corse attorno alla tendenza. FC max stimata, caldo e salite possono spostare il risultato.',
           'For each continuous run (at least 15′, run-walk sessions excluded) I compute efficiency: speed ÷ heart rate. Multiplied by ' + t.fc_ref + ' bpm it gives the pace you would hold at that heart rate. ' +
@@ -1192,7 +1192,7 @@
           '<p class="sub">' + T('Dalla tendenza del passo a parità di battiti', 'From the trend of pace at equal heart rate') + '</p></div>' + pillAff('nessuna') + '</div>' +
         dots(Math.min(t.corse_continue, t.richieste), t.richieste) +
         semplice(T(
-          'Si attiva con <b>' + t.richieste + ' corse continue</b> (almeno 15′, con frequenza cardiaca) distribuite su almeno 2 settimane. Le sedute corsa-cammino non contano: il loro passo medio include la camminata. ' +
+          'Si attiva con <b>' + t.richieste + ' corse continue</b> (almeno 15′, con frequenza cardiaca) distribuite su almeno 2 settimane. Le sessioni corsa-cammino non contano: il loro passo medio include la camminata. ' +
           'Con il piano attuale succederà intorno a <b>gennaio</b>, quando inizieranno le corse continue.' + (riegel ? ' Nel frattempo la stima indicativa dalla tua corsa migliore è ' + fmtDurataHM(riegel.tempo_sec) + '.' : ''),
           'It activates with <b>' + t.richieste + ' continuous runs</b> (at least 15′, with heart rate) spread over at least 2 weeks. Run-walk sessions do not count: their average pace includes walking. ' +
           'With the current plan this will happen around <b>January</b>, when continuous runs start.' + (riegel ? ' Meanwhile the rough estimate from your best run is ' + fmtDurataHM(riegel.tempo_sec) + '.' : ''))) +
@@ -1636,7 +1636,7 @@
       const g = rc.giorni || [], primi = g.slice(0, 4), altri = g.slice(4);
       const riga = (x) => '<div class="dd-li"><b>' + esc(fmtDataLunga(x.data)) + '</b><span>' + x.segnali.map(esc).join(' · ') + '</span></div>';
       return '<section class="card rec-card"><div class="rec-top"><h3>' + T('Giorni con recupero incompleto', 'Days with incomplete recovery') + '</h3><b class="rec-n' + (g.length ? ' warn' : '') + '">' + g.length + '<small>/30</small></b></div>' +
-        '<p class="sub">' + T('Ultimi 30 giorni. In questi giorni il coach ha alleggerito la seduta.', 'Last 30 days. On these days the coach eased your session.') + '</p>' +
+        '<p class="sub">' + T('Ultimi 30 giorni. In questi giorni il coach ha alleggerito la sessione.', 'Last 30 days. On these days the coach eased your session.') + '</p>' +
         (g.length ? '<div class="dd-list">' + primi.map(riga).join('') + '</div>' +
             (altri.length ? '<details class="more"><summary>' + T('Altri ' + altri.length + ' giorni', altri.length + ' more days') + '</summary><div class="dd-list">' + altri.map(riga).join('') + '</div></details>' : '')
           : '<p class="dd-p">' + (rc.base_pronta ? T('Nessuno: il recupero è sempre stato nella norma. 💪', 'None: recovery has always been normal. 💪') : T('Il coach confronta ogni giorno con la tua media delle 4 settimane precedenti: servono almeno 5 giorni di dati per iniziare.', 'The coach compares each day with your average of the previous 4 weeks: at least 5 days of data are needed to start.')) + '</p>') +
@@ -1877,8 +1877,8 @@
     document.body.insertAdjacentHTML('beforeend',
       '<dialog id="inizio-dlg" class="corpo-dlg" aria-labelledby="inizio-t"><form method="dialog" class="acc-form" id="inizio-form" novalidate>' +
         '<h3 id="inizio-t">' + T('Quando inizi?', 'When do you start?') + '</h3>' +
-        '<p class="sub">' + T('Scegli il giorno della prima seduta: da lì il coach costruisce il tuo calendario. Ti propongo il primo giorno utile.', 'Pick the day of your first session: the coach builds your calendar from there. I suggest the first suitable day.') + '</p>' +
-        '<label class="acc-f"><span>' + T('Prima seduta', 'First session') + '</span><input name="programma_inizio" type="date" min="' + esc(oggiS) + '" value="' + esc(proposta) + '" required></label>' +
+        '<p class="sub">' + T('Scegli il giorno della prima sessione: da lì il coach costruisce il tuo calendario. Ti propongo il primo giorno utile.', 'Pick the day of your first session: the coach builds your calendar from there. I suggest the first suitable day.') + '</p>' +
+        '<label class="acc-f"><span>' + T('Prima sessione', 'First session') + '</span><input name="programma_inizio" type="date" min="' + esc(oggiS) + '" value="' + esc(proposta) + '" required></label>' +
         '<p id="inizio-err" class="acc-err" hidden></p>' +
         '<div class="corpo-az"><span></span><button type="submit" class="btn-primary">' + T('Inizia il piano', 'Start the plan') + '</button></div>' +
       '</form></dialog>');
@@ -2134,7 +2134,7 @@
     opz += '</optgroup>';
     box.innerHTML = '<p class="gd-nota">' + esc(v.motivo) + '</p>' +
       '<label class="acc-f"><span>' + T('Il piano parte dalla settimana', 'The plan starts from week') + '</span><select id="gd-liv-sel">' + opz + '</select>' +
-        '<small>' + T('Cambiarla ricalcola il piano dalla data della prima seduta.', 'Changing it recalculates the plan from the first-session date.') + '</small></label>' +
+        '<small>' + T('Cambiarla ricalcola il piano dalla data della prima sessione.', 'Changing it recalculates the plan from the first-session date.') + '</small></label>' +
       '<button type="button" class="pill-btn" data-gd-livello' + (ME.demo ? ' disabled' : '') + '>' + T('Parti da questa settimana', 'Start from this week') + '</button>';
   }
   document.addEventListener('toggle', (e) => { if (e.target && e.target.id === 'gd-livello' && e.target.open) riempiLivelloGuida(); }, true);
@@ -2253,7 +2253,7 @@
     if (!u.completo) {
       html += '<section class="card acc-welcome"><h3>' + T('Benvenuto! Due passi per iniziare', 'Welcome! Two steps to get started') + '</h3><ol>' +
         '<li>' + T('<b>Collega una fonte dei dati</b> qui sotto: ' + (sv.disponibile ? 'Strava è la più veloce (un tocco), Intervals.icu porta anche FC a riposo, HRV e sonno.' : 'Intervals.icu, con il tuo orologio collegato.'), '<b>Connect a data source</b> below: ' + (sv.disponibile ? 'Strava is the quickest (one tap), Intervals.icu also brings resting HR, HRV and sleep.' : 'Intervals.icu, with your watch connected.')) + '</li>' +
-        '<li>' + T('<b>Scegli il giorno della prima seduta</b> nella sezione Il tuo piano.', '<b>Pick the day of your first session</b> in the Your plan section.') + '</li></ol></section>';
+        '<li>' + T('<b>Scegli il giorno della prima sessione</b> nella sezione Il tuo piano.', '<b>Pick the day of your first session</b> in the Your plan section.') + '</li></ol></section>';
     }
     const statoF = (on, txt) => '<span class="fonte-st' + (on ? ' on' : '') + '">' + (on ? '✓ ' : '') + txt + '</span>';
     // ---- 1. da dove arrivano i dati: Strava e/o Intervals.icu ----
@@ -2265,32 +2265,32 @@
       (sv.disponibile
         ? '<div class="fonte fonte-strava"><div class="fonte-top"><b>Strava</b>' + statoF(sv.collegato, sv.collegato ? T('collegato', 'connected') + (sv.nome ? ' · ' + esc(sv.nome) : '') : T('non collegato', 'not connected')) + '</div>' +
             '<p>' + T('Le tue corse con mappa, cardio, passo e dislivello. <b>Un tocco</b> e hai finito: niente chiavi da copiare.', 'Your runs with map, heart rate, pace and elevation. <b>One tap</b> and you’re done: no keys to copy.') + '</p>' +
-            '<p class="fonte-no">' + T('Non porta FC a riposo, HRV e sonno: per adattare la seduta ogni mattina serve Intervals.icu.', 'It doesn’t bring resting HR, HRV and sleep: to adapt the session every morning you need Intervals.icu.') + '</p>' +
+            '<p class="fonte-no">' + T('Non porta FC a riposo, HRV e sonno: per adattare la sessione ogni mattina serve Intervals.icu.', 'It doesn’t bring resting HR, HRV and sleep: to adapt the session every morning you need Intervals.icu.') + '</p>' +
             '<div class="fonte-az">' + (sv.collegato
               ? '<button type="button" class="link-btn" id="strava-scollega">' + T('Scollega Strava', 'Disconnect Strava') + '</button>'
               : '<a class="btn-strava" href="/api/strava/collega">' + T('Connetti con Strava', 'Connect with Strava') + '</a>') +
               '<button type="button" class="link-btn" data-apri-sheet="#guida-strava">' + T('Come funziona', 'How it works') + '</button></div></div>'
         : '') +
       '<div class="fonte fonte-int"><div class="fonte-top"><b>Intervals.icu</b>' + statoF(haInt, haInt ? T('collegato', 'connected') : T('non collegato', 'not connected')) + (sv.disponibile ? '<span class="fonte-cons">' + T('consigliato', 'recommended') + '</span>' : '') + '</div>' +
-        '<p>' + T('Corse <b>e dati di salute</b>: FC a riposo, HRV e sonno. Servono al coach per adattare la seduta ogni mattina e per le tue zone cardiache personali.', 'Runs <b>and health data</b>: resting HR, HRV and sleep. The coach uses them to adapt your session every morning and for your personal heart-rate zones.') + '</p>' +
+        '<p>' + T('Corse <b>e dati di salute</b>: FC a riposo, HRV e sonno. Servono al coach per adattare la sessione ogni mattina e per le tue zone cardiache personali.', 'Runs <b>and health data</b>: resting HR, HRV and sleep. The coach uses them to adapt your session every morning and for your personal heart-rate zones.') + '</p>' +
         (sv.disponibile ? '' : '<p class="fonte-no">' + T('Usi Strava? Collega lo stesso orologio anche a Intervals.icu: le corse arrivano a tutti e due e Strava non cambia. Le corse che Intervals importa da Strava, invece, ad AAC non arrivano (regole di Strava).', 'Using Strava? Connect the same watch to Intervals.icu too: runs reach both and Strava doesn’t change. Runs that Intervals imports from Strava, though, don’t reach AAC (Strava’s rules).') + '</p>') +
         '<div class="fonte-az"><button type="button" class="acc-guida" data-apri-sheet="#collega">' + ICO.share + '<span>' + T('Collega l’orologio a Intervals', 'Connect your watch to Intervals') + '</span></button></div>' +
         (haInt
-          ? '<label class="nt-riga fonte-sedute"><span><b>' + T('Sedute del piano su Intervals', 'Plan sessions on Intervals') + '</b><small>' +
-              T('I prossimi 7 giorni nel tuo calendario Intervals.icu, con i tuoi limiti di FC. Se il coach cambia una seduta, si aggiorna da sola.', 'The next 7 days in your Intervals.icu calendar, with your heart-rate limits. If the coach changes a session, it updates by itself.') +
+          ? '<label class="nt-riga fonte-sedute"><span><b>' + T('Sessioni del piano su Intervals', 'Plan sessions on Intervals') + '</b><small>' +
+              T('I prossimi 7 giorni nel tuo calendario Intervals.icu, con i tuoi limiti di FC. Se il coach cambia una sessione, si aggiorna da sola.', 'The next 7 days in your Intervals.icu calendar, with your heart-rate limits. If the coach changes a session, it updates by itself.') +
               '</small></span><input type="checkbox" id="acc-sedute" class="nt-sw"' + (p.invia_sedute ? ' checked' : '') + (u.demo || u.impersonato_da ? ' disabled' : '') + '></label>' +
             '<details class="more fonte-sedute-come"><summary>' + T('Come arrivano all’orologio', 'How they reach your watch') + '</summary><ul>' +
-              '<li>' + T('<b>Garmin</b>: nel collegamento Garmin di Intervals.icu attiva l’invio degli allenamenti pianificati. Le sedute arrivano nel calendario di Garmin Connect e da lì all’orologio.', '<b>Garmin</b>: in Intervals.icu’s Garmin connection turn on uploading planned workouts. Sessions reach your Garmin Connect calendar and then your watch.') + '</li>' +
-              '<li>' + T('<b>Apple Watch</b>: serve un’app sull’iPhone che legga il calendario di Intervals.icu e passi le sedute all’app Allenamento (per esempio Intervals.icu Companion). A volte bisogna aprirla perché la seduta aggiornata arrivi.', '<b>Apple Watch</b>: you need an iPhone app that reads your Intervals.icu calendar and sends sessions to the Workout app (for example Intervals.icu Companion). Sometimes you need to open it for the updated session to arrive.') + '</li>' +
+              '<li>' + T('<b>Garmin</b>: nel collegamento Garmin di Intervals.icu attiva l’invio degli allenamenti pianificati. Le sessioni arrivano nel calendario di Garmin Connect e da lì all’orologio.', '<b>Garmin</b>: in Intervals.icu’s Garmin connection turn on uploading planned workouts. Sessions reach your Garmin Connect calendar and then your watch.') + '</li>' +
+              '<li>' + T('<b>Apple Watch</b>: serve un’app sull’iPhone che legga il calendario di Intervals.icu e passi le sessioni all’app Allenamento (per esempio Intervals.icu Companion). A volte bisogna aprirla perché la sessione aggiornata arrivi.', '<b>Apple Watch</b>: you need an iPhone app that reads your Intervals.icu calendar and sends sessions to the Workout app (for example Intervals.icu Companion). Sometimes you need to open it for the updated session to arrive.') + '</li>' +
               '<li>' + T('<b>Altri orologi</b>: dipende da cosa Intervals.icu sincronizza con la loro app.', '<b>Other watches</b>: it depends on what Intervals.icu syncs with their app.') + '</li>' +
-              '<li>' + T('AAC tocca solo le sue sedute (nome che finisce con «· AAC»): quelle che aggiungi tu restano. Spegnendo l’interruttore, le sedute di AAC da oggi in poi spariscono da Intervals.', 'AAC only touches its own sessions (name ending in “· AAC”): the ones you add stay. Turning it off removes AAC’s sessions from today onwards from Intervals.') + '</li>' +
+              '<li>' + T('AAC tocca solo le sue sessioni (nome che finisce con «· AAC»): quelle che aggiungi tu restano. Spegnendo l’interruttore, le sessioni di AAC da oggi in poi spariscono da Intervals.', 'AAC only touches its own sessions (name ending in “· AAC”): the ones you add stay. Turning it off removes AAC’s sessions from today onwards from Intervals.') + '</li>' +
             '</ul></details>'
           : '') +
         '<details class="more fonte-chiave"' + (haInt ? '' : ' open') + '><summary>' + (haInt ? T('Athlete ID e API key', 'Athlete ID and API key') : T('Inserisci Athlete ID e API key', 'Enter Athlete ID and API key')) + '</summary>' +
           '<form id="acc-int-form" class="acc-form" autocomplete="off">' +
             '<p class="fine">' + T('Su intervals.icu apri <b>Settings → Developer Settings</b>: copia l’Athlete ID e genera una API key.', 'On intervals.icu open <b>Settings → Developer Settings</b>: copy the Athlete ID and generate an API key.') + '</p>' +
             campo('acc-ath', 'Athlete ID', '<input id="acc-ath" name="athlete_id" inputmode="text" placeholder="i123456" value="' + esc(p.athlete_id) + '">') +
-            campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata per leggere i tuoi dati (e per scrivere le sedute del piano, solo se lo attivi qui sotto).', 'Stored encrypted, used to read your data (and to write your plan sessions, only if you turn it on below).')) +
+            campo('acc-key', 'API key', '<input id="acc-key" name="intervals_key" type="password" placeholder="' + (p.ha_chiave ? T('già impostata · lascia vuoto per non cambiarla', 'already set · leave empty to keep it') : T('incolla la chiave', 'paste the key')) + '">', T('Salvata cifrata, usata per leggere i tuoi dati (e per scrivere le sessioni del piano, solo se lo attivi qui sotto).', 'Stored encrypted, used to read your data (and to write your plan sessions, only if you turn it on below).')) +
             '<p class="acc-err" hidden></p><button type="submit" class="btn-primary">' + T('Salva Intervals.icu', 'Save Intervals.icu') + '</button>' +
           '</form></details></div>' +
     '</section>';
@@ -2300,7 +2300,7 @@
       '<button type="button" class="gc-cta" data-vai-piano><span>' + T('Rivedi il tuo piano', 'Review your plan') + '</span>' + FRECCIA + '</button>' +
       (nonIniziato
         ? '<form id="acc-piano-form" class="acc-form" autocomplete="off"><div class="acc-row acc-row2">' +
-            campo('acc-ini', T('Prima seduta', 'First session'), '<input id="acc-ini" name="programma_inizio" type="date" value="' + esc(p.programma_inizio || '') + '">') +
+            campo('acc-ini', T('Prima sessione', 'First session'), '<input id="acc-ini" name="programma_inizio" type="date" value="' + esc(p.programma_inizio || '') + '">') +
             campo('acc-ora', T('Orario', 'Time'), '<input id="acc-ora" name="programma_ora" type="time" value="' + esc(p.programma_ora || '06:30') + '">') +
           '</div><p class="acc-err" hidden></p><button type="submit" class="btn-primary">' + T('Salva', 'Save') + '</button></form>'
         : '') +
@@ -2432,7 +2432,7 @@
     const barre = d.ore.map((m, h) => '<i style="height:' + Math.max(m ? 8 : 2, Math.round(m / maxOra * 100)) + '%"' + (m ? ' class="on"' : '') + ' title="' + h + ':00 · ' + m + '′"></i>').join('');
     const al = d.allenamento;
     const allen = !al ? '' : al.piano && al.previste
-      ? '<div class="uso-al"><b>' + al.fatte + '<small>/' + al.previste + '</small></b><span>' + T('sedute fatte del piano', 'plan sessions done') + ' · ' + Math.round(al.fatte / al.previste * 100) + '%</span></div>'
+      ? '<div class="uso-al"><b>' + al.fatte + '<small>/' + al.previste + '</small></b><span>' + T('sessioni fatte del piano', 'plan sessions done') + ' · ' + Math.round(al.fatte / al.previste * 100) + '%</span></div>'
       : '<div class="uso-al"><b>' + al.corse + '</b><span>' + T('corse', 'runs') + '</span></div>';
     const html =
       '<section class="acc-head">' + avatar(u, 'av-lg') + '<div><h1>' + esc(u.nome || u.email) + '</h1><p>' + esc(u.email) + '</p></div></section>' +
@@ -2460,7 +2460,7 @@
     return '<h4>' + T('Il tuo piano diventa', 'Your plan becomes') + '</h4>' +
       '<div class="ap-kv">' +
         '<div><b>' + a.settimana_piano + '<small>/' + a.settimane_totali + '</small></b><span>' + T('settimana', 'week') + ' · ' + esc(a.fase) + '</span></div>' +
-        '<div><b>' + (fr.attuale || 3) + (fr.massima > (fr.attuale || 3) && fr.modo !== 'fissi' ? '<small>→' + fr.massima + '</small>' : '') + '</b><span>' + T('sedute a settimana', 'sessions a week') + '</span></div>' +
+        '<div><b>' + (fr.attuale || 3) + (fr.massima > (fr.attuale || 3) && fr.modo !== 'fissi' ? '<small>→' + fr.massima + '</small>' : '') + '</b><span>' + T('sessioni a settimana', 'sessions a week') + '</span></div>' +
         (() => { const dg = a.data_stimata || a.data_gara; const altroAnno = dg.slice(0, 4) !== String(new Date().getFullYear()); return '<div><b>' + esc(fmtData(dg)) + (altroAnno ? '<small>' + dg.slice(0, 4) + '</small>' : '') + '</b><span>' + T('gara se tutto fila', 'race if all goes well') + '</span></div>'; })() +
       '</div>' +
       (a.prossime && a.prossime.length ? '<p class="ap-sett">' + T('Settimana ' + sett + ' del piano', 'Plan week ' + sett) + '</p><ul class="ap-sed">' + a.prossime.map((x) =>
@@ -2473,14 +2473,14 @@
   let guida = null;
   const DESC_OB = () => ({
     '5k': T('Il primo traguardo: ideale se parti da zero o torni a correre.', 'The first milestone: ideal if you start from zero or are getting back into running.'),
-    '10k': T('Il passo dopo i 5 km: più resistenza, una seduta di ritmo a settimana.', 'The step after 5K: more endurance, one tempo session a week.'),
+    '10k': T('Il passo dopo i 5 km: più resistenza, una sessione di ritmo a settimana.', 'The step after 5K: more endurance, one tempo session a week.'),
     mezza: T('21 km: serve costanza, il lungo cresce piano ogni settimana.', '21 km: it takes consistency, the long run grows slowly every week.'),
     maratona: T('42 km: consigliata se corri già da almeno 6 mesi con regolarità.', '42 km: recommended if you have been running regularly for at least 6 months.'),
   });
   const DESC_INT = () => ({
     tranquilla: T('Volumi un po’ più bassi. Per chi inizia, ha poco tempo o rientra da uno stop.', 'Slightly lower volume. For beginners, busy weeks or a comeback.'),
     equilibrata: T('Il piano così com’è. La scelta giusta per la maggior parte delle persone.', 'The plan as designed. The right choice for most people.'),
-    ambiziosa: T('Volumi più alti e prima la 4ª seduta. Per chi corre già e recupera bene.', 'Higher volume and the 4th session sooner. For runners who already train and recover well.'),
+    ambiziosa: T('Volumi più alti e prima la 4ª sessione. Per chi corre già e recupera bene.', 'Higher volume and the 4th session sooner. For runners who already train and recover well.'),
   });
   function riepilogoGuida(pr) {
     const ob = OBIETTIVI_UI.find((o) => o[0] === (pr.obiettivo || 'mezza')) || OBIETTIVI_UI[2];
@@ -2557,8 +2557,8 @@
       corpo = bolla(T('<b>Ecco cosa ti propongo.</b> Se ti convince confermalo; altrimenti torna indietro e cambia quello che vuoi.', '<b>Here is what I propose.</b> If you like it, confirm it; otherwise go back and change anything you want.')) +
         '<div id="gd-anteprima" class="acc-anteprima" aria-live="polite">' + (g.anteprima ? htmlAnteprima(g.anteprima) : '<div class="skeleton" style="height:120px"></div>') + '</div>' +
         '<div class="gd-poi"><h4>' + T('Poi ci penso io', 'Then I take care of it') + '</h4><ul>' +
-          '<li>' + T('<b>Ogni giorno</b> guardo FC a riposo, HRV e sonno: se sei stanco la seduta si alleggerisce.', '<b>Every day</b> I check resting HR, HRV and sleep: if you are tired the session gets lighter.') + '</li>' +
-          '<li>' + T('<b>Ogni settimana</b> decido se avanzare, ripetere o tornare indietro, e se aggiungere una seduta.', '<b>Every week</b> I decide whether to move on, repeat or step back, and whether to add a session.') + '</li>' +
+          '<li>' + T('<b>Ogni giorno</b> guardo FC a riposo, HRV e sonno: se sei stanco la sessione si alleggerisce.', '<b>Every day</b> I check resting HR, HRV and sleep: if you are tired the session gets lighter.') + '</li>' +
+          '<li>' + T('<b>Ogni settimana</b> decido se avanzare, ripetere o tornare indietro, e se aggiungere una sessione.', '<b>Every week</b> I decide whether to move on, repeat or step back, and whether to add a session.') + '</li>' +
           '<li>' + T('<b>Ogni 3 settimane</b> ritocco l’intensità in base a come rispondi.', '<b>Every 3 weeks</b> I fine-tune the intensity based on how you respond.') + '</li></ul></div>' +
         (ME.profilo && ME.profilo.ha_fonte ? '<details class="more gd-livello" id="gd-livello"><summary>' + T('Preferisci scegliere tu da quale settimana partire?', 'Prefer to choose which week to start from?') + '</summary><div id="gd-liv-box"><div class="skeleton" style="height:90px"></div></div></details>' : '') +
         '<p id="gd-err" class="acc-err" hidden></p>';
@@ -2671,7 +2671,7 @@
     if (!ME || ME.demo || ME.impersonato_da || !pushSupportato() || (suIOS() && !installata())) return '';
     if (Notification.permission !== 'default' || ntRimandata()) return '';
     return '<section class="avviso inst" id="nt-card"><div class="av-h">' + ICO.campana + '<h3>' + T('Attiva le notifiche', 'Turn on notifications') + '</h3></div>' +
-      '<p>' + T('Ogni mattina la seduta del giorno e un avviso ogni volta che il coach cambia qualcosa, con il motivo. Puoi scegliere cosa ricevere nel profilo.', 'Your session every morning and an alert every time the coach changes something, with the reason. You can choose what to receive in your profile.') + '</p>' +
+      '<p>' + T('Ogni mattina la sessione del giorno e un avviso ogni volta che il coach cambia qualcosa, con il motivo. Puoi scegliere cosa ricevere nel profilo.', 'Your session every morning and an alert every time the coach changes something, with the reason. You can choose what to receive in your profile.') + '</p>' +
       '<button type="button" class="btn-primary inst-btn" id="nt-attiva">' + T('Attiva', 'Turn on') + '</button>' +
       '<button type="button" class="link-btn" id="nt-dopo">' + T('Più tardi', 'Later') + '</button></section>';
   }
@@ -2699,7 +2699,7 @@
     if (!ME || ME.demo || ME.impersonato_da) { box.remove(); return; }
     const titolo = '<h3>🔔 ' + T('Notifiche', 'Notifications') + '</h3>';
     if (suIOS() && !installata()) {
-      box.innerHTML = titolo + '<p class="sub">' + T('Su iPhone le notifiche arrivano quando AAC è sulla schermata Home: si apre come un’app e ti manda la seduta del mattino.', 'On iPhone notifications arrive when AAC is on your Home Screen: it opens like an app and sends you your morning session.') + '</p>' +
+      box.innerHTML = titolo + '<p class="sub">' + T('Su iPhone le notifiche arrivano quando AAC è sulla schermata Home: si apre come un’app e ti manda la sessione del mattino.', 'On iPhone notifications arrive when AAC is on your Home Screen: it opens like an app and sends you your morning session.') + '</p>' +
         '<ol class="nt-passi"><li>' + T('In Safari tocca <b>Condividi</b> ', 'In Safari tap <b>Share</b> ') + '<span class="inst-ico">' + ICO.share + '</span></li>' +
           '<li>' + T('Scegli <b>Aggiungi alla schermata Home</b> ', 'Choose <b>Add to Home Screen</b> ') + '<span class="inst-ico">＋</span></li>' +
           '<li>' + T('Apri AAC dall’icona, accedi e torna qui per attivare le notifiche', 'Open AAC from the icon, sign in and come back here to turn on notifications') + '</li></ol>';
@@ -2713,7 +2713,7 @@
     const sub = await iscrizioneAttuale();
     const negato = Notification.permission === 'denied';
     if (!sub) {
-      box.innerHTML = titolo + '<p class="sub">' + T('Ogni mattina la seduta del giorno, un avviso ogni volta che il coach cambia qualcosa e la domenica sera il riepilogo della settimana.', 'Every morning your session for the day, an alert every time the coach changes something and on Sunday evening your weekly recap.') + '</p>' +
+      box.innerHTML = titolo + '<p class="sub">' + T('Ogni mattina la sessione del giorno, un avviso ogni volta che il coach cambia qualcosa e la domenica sera il riepilogo della settimana.', 'Every morning your session for the day, an alert every time the coach changes something and on Sunday evening your weekly recap.') + '</p>' +
         (negato ? '<p class="nt-nota">' + T('Le notifiche sono bloccate: riattivale nelle impostazioni del telefono o del browser per questo sito.', 'Notifications are blocked: turn them back on in your phone or browser settings for this site.') + '</p>'
           : '<button type="button" class="btn-primary nt-attiva" id="nt-attiva">' + T('Attiva le notifiche', 'Turn on notifications') + '</button>') + installa;
       return;
@@ -2721,12 +2721,12 @@
     const ore = []; for (let h = 5; h <= 11; h++) for (const m of ['00', '30']) ore.push(String(h).padStart(2, '0') + ':' + m);
     if (!ore.includes(st.ora)) ore.push(st.ora);
     box.innerHTML = titolo +
-      '<label class="nt-riga"><span><b>' + T('Seduta del mattino', 'Morning session') + '</b><small>' + T('solo nei giorni con una seduta', 'only on days with a session') + '</small></span>' +
+      '<label class="nt-riga"><span><b>' + T('Sessione del mattino', 'Morning session') + '</b><small>' + T('solo nei giorni con una sessione', 'only on days with a session') + '</small></span>' +
         '<select id="nt-ora" aria-label="' + T('Ora della notifica', 'Notification time') + '">' + ore.sort().map((o) => '<option' + (o === st.ora ? ' selected' : '') + '>' + o + '</option>').join('') + '</select>' +
         '<input type="checkbox" id="nt-mattina" class="nt-sw"' + (st.mattina ? ' checked' : '') + '></label>' +
       '<label class="nt-riga"><span><b>' + T('Avvisi del coach', 'Coach alerts') + '</b><small>' + T('ogni volta che il coach cambia qualcosa, con il motivo', 'every time the coach changes something, with the reason') + '</small></span>' +
         '<input type="checkbox" id="nt-avvisi" class="nt-sw"' + (st.avvisi !== false ? ' checked' : '') + '></label>' +
-      '<label class="nt-riga"><span><b>' + T('Riepilogo della domenica', 'Sunday recap') + '</b><small>' + T('alle 19:00: com’è andata e la prossima seduta', 'at 7 pm: how it went and your next session') + '</small></span>' +
+      '<label class="nt-riga"><span><b>' + T('Riepilogo della domenica', 'Sunday recap') + '</b><small>' + T('alle 19:00: com’è andata e la prossima sessione', 'at 7 pm: how it went and your next session') + '</small></span>' +
         '<input type="checkbox" id="nt-domenica" class="nt-sw"' + (st.domenica ? ' checked' : '') + '></label>' +
       '<div class="nt-az"><button type="button" class="btn-mini" id="nt-prova">' + T('Invia una prova', 'Send a test') + '</button>' +
         '<button type="button" class="link-btn" id="nt-spegni">' + T('Disattiva su questo dispositivo', 'Turn off on this device') + '</button></div>';
@@ -2784,9 +2784,9 @@
     if (r.ok) {
       ME.profilo.invia_sedute = attivo;
       const n = r.out.inviate || 0;
-      toast(!attivo ? T('Sedute tolte da Intervals.icu', 'Sessions removed from Intervals.icu')
-        : n ? T(n === 1 ? '1 seduta inviata a Intervals.icu' : n + ' sedute inviate a Intervals.icu', n === 1 ? '1 session sent to Intervals.icu' : n + ' sessions sent to Intervals.icu')
-          : T('Nessuna seduta nei prossimi 7 giorni: le invio appena il piano ne ha', 'No sessions in the next 7 days: I’ll send them as soon as the plan has some'), 'ok');
+      toast(!attivo ? T('Sessioni tolte da Intervals.icu', 'Sessions removed from Intervals.icu')
+        : n ? T(n === 1 ? '1 sessione inviata a Intervals.icu' : n + ' sessioni inviate a Intervals.icu', n === 1 ? '1 session sent to Intervals.icu' : n + ' sessions sent to Intervals.icu')
+          : T('Nessuna sessione nei prossimi 7 giorni: le invio appena il piano ne ha', 'No sessions in the next 7 days: I’ll send them as soon as the plan has some'), 'ok');
     } else if (r.out && typeof r.out.attivo === 'boolean') {
       ME.profilo.invia_sedute = r.out.attivo; // scelta salvata, Intervals non ha risposto: si riprova al prossimo sync
       toast(r.out.errore || T('Scelta salvata', 'Choice saved'), 'err');
@@ -3936,13 +3936,13 @@
   const METRICHE = {
     fc_riposo: { cat: 'cuore', nome: () => T('FC a riposo', 'Resting HR'), u: 'bpm', tipo: 'line', fmt: (v) => fmt0(v), meglio: 'basso', base: 'base_fc_riposo',
       cosa: () => T('I battiti al minuto a riposo, misurati dall’orologio durante la giornata e il sonno. Con l’allenamento aerobico tende a scendere di qualche battito nell’arco di mesi.', 'Beats per minute at rest, measured by your watch through the day and during sleep. With aerobic training it tends to drop a few beats over months.'),
-      coach: () => T('Se oggi è <b>almeno 5 bpm sopra</b> la tua media delle 4 settimane precedenti, il coach riduce la seduta del giorno a circa il 60%. Se succede 3 o più giorni in una settimana, la settimana si ripete.', 'If today it is <b>at least 5 bpm above</b> your average of the previous 4 weeks, the coach cuts the day’s session to about 60%. If it happens on 3 or more days in a week, the week is repeated.') },
+      coach: () => T('Se oggi è <b>almeno 5 bpm sopra</b> la tua media delle 4 settimane precedenti, il coach riduce la sessione del giorno a circa il 60%. Se succede 3 o più giorni in una settimana, la settimana si ripete.', 'If today it is <b>at least 5 bpm above</b> your average of the previous 4 weeks, the coach cuts the day’s session to about 60%. If it happens on 3 or more days in a week, the week is repeated.') },
     hrv: { cat: 'cuore', nome: () => 'HRV', u: 'ms', tipo: 'line', fmt: (v) => fmt0(v), meglio: 'alto', base: 'base_hrv',
       cosa: () => T('La variabilità del battito (SDNN con Apple Watch, rMSSD con Garmin e altri: scale diverse, per questo conta solo il confronto con la tua media). Valori più alti del tuo solito indicano un sistema nervoso riposato; varia molto da persona a persona, quindi conta il confronto con te stesso.', 'Heart-rate variability (SDNN on Apple Watch, rMSSD on Garmin and others: different scales, which is why only the comparison with your own average matters). Values above your usual mean a rested nervous system; it varies a lot between people, so what matters is comparing with yourself.'),
-      coach: () => T('Se oggi è <b>almeno il 15% sotto</b> la tua media delle 4 settimane precedenti, il coach riduce la seduta del giorno. 3 o più giorni così in una settimana → la settimana si ripete.', 'If today it is <b>at least 15% below</b> your average of the previous 4 weeks, the coach lightens the day’s session. 3 or more such days in a week → the week is repeated.') },
+      coach: () => T('Se oggi è <b>almeno il 15% sotto</b> la tua media delle 4 settimane precedenti, il coach riduce la sessione del giorno. 3 o più giorni così in una settimana → la settimana si ripete.', 'If today it is <b>at least 15% below</b> your average of the previous 4 weeks, the coach lightens the day’s session. 3 or more such days in a week → the week is repeated.') },
     sonno_sec: { cat: 'sonno', nome: () => T('Sonno', 'Sleep'), u: '', tipo: 'bar', fmt: (v) => fmtOre(v), meglio: 'alto', conv: (v) => v / 3600, tick: (v) => v + 'h',
       cosa: () => T('Le ore dormite registrate dall’orologio (serve indossarlo di notte con il monitoraggio del sonno attivo).', 'Hours slept as recorded by your watch (wear it at night with sleep tracking on).'),
-      coach: () => T('Se dormi <b>meno di 5h30</b>, la seduta del giorno viene alleggerita.', 'If you sleep <b>less than 5h30</b>, the day’s session is lightened.') },
+      coach: () => T('Se dormi <b>meno di 5h30</b>, la sessione del giorno viene alleggerita.', 'If you sleep <b>less than 5h30</b>, the day’s session is lightened.') },
     passi: { cat: 'attivita', nome: () => T('Passi', 'Steps'), u: '', tipo: 'bar', fmt: (v) => fmt0(v), meglio: 'alto',
       cosa: () => T('I passi della giornata. Utile per capire quanto ti muovi al di fuori degli allenamenti.', 'Daily steps. Useful to see how much you move outside workouts.'),
       coach: () => T('Solo informativo: il coach non lo usa per adattare il piano.', 'Informational only: the coach does not use it to adapt the plan.') },
@@ -4012,7 +4012,7 @@
     sonno_sec: [
       ['Come si misura', 'Dal movimento e dai battiti mentre dormi. La durata è affidabile; le fasi del sonno sono solo una stima.', 'How it’s measured', 'From movement and heart rate while you sleep. Duration is reliable; sleep stages are only an estimate.'],
       ['Valori di riferimento', 'Gli adulti hanno bisogno di 7–9 ore; chi si allena ne trae beneficio anche dalla parte alta.', 'Reference values', 'Adults need 7–9 hours; people who train benefit from the upper end too.'],
-      ['Perché conta tanto', 'Il corpo si adatta all’allenamento mentre dormi: lì ripara i muscoli e consolida la forma. Poco sonno aumenta il rischio di infortuni e rende le sedute più faticose.', 'Why it matters so much', 'Your body adapts to training while you sleep: that’s where muscles repair and fitness consolidates. Short sleep raises injury risk and makes sessions feel harder.'],
+      ['Perché conta tanto', 'Il corpo si adatta all’allenamento mentre dormi: lì ripara i muscoli e consolida la forma. Poco sonno aumenta il rischio di infortuni e rende le sessioni più faticose.', 'Why it matters so much', 'Your body adapts to training while you sleep: that’s where muscles repair and fitness consolidates. Short sleep raises injury risk and makes sessions feel harder.'],
       ['Consiglio', 'Orari regolari, camera fresca e buia, schermi spenti un po’ prima. Una notte corta capita: il coach alleggerisce quella giornata.', 'Tip', 'Regular hours, a cool dark room, screens off a little earlier. A short night happens: the coach eases that day.'],
     ],
     sonno_score: [
@@ -4030,7 +4030,7 @@
     ],
     calorie: [
       ['Come si calcola', 'L’orologio stima l’energia spesa da battiti, peso, età e movimento. È una stima, con un margine anche del 20%.', 'How it’s calculated', 'Your watch estimates the energy spent from heart rate, weight, age and movement. It’s an estimate, with a margin of up to 20%.'],
-      ['Consiglio', 'Nei giorni di lungo e di qualità mangia abbastanza carboidrati: correre a stomaco vuoto rende le sedute più dure e il recupero più lento.', 'Tip', 'On long-run and quality days eat enough carbs: running on empty makes sessions harder and recovery slower.'],
+      ['Consiglio', 'Nei giorni di lungo e di qualità mangia abbastanza carboidrati: correre a stomaco vuoto rende le sessioni più dure e il recupero più lento.', 'Tip', 'On long-run and quality days eat enough carbs: running on empty makes sessions harder and recovery slower.'],
     ],
     spo2: [
       ['Come si misura', 'Con la luce rossa e infrarossa del sensore, di solito di notte. Al polso è meno precisa di un pulsossimetro da dito.', 'How it’s measured', 'With the sensor’s red and infrared light, usually at night. At the wrist it’s less precise than a finger pulse oximeter.'],

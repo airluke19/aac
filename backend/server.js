@@ -371,12 +371,12 @@ function vociDiario(cd) {
     if (t) add(`${w.a}T21:00:00`, 'settimana', `settimana:${w.da}`, L(`Settimana ${w.numero}: ${t}`, `Week ${w.numero}: ${t}`), w.motivi.join(', '));
   }
   const s0 = p.prossime && p.prossime[0];
-  if (s0 && s0.adattata) add(ora, 'alleggerita', `alleggerita:${s0.data}`, L('Seduta alleggerita', 'Session lightened'),
+  if (s0 && s0.adattata) add(ora, 'alleggerita', `alleggerita:${s0.data}`, L('Sessione alleggerita', 'Session lightened'),
     `${gm(s0.data)}. ${spiegaAlleggerita(s0)}`);
   const im = p.intensita && p.intensita.ultima_modifica;
   if (im) add(`${im.data}T21:00:00`, 'intensita', `intensita:${im.data}`, L('Intensità ritoccata', 'Intensity adjusted'), im.motivo);
   const fm = p.frequenza && p.frequenza.ultima_modifica;
-  if (fm) add(`${fm.data}T21:00:00`, 'frequenza', `frequenza:${fm.data}`, L('Sedute a settimana', 'Sessions per week'), fm.motivo);
+  if (fm) add(`${fm.data}T21:00:00`, 'frequenza', `frequenza:${fm.data}`, L('Sessioni a settimana', 'Sessions per week'), fm.motivo);
   const c = p.carico;
   if (c && c.livello !== 'ok') add(ora, 'carico', `carico:${cd.oggi}:${c.livello}`, c.livello === 'alto' ? L('Carico troppo alto', 'Load too high') : L('Carico in crescita rapida', 'Load rising fast'), c.segnali.join('; '));
   // zone: quando cambiano (prima volta: confronto con il vecchio calcolo in % della FC max)
@@ -488,7 +488,7 @@ function parereCorsa(id, oggiStr = oggi(), gia = null) {
   // 0. a cosa serviva la seduta (il perche' fisiologico)
   const scopo = {
     facile: L('Le corse facili sono l’80% dell’allenamento dei migliori runner (Seiler): costruiscono capillari e mitocondri, il motore della resistenza.', 'Easy runs make up 80% of top runners’ training (Seiler): they build capillaries and mitochondria, the engine of endurance.'),
-    lungo: L('Il lungo allena il cuore a pompare più sangue a ogni battito e i muscoli a usare i grassi: è la seduta che ti porta al traguardo.', 'The long run trains your heart to pump more blood per beat and your muscles to burn fat: it’s the session that gets you to the finish line.'),
+    lungo: L('Il lungo allena il cuore a pompare più sangue a ogni battito e i muscoli a usare i grassi: è la sessione che ti porta al traguardo.', 'The long run trains your heart to pump more blood per beat and your muscles to burn fat: it’s the session that gets you to the finish line.'),
     'corsa-cammino': L('Alternare corsa e cammino lascia a tendini e articolazioni il tempo di adattarsi: è il modo più sicuro per costruire la corsa continua.', 'Alternating running and walking gives tendons and joints time to adapt: it’s the safest way to build continuous running.'),
     qualita: L('Il lavoro intenso alza la soglia e il VO₂max: ti rende più veloce a parità di fatica.', 'Hard work raises your threshold and VO₂max: it makes you faster for the same effort.'),
     recupero: L('La corsa di recupero fa circolare il sangue senza aggiungere fatica: il corpo ripara e si rinforza.', 'A recovery run gets blood flowing without adding fatigue: your body repairs and gets stronger.'),
@@ -523,7 +523,7 @@ function parereCorsa(id, oggiStr = oggi(), gia = null) {
         consigli.push(L('In salita e nell’ultimo terzo accorcia il passo e rallenta: se riesci a parlare a frasi intere sei nella zona giusta.', 'On climbs and in the last third shorten your stride and slow down: if you can talk in full sentences you’re in the right zone.'));
       } else {
         tono = 'warn';
-        punti.push({ tono: 'warn', testo: L(`Troppo forte per una seduta facile: ${minuti(sopra)}′ sopra ${lim} bpm (${pct}%). Così si accumula fatica senza costruire la base aerobica.`, `Too hard for an easy session: ${minuti(sopra)}′ above ${lim} bpm (${pct}%). That piles up fatigue without building your aerobic base.`) });
+        punti.push({ tono: 'warn', testo: L(`Troppo forte per una sessione facile: ${minuti(sopra)}′ sopra ${lim} bpm (${pct}%). Così si accumula fatica senza costruire la base aerobica.`, `Too hard for an easy session: ${minuti(sopra)}′ above ${lim} bpm (${pct}%). That piles up fatigue without building your aerobic base.`) });
         consigli.push(L(`La prossima volta guarda l’orologio e resta sotto ${lim} bpm, anche camminando qualche secondo: sembra lento, ma è così che il cuore diventa più efficiente.`, `Next time watch your heart rate and stay below ${lim} bpm, even walking for a few seconds: it feels slow, but that’s how your heart becomes more efficient.`));
       }
     } else if (tipo === 'qualita') {
@@ -575,9 +575,9 @@ function parereCorsa(id, oggiStr = oggi(), gia = null) {
   // solo per le corse della settimana in corso: su una corsa vecchia "settimana e prossima" non hanno senso
   if (p && p.attivo && p.settimana && c.data >= p.settimana.da) {
     const st = p.settimana, prox = p.prossime.find((x) => x.data > c.data && !x.fatta);
-    const sett = st && st.sedute ? (st.fatte >= st.sedute ? L(`Settimana completa: ${st.fatte} sedute su ${st.sedute}. Si avanza!`, `Week complete: ${st.fatte} of ${st.sedute} sessions. Moving forward!`)
-      : st.fatte >= Math.max(2, st.sedute - 1) ? L(`${st.fatte} sedute su ${st.sedute}: la settimana è già salva.`, `${st.fatte} of ${st.sedute} sessions: the week is already in the bag.`)
-      : L(`${st.fatte} ${st.fatte === 1 ? 'seduta' : 'sedute'} su ${st.sedute} questa settimana: avanti così.`, `${st.fatte} of ${st.sedute} sessions this week: keep it up.`)) : '';
+    const sett = st && st.sedute ? (st.fatte >= st.sedute ? L(`Settimana completa: ${st.fatte} sessioni su ${st.sedute}. Si avanza!`, `Week complete: ${st.fatte} of ${st.sedute} sessions. Moving forward!`)
+      : st.fatte >= Math.max(2, st.sedute - 1) ? L(`${st.fatte} sessioni su ${st.sedute}: la settimana è già salva.`, `${st.fatte} of ${st.sedute} sessions: the week is already in the bag.`)
+      : L(`${st.fatte} ${st.fatte === 1 ? 'sessione' : 'sessioni'} su ${st.sedute} questa settimana: avanti così.`, `${st.fatte} of ${st.sedute} sessions this week: keep it up.`)) : '';
     chiusa = [sett, prox ? L(`Prossima: ${giornoSettimana(prox.data)}, ${nomeS(prox.titolo)} ${prox.durata_min}′.`, `Next: ${giornoSettimana(prox.data)}, ${nomeS(prox.titolo)} ${prox.durata_min}′.`) : ''].filter(Boolean).join(' ');
   }
 
@@ -618,7 +618,7 @@ function testoNotifica(u, tipo, lingua) {
   const prima = LINGUA;
   LINGUA = lingua === 'en' ? 'en' : 'it';
   try {
-    if (tipo === 'prova') return { title: 'Always Adaptive Coach', body: L('Notifiche attive: ogni mattina la tua seduta, la domenica il riepilogo della settimana.', 'Notifications on: your session every morning, your weekly recap on Sunday.'), tag: 'prova', url: '/' };
+    if (tipo === 'prova') return { title: 'Always Adaptive Coach', body: L('Notifiche attive: ogni mattina la tua sessione, la domenica il riepilogo della settimana.', 'Notifications on: your session every morning, your weekly recap on Sunday.'), tag: 'prova', url: '/' };
     return contesto.run(account.contestoDi(u), () => {
       const oggiStr = oggi();
       const p = costruisciProgramma(oggiStr);
@@ -629,7 +629,7 @@ function testoNotifica(u, tipo, lingua) {
         if (!s || s.data !== oggiStr || s.fatta) return null; // oggi niente seduta: nessuna notifica
         const corpo = `${nome(s)} · ${s.durata_min}′` + (s.fc_target ? L(` · FC ${s.fc_target}`, ` · HR ${s.fc_target}`) : '');
         return s.adattata
-          ? { title: L('Oggi seduta alleggerita', 'Lighter session today'), body: `${corpo}. ${spiegaAlleggerita(s)}`, tag: 'mattina', url: '/' }
+          ? { title: L('Oggi sessione alleggerita', 'Lighter session today'), body: `${corpo}. ${spiegaAlleggerita(s)}`, tag: 'mattina', url: '/' }
           : { title: L('Oggi si corre', 'Run today'), body: corpo, tag: 'mattina', url: '/' };
       }
       if (tipo === 'domenica') {
@@ -638,7 +638,7 @@ function testoNotifica(u, tipo, lingua) {
         const prox = p.prossime.find((x) => x.data > oggiStr);
         const kmTxt = String(round(r7.km, 1)).replace('.', LINGUA === 'en' ? '.' : ',');
         const corse = r7.n === 1 ? L('1 corsa', '1 run') : L(`${r7.n} corse`, `${r7.n} runs`);
-        const piano = L(`piano: ${st.fatte} ${st.fatte === 1 ? 'seduta' : 'sedute'} su ${st.sedute}`, `plan: ${st.fatte} of ${st.sedute} sessions`);
+        const piano = L(`piano: ${st.fatte} ${st.fatte === 1 ? 'sessione' : 'sessioni'} su ${st.sedute}`, `plan: ${st.fatte} of ${st.sedute} sessions`);
         return {
           title: L('La tua settimana', 'Your week'),
           body: L(`${corse} e ${kmTxt} km negli ultimi 7 giorni · ${piano}.`, `${corse} and ${kmTxt} km in the last 7 days · ${piano}.`) +
@@ -963,7 +963,7 @@ function descrizioneIntervals(s, modo) {
     s.adattata ? L(`Alleggerita dal coach: ${s.adattata.motivi.join(', ')}.`, `Lightened by the coach: ${s.adattata.motivi.join(', ')}.`) : null,
     s.nota || null,
   ].filter(Boolean);
-  const coda = L('Dal piano di AAC: se il coach cambia la seduta, si aggiorna da sola.', 'From your AAC plan: if the coach changes the session, it updates by itself.');
+  const coda = L('Dal piano di AAC: se il coach cambia la sessione, si aggiorna da sola.', 'From your AAC plan: if the coach changes the session, it updates by itself.');
   return [...testo, '', ...out, '', coda].join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
@@ -2002,7 +2002,7 @@ const PIANO_MEZZA = [
   { sedute: [cc(2, 12, 2), cc(2, 12, 2), cc(2, 12, 2)], nota: ['Due blocchi lunghi: il cammino serve solo per riprendere fiato.', 'Two long blocks: the walk is only there to catch your breath.'] },
   { sedute: [fa(22), fa(22), fa(22)], nota: ['Traguardo della fase 1: 20–25 minuti di corsa senza fermarti, sempre a ritmo conversazione.', 'Phase 1 milestone: 20–25 minutes of running without stopping, always at conversational pace.'] },
   // ---- Fase 2 · Base aerobica ----
-  { sedute: [fa(25), lu(28), fa(25)], nota: ['Da qui arriva il lungo: è la seduta più importante della settimana, il coach lo mette di preferenza nel weekend.', 'From now on there is a long run: it is the most important session of the week, and the coach prefers to put it at the weekend.'] },
+  { sedute: [fa(25), lu(28), fa(25)], nota: ['Da qui arriva il lungo: è la sessione più importante della settimana, il coach lo mette di preferenza nel weekend.', 'From now on there is a long run: it is the most important session of the week, and the coach prefers to put it at the weekend.'] },
   { sedute: [fa(25), lu(32), fa(28)], nota: ['Il ritmo resta da conversazione anche se i minuti aumentano.', 'The pace stays conversational even as the minutes go up.'] },
   { sedute: [fa(28), lu(36), fa(28, true)], nota: ['Allunghi: 4 accelerazioni progressive da 20" a fine corsa, recuperando camminando. Servono per la tecnica, non per la fatica.', 'Strides: 4 progressive 20" accelerations at the end of the run, walking to recover. They are for technique, not fatigue.'] },
   { sedute: [fa(25), lu(30), fa(25)], scarico: true, nota: ['Settimana di scarico: meno volume per consolidare.', 'Recovery week: less volume to consolidate.'] },
@@ -2088,12 +2088,12 @@ function consigliGiorni(giorni, modo, obiettivo) {
   if (modo === 'fissi') {
     if (k === 1) out.push(L(`Un solo giorno (${nomeG(giorni[0])}): ogni settimana del piano durerà 2 settimane, quindi l’obiettivo slitta. Non è l’ideale, il corpo si adatta meglio con 2–3 uscite, ma ci proviamo. Se riesci, a metà settimana fai 30′ di camminata veloce: non conta per il piano ma aiuta tendini e fiato.`,
       `A single day (${nomeG(giorni[0])}): each plan week will last 2 weeks, so your goal moves later. Not ideal, the body adapts better with 2–3 outings, but let’s try. If you can, add a 30′ brisk walk midweek: it does not count for the plan but helps tendons and breathing.`));
-    if (k === 2 && giorni.some(diFila)) out.push(L('Due giorni di fila: il primo è per la seduta chiave, il secondo è sempre facile (la qualità diventa corsa facile). Poi tanti giorni di riposo: se puoi, distanziali.',
+    if (k === 2 && giorni.some(diFila)) out.push(L('Due giorni di fila: il primo è per la sessione chiave, il secondo è sempre facile (la qualità diventa corsa facile). Poi tanti giorni di riposo: se puoi, distanziali.',
       'Two days in a row: the first is for the key session, the second is always easy (quality becomes an easy run). Then many rest days: spread them out if you can.'));
     else if (k === 2) out.push(L('Due giorni: il piano non si allunga, ma salta una corsa facile a settimana. Tieni il ritmo davvero da conversazione.', 'Two days: the plan does not get longer, but skips one easy run a week. Keep the pace truly conversational.'));
     if (k <= 2 && (obiettivo === 'mezza' || obiettivo === 'maratona')) out.push(L(`Per ${nomeOb === 'Maratona' ? 'la maratona' : 'la mezza'} nelle fasi finali servono almeno 3 uscite a settimana: con ${k} ${k === 1 ? 'giorno' : 'giorni'} valuta 10 km o 5 km, oppure aggiungi un giorno più avanti.`,
       `For the ${obiettivo === 'maratona' ? 'marathon' : 'half marathon'} the final phases need at least 3 runs a week: with ${k} day${k === 1 ? '' : 's'} consider 10K or 5K, or add a day later on.`));
-    if (k === 3 || k === 4) out.push(L('Con giorni fissi la 4ª e 5ª seduta arrivano solo se ci sono giorni liberi: il coach non ne aggiunge altri.', 'With fixed days the 4th and 5th session only come if there are free days: the coach adds no others.'));
+    if (k === 3 || k === 4) out.push(L('Con giorni fissi la 4ª e 5ª sessione arrivano solo se ci sono giorni liberi: il coach non ne aggiunge altri.', 'With fixed days the 4th and 5th session only come if there are free days: the coach adds no others.'));
   }
   if (fila3) out.push(L('Tre giorni di corsa di fila affaticano gambe e tendini, soprattutto all’inizio: se puoi, lascia un giorno di riposo in mezzo.', 'Three running days in a row tire legs and tendons, especially at first: leave a rest day in between if you can.'));
   return out;
@@ -2683,14 +2683,14 @@ function costruisciProgramma(oggiStr) {
     } else if (fatte === 0) {
       vuoteDiFila++;
       esito = vuoteDiFila >= 2 ? 'indietro' : 'ripeti';
-      motivi.push(vuoteDiFila >= 2 ? L('due settimane senza sedute: si riparte con calma', 'two weeks without sessions: easing back in') : L('nessuna seduta registrata', 'no sessions recorded'));
+      motivi.push(vuoteDiFila >= 2 ? L('due settimane senza sessioni: si riparte con calma', 'two weeks without sessions: easing back in') : L('nessuna sessione registrata', 'no sessions recorded'));
     } else if (fatte === 1 && nSett === 1 && accum === 0) {
       esito = 'ripeti';
       accum = 1;
-      motivi.push(L('1 seduta su 2 di questa settimana del piano: con un giorno a settimana dura 2 settimane', '1 of 2 sessions of this plan week: with one day a week it lasts 2 weeks'));
+      motivi.push(L('1 sessione su 2 di questa settimana del piano: con un giorno a settimana dura 2 settimane', '1 of 2 sessions of this plan week: with one day a week it lasts 2 weeks'));
     } else if (fatte === 1 && nSett > 1) {
       esito = 'ripeti';
-      motivi.push(L(`1 seduta su ${nSett}`, `1 of ${nSett} sessions`));
+      motivi.push(L(`1 sessione su ${nSett}`, `1 of ${nSett} sessions`));
     } else if (fcAlta) {
       esito = 'ripeti';
       motivi.push(L(`FC media nelle corse ${Math.round(fcMedia)} bpm: troppo alta per corse facili`, `average run HR ${Math.round(fcMedia)} bpm: too high for easy runs`));
@@ -2699,8 +2699,8 @@ function costruisciProgramma(oggiStr) {
       motivi.push(L(`${giorniNonRecuperato} giorni con segnali di recupero incompleto`, `${giorniNonRecuperato} days with signs of incomplete recovery`));
     } else {
       esito = 'avanti';
-      if (nSett === 1) motivi.push(L('2 sedute su 2 in due settimane', '2 of 2 sessions over two weeks'));
-      else motivi.push(L(`${fatte} sedute su ${nSett}${fcMedia ? `, FC media ${Math.round(fcMedia)} bpm` : ''}`, `${fatte} of ${nSett} sessions${fcMedia ? `, average HR ${Math.round(fcMedia)} bpm` : ''}`));
+      if (nSett === 1) motivi.push(L('2 sessioni su 2 in due settimane', '2 of 2 sessions over two weeks'));
+      else motivi.push(L(`${fatte} sessioni su ${nSett}${fcMedia ? `, FC media ${Math.round(fcMedia)} bpm` : ''}`, `${fatte} of ${nSett} sessions${fcMedia ? `, average HR ${Math.round(fcMedia)} bpm` : ''}`));
     }
     if (fatte > 0) vuoteDiFila = 0;
     if (esito === 'avanti' || esito === 'indietro') accum = 0;
@@ -2734,16 +2734,16 @@ function costruisciProgramma(oggiStr) {
     let motivoFreq = null;
     if (settDura || esito === 'indietro') {
       buoneDiFila = 0; scarseDiFila = 0;
-      if (livelloFreq > 3) { livelloFreq--; motivoFreq = L(`si torna a ${livelloFreq} sedute: segnali di fatica`, `back to ${livelloFreq} sessions: signs of fatigue`); }
+      if (livelloFreq > 3) { livelloFreq--; motivoFreq = L(`si torna a ${livelloFreq} sessioni: segnali di fatica`, `back to ${livelloFreq} sessions: signs of fatigue`); }
     } else if (nSett > 3 && fatte < nSett - 1) {
       buoneDiFila = 0;
-      if (++scarseDiFila >= 2) { livelloFreq = Math.max(3, nSett - 1); scarseDiFila = 0; motivoFreq = L(`si torna a ${livelloFreq} sedute: da 2 settimane non entrano tutte`, `back to ${livelloFreq} sessions: for 2 weeks they did not all fit`); }
+      if (++scarseDiFila >= 2) { livelloFreq = Math.max(3, nSett - 1); scarseDiFila = 0; motivoFreq = L(`si torna a ${livelloFreq} sessioni: da 2 settimane non entrano tutte`, `back to ${livelloFreq} sessions: for 2 weeks they did not all fit`); }
     } else {
       scarseDiFila = 0;
       buoneDiFila = esito === 'avanti' && fatte >= nSett && caricoOk ? buoneDiFila + 1 : 0;
       if (buoneDiFila >= 3 && livelloFreq < frequenzaObiettivo(step)) {
         livelloFreq++; buoneDiFila = 0;
-        motivoFreq = L(`da ora ${livelloFreq} sedute a settimana: 3 settimane complete senza fatica`, `from now on ${livelloFreq} sessions a week: 3 complete weeks without fatigue`)
+        motivoFreq = L(`da ora ${livelloFreq} sessioni a settimana: 3 settimane complete senza fatica`, `from now on ${livelloFreq} sessions a week: 3 complete weeks without fatigue`)
           + (acwr != null ? L(`, carico in crescita sicura (${it1(acwr)})`, `, load rising safely (${round(acwr, 1)})`) : '');
       }
     }
@@ -2798,15 +2798,15 @@ function costruisciProgramma(oggiStr) {
       const dow = new Date(dayMs(data)).getUTCDay();
       let perche = null;
       if (extra) perche = proiezione
-        ? L(`Seduta in più prevista: il coach la aggiunge se reggi bene il carico (${n} a settimana).`, `Extra session planned: the coach adds it if you handle the load well (${n} a week).`)
-        : L(`Seduta in più (${n} a settimana): la tua forma regge più volume, sempre a ritmo facile.`, `Extra session (${n} a week): your fitness can take more volume, always at an easy pace.`);
-      if (facilitata && desc[0] === 'facile' && sedutaDura(pianoAttivo()[stepIdx].sedute[Math.min(i, 2)] || ['facile'])) perche = L('Doveva essere una seduta di qualità: con i tuoi giorni attaccati diventa corsa facile, per non fare due sedute impegnative di fila.', 'This was meant to be a quality session: with your back-to-back days it becomes an easy run, to avoid two hard sessions in a row.');
+        ? L(`Sessione in più prevista: il coach la aggiunge se reggi bene il carico (${n} a settimana).`, `Extra session planned: the coach adds it if you handle the load well (${n} a week).`)
+        : L(`Sessione in più (${n} a settimana): la tua forma regge più volume, sempre a ritmo facile.`, `Extra session (${n} a week): your fitness can take more volume, always at an easy pace.`);
+      if (facilitata && desc[0] === 'facile' && sedutaDura(pianoAttivo()[stepIdx].sedute[Math.min(i, 2)] || ['facile'])) perche = L('Doveva essere una sessione di qualità: con i tuoi giorni attaccati diventa corsa facile, per non fare due sessioni impegnative di fila.', 'This was meant to be a quality session: with your back-to-back days it becomes an easy run, to avoid two hard sessions in a row.');
       if (n < pianoAttivo()[stepIdx].sedute.length && pos === 0 && !perche) perche = n === 1
-        ? L('Con un giorno a settimana fai una seduta per volta: questa settimana del piano dura 2 settimane.', 'With one day a week you do one session at a time: this plan week lasts 2 weeks.')
-        : L(`Con ${n} giorni a settimana il coach tiene le sedute più importanti e salta una corsa facile.`, `With ${n} days a week the coach keeps the key sessions and skips an easy run.`);
+        ? L('Con un giorno a settimana fai una sessione per volta: questa settimana del piano dura 2 settimane.', 'With one day a week you do one session at a time: this plan week lasts 2 weeks.')
+        : L(`Con ${n} giorni a settimana il coach tiene le sessioni più importanti e salta una corsa facile.`, `With ${n} days a week the coach keeps the key sessions and skips an easy run.`);
       if (desc[0] === 'gara') perche = L('Data indicativa: le gare si corrono quasi sempre nel weekend.', 'Indicative date: races are almost always at the weekend.');
       else if (!fissi && preferiti.size && !preferiti.has(dow) && !(data <= oggiStr && dati.giorniCorsa.has(data)))
-        perche = (perche ? perche + ' ' : '') + L('Fuori dai tuoi giorni preferiti: lì non c’era posto senza due sedute impegnative di fila o senza recuperare quella saltata.', 'Outside your preferred days: there was no room there without two hard sessions back to back or without making up a missed one.');
+        perche = (perche ? perche + ' ' : '') + L('Fuori dai tuoi giorni preferiti: lì non c’era posto senza due sessioni impegnative di fila o senza recuperare quella saltata.', 'Outside your preferred days: there was no room there without two hard sessions back to back or without making up a missed one.');
       descPerData.set(data, desc);
       calendario.push({ ...sed, seduta: pos + 1, sedute_settimana: n, extra, perche_giorno: perche, fatta: fattaIl(sed, data), manuale: dati.manuali.has(data), passata: data < oggiStr });
       prec.corsa.add(data); prec.dow.add(dow);
@@ -2928,11 +2928,11 @@ function costruisciProgramma(oggiStr) {
   const prossimoLungo = calendario.find((c) => c.tipo === 'lungo' && c.data >= oggiStr && !c.fatta && diffDays(c.data, oggiStr) <= 7);
   if (prossimoLungo && carico.limite_lungo_km) consigli.push(L(`Lungo di ${giornoSettimana(prossimoLungo.data)}: resta entro ${it1(carico.limite_lungo_km)} km (+10% sulla corsa più lunga degli ultimi 30 giorni).`, `Long run on ${giornoSettimana(prossimoLungo.data)}: stay within ${round(carico.limite_lungo_km, 1)} km (+10% over your longest run of the last 30 days).`));
   if (prossime[0] && prossime[0].adattata) {
-    consigli.push(L(`Prossima seduta alleggerita: ${prossime[0].adattata.motivi.join(', ')}.`, `Next session lightened: ${prossime[0].adattata.motivi.join(', ')}.`));
+    consigli.push(L(`Prossima sessione alleggerita: ${prossime[0].adattata.motivi.join(', ')}.`, `Next session lightened: ${prossime[0].adattata.motivi.join(', ')}.`));
   } else if (prontezza.valutata) {
-    consigli.push(L('FC a riposo, HRV e sonno nella norma: via libera alla seduta prevista.', 'Resting HR, HRV and sleep look normal: go ahead with the planned session.'));
+    consigli.push(L('FC a riposo, HRV e sonno nella norma: via libera alla sessione prevista.', 'Resting HR, HRV and sleep look normal: go ahead with the planned session.'));
   } else {
-    consigli.push(L('Senza dati di FC a riposo, HRV e sonno adatto il piano solo in base alle sedute fatte: fai arrivare questi dati su Intervals.icu (Apple Watch: app Companion; Garmin e altri: wellness nel collegamento).', 'Without resting HR, HRV and sleep data I can only adapt the plan to the sessions you complete: get this data onto Intervals.icu (Apple Watch: Companion app; Garmin and others: wellness in the connection).'));
+    consigli.push(L('Senza dati di FC a riposo, HRV e sonno adatto il piano solo in base alle sessioni fatte: fai arrivare questi dati su Intervals.icu (Apple Watch: app Companion; Garmin e altri: wellness nel collegamento).', 'Without resting HR, HRV and sleep data I can only adapt the plan to the sessions you complete: get this data onto Intervals.icu (Apple Watch: Companion app; Garmin and others: wellness in the connection).'));
   }
   if (statoObiettivo === 'in_linea') {
     consigli.push(ritardo > 0
@@ -2941,7 +2941,7 @@ function costruisciProgramma(oggiStr) {
   } else if (statoObiettivo === 'ritardo') {
     consigli.push(L(`Al ritmo reale (${Math.round(ritmoAvanzamento * 100)}% delle settimane in avanti) l’obiettivo slitta oltre i ${mesiOk} mesi ma resta entro ${mesiMax}. Meglio arrivarci sani che in fretta.`, `At your real pace (${Math.round(ritmoAvanzamento * 100)}% of weeks moving forward) your goal slips past ${mesiOk} months but stays within ${mesiMax}. Better to get there healthy than fast.`));
   } else {
-    consigli.push(L(`Al ritmo attuale l’obiettivo va oltre i ${mesiMax} mesi: rivediamo insieme frequenza e orari delle sedute.`, `At the current pace your goal goes beyond ${mesiMax} months: let’s review session frequency and timing.`));
+    consigli.push(L(`Al ritmo attuale l’obiettivo va oltre i ${mesiMax} mesi: rivediamo insieme frequenza e orari delle sessioni.`, `At the current pace your goal goes beyond ${mesiMax} months: let’s review session frequency and timing.`));
   }
 
   return {
@@ -3048,7 +3048,7 @@ function generaIcs() {
   ];
   for (const s of p.calendario.filter((x) => !x.passata)) {
     const descr =
-      `${s.fase} · ${s.titolo} · ${L('seduta', 'session')} ${s.seduta}/${s.sedute_settimana || 3}\n\n` +
+      `${s.fase} · ${s.titolo} · ${L('sessione', 'session')} ${s.seduta}/${s.sedute_settimana || 3}\n\n` +
       `${s.struttura.map((f) => `${f.fase} ${f.min}': ${f.testo}`).join('\n')}\n\n` +
       `${L('FC', 'HR')}: ${s.fc_target} bpm.\n${s.nota}\n\n` +
       L('Il piano si adatta ai tuoi dati: se cambia, riscarica il calendario dall’app.', 'The plan adapts to your data: if it changes, download the calendar again from the app.');
@@ -4116,9 +4116,9 @@ function markdownSessione(data, perParere = false) {
   R.push('');
 
   if (seduta) {
-    R.push(L('## Seduta prevista dal piano', '## Planned session'));
+    R.push(L('## Sessione prevista dal piano', '## Planned session'));
     R.push(L(
-      `- ${seduta.fase} · ${seduta.titolo} · seduta ${seduta.seduta}/${seduta.sedute_settimana || 3} · tipo: ${P(NOMI_TIPO_SEDUTA[seduta.tipo]) || seduta.tipo}${seduta.scarico ? ' · settimana di scarico' : ''}`,
+      `- ${seduta.fase} · ${seduta.titolo} · sessione ${seduta.seduta}/${seduta.sedute_settimana || 3} · tipo: ${P(NOMI_TIPO_SEDUTA[seduta.tipo]) || seduta.tipo}${seduta.scarico ? ' · settimana di scarico' : ''}`,
       `- ${seduta.fase} · ${seduta.titolo} · session ${seduta.seduta}/${seduta.sedute_settimana || 3} · type: ${P(NOMI_TIPO_SEDUTA[seduta.tipo]) || seduta.tipo}${seduta.scarico ? ' · recovery week' : ''}`
     ));
     R.push(L(
@@ -4219,7 +4219,7 @@ function markdownSessione(data, perParere = false) {
     R.push('');
     R.push(L('Adattamenti del piano più recenti:', 'Most recent plan adaptations:'));
     p.storia.slice(0, 4).forEach((x) => R.push(L(
-      `- ${x.da} → ${x.a} (piano sett. ${x.settimana_piano}): ${x.fatte}/3 sedute, ${x.motivi.join(', ')} → ${esiti[x.esito]}`,
+      `- ${x.da} → ${x.a} (piano sett. ${x.settimana_piano}): ${x.fatte}/3 sessioni, ${x.motivi.join(', ')} → ${esiti[x.esito]}`,
       `- ${x.da} → ${x.a} (plan wk ${x.settimana_piano}): ${x.fatte}/3 sessions, ${x.motivi.join(', ')} → ${esiti[x.esito]}`
     )));
   }
@@ -4234,7 +4234,7 @@ function markdownSessione(data, perParere = false) {
   if (perParere) {
     // formato "parere del coach": breve, concreto, con i numeri
     R.push(L(
-      'Sei AAC, un allenatore di corsa esperto e pratico. Dammi un parere su questa seduta basandoti solo sui dati qui sopra (se un dato manca, non inventarlo). Il piano si adatta già da solo: i consigli riguardano come eseguire le sedute, non cambiare il programma. La salute viene prima della prestazione; niente diagnosi mediche.',
+      'Sei AAC, un allenatore di corsa esperto e pratico. Dammi un parere su questa sessione basandoti solo sui dati qui sopra (se un dato manca, non inventarlo). Il piano si adatta già da solo: i consigli riguardano come eseguire le sessioni, non cambiare il programma. La salute viene prima della prestazione; niente diagnosi mediche.',
       'You are AAC, an experienced, practical running coach. Give me feedback on this session based only on the data above (if something is missing, do not invent it). The plan already adapts by itself: tips are about how to run the sessions, not about changing the programme. Health comes before performance; no medical diagnoses.'
     ));
     R.push(notaCorpo);
@@ -4253,9 +4253,9 @@ function markdownSessione(data, perParere = false) {
     R.push(`4. Am I on track for my goal (${p ? p.obiettivo.nome : 'race'})? What should I improve first?`);
   } else {
     R.push('Sei un allenatore di corsa esperto con principianti. Analizza questa sessione e rispondi in modo concreto:');
-    R.push('1. Com’è andata rispetto alla seduta prevista (intensità, FC, passo, durata)?');
+    R.push('1. Com’è andata rispetto alla sessione prevista (intensità, FC, passo, durata)?');
     R.push('2. Ci sono segnali di fatica, sovraccarico o rischio infortunio (FC, deriva cardiaca, recupero)?');
-    R.push('3. Cosa devo cambiare nella prossima seduta e nella settimana?');
+    R.push('3. Cosa devo cambiare nella prossima sessione e nella settimana?');
     R.push(`4. Sono in linea con l’obiettivo (${p ? p.obiettivo.nome : 'gara'})? Cosa migliorare per primo?`);
   }
   R.push('');
@@ -4481,7 +4481,7 @@ function creaApp() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data)) return res.status(400).json({ errore: L('Data non valida', 'Invalid date') });
     try {
       const md = markdownSessione(data, req.query.per === 'parere');
-      if (!md) return res.status(404).json({ errore: L('Nessuna seduta o attività in questa data', 'No session or activity on this date') });
+      if (!md) return res.status(404).json({ errore: L('Nessuna sessione o attività in questa data', 'No session or activity on this date') });
       res.set('Content-Type', 'text/markdown; charset=utf-8');
       res.set('Cache-Control', 'no-store');
       res.send(md);
