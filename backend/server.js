@@ -221,6 +221,12 @@ function apriDbUtente(file) {
       creato TEXT NOT NULL
     );
 
+    -- Giorni in cui l'utente ha detto "non posso": il coach rifà la settimana senza quel giorno
+    CREATE TABLE IF NOT EXISTS giorni_non_posso (
+      data   TEXT PRIMARY KEY,
+      creato TEXT NOT NULL
+    );
+
     -- Diario del coach: ogni intervento (decisioni settimanali, sedute alleggerite, zone, carico, notifiche)
     CREATE TABLE IF NOT EXISTS diario (
       id     INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -373,6 +379,13 @@ function vociDiario(cd) {
   const s0 = p.prossime && p.prossime[0];
   if (s0 && s0.adattata) add(ora, 'alleggerita', `alleggerita:${s0.data}`, L('Sessione alleggerita', 'Session lightened'),
     `${gm(s0.data)}. ${spiegaAlleggerita(s0)}`);
+  // giorni "non posso": dove e' finita la sessione (non notificata: l'ha chiesto l'utente)
+  for (const np of p.non_posso || []) {
+    if (!np.titolo || np.data < addDays(cd.oggi, -7)) continue;
+    add(ora, 'spostata', `spostata:${np.data}:${np.spostata_a || '-'}`, L('Sessione spostata', 'Session moved'), np.spostata_a
+      ? L(`${gm(np.data)} non potevi: ${np.titolo} passa a ${gm(np.spostata_a)}.`, `${gm(np.data)} you couldn’t make it: ${np.titolo} moves to ${gm(np.spostata_a)}.`)
+      : L(`${gm(np.data)} non potevi e la settimana non ha altri giorni liberi: ${np.titolo} salta, il coach tiene le sessioni più importanti.`, `${gm(np.data)} you couldn’t make it and the week has no other free day: ${np.titolo} is skipped, the coach keeps the key sessions.`));
+  }
   const im = p.intensita && p.intensita.ultima_modifica;
   if (im) add(`${im.data}T21:00:00`, 'intensita', `intensita:${im.data}`, L('Intensità ritoccata', 'Intensity adjusted'), im.motivo);
   const fm = p.frequenza && p.frequenza.ultima_modifica;
@@ -424,7 +437,7 @@ function notificaVoci(utenteId, nuove) {
   const pref = notifiche.preferenzeDi(utenteId);
   const limite = new Date(Date.now() - 3 * 864e5).toISOString();
   const oggiStr = oggi();
-  const da = nuove.filter((v) => v.quando >= limite).filter((v) => !(v.tipo === 'alleggerita' && pref && pref.mattina && !pref.ultima.includes(`mattina:${oggiStr}`)));
+  const da = nuove.filter((v) => v.quando >= limite && v.tipo !== 'spostata').filter((v) => !(v.tipo === 'alleggerita' && pref && pref.mattina && !pref.ultima.includes(`mattina:${oggiStr}`)));
   for (const v of da.slice(0, 3)) {
     notifiche.avvisa(utenteId, (lingua) => (lingua === 'en'
       ? { title: v.titolo_en || v.titolo, body: v.testo_en || v.testo || '', tag: `diario-${v.tipo}`, url: '/#diario' }
@@ -2099,6 +2112,15 @@ function consigliGiorni(giorni, modo, obiettivo) {
   return out;
 }
 
+// Giorni possibili: i giorni passati in cui hai corso davvero sempre; mai un giorno "non posso";
+// con giorni obbligatori solo quelli
+function giornoAmmesso(c, off) {
+  const d = addDays(c.da, off);
+  if (d <= c.oggi && c.giorniCorsa.has(d)) return true;
+  if (c.nonPosso && c.nonPosso.has(d)) return false;
+  return !c.fissi || c.fissi.has(new Date(dayMs(d)).getUTCDay());
+}
+
 // Sceglie i giorni delle sedute di una settimana. sedute = descrittori nell'ordine del piano.
 // Restituisce [{ off, i }] (off = giorno 0-6 dall'inizio del blocco, i = indice nella lista sedute).
 function scegliGiorni(sedute, c) {
@@ -2107,8 +2129,7 @@ function scegliGiorni(sedute, c) {
   const facili = sedute.map((d, i) => (sedutaDura(d) ? -1 : i)).filter((i) => i >= 0);
   const dataDi = (off) => addDays(c.da, off);
   const dowDi = (off) => new Date(dayMs(dataDi(off))).getUTCDay();
-  // giorni possibili: con giorni obbligatori solo quelli, piu' i giorni passati in cui hai corso davvero
-  const ammesso = (off) => !c.fissi || c.fissi.has(dowDi(off)) || (dataDi(off) <= c.oggi && c.giorniCorsa.has(dataDi(off)));
+  const ammesso = (off) => giornoAmmesso(c, off);
   let migliore = null;
   const valuta = (giorni, mappa) => {
     // mappa[k] = indice della seduta nel giorno giorni[k]
@@ -2407,6 +2428,7 @@ function datiAdattamento(inizio, oggiStr) {
     .prepare("SELECT data FROM altre_attivita WHERE tipo IN ('Walk', 'Hike') AND durata >= 900 AND data >= ? AND data <= ?")
     .all(inizio, oggiStr);
   const manuali = db.prepare('SELECT data FROM sedute_manuali WHERE data >= ?').all(inizio);
+  const nonPosso = db.prepare('SELECT data FROM giorni_non_posso WHERE data >= ?').all(inizio);
   const benessere = new Map(
     db.prepare('SELECT * FROM benessere WHERE data >= ? AND data <= ?').all(addDays(inizio, -35), oggiStr).map((r) => [r.data, r])
   );
@@ -2418,6 +2440,8 @@ function datiAdattamento(inizio, oggiStr) {
     giorniCorsa: new Set([...corse, ...manuali].map((r) => r.data)),
     giorniCamminata: new Set(camminate.map((r) => r.data)),
     manuali: new Set(manuali.map((r) => r.data)),
+    // "non posso": giorni tolti dall'utente (se poi corre lo stesso, conta la corsa)
+    nonPosso: new Set(nonPosso.map((r) => r.data)),
     benessere,
     tsb: new Map(serie.map((p) => [p.data, p.tsb])),
     acwr: new Map(serie.filter((p) => p.ctl >= 5).map((p) => [p.data, p.atl / p.ctl])), // carico acuto / cronico
@@ -2766,17 +2790,34 @@ function costruisciProgramma(oggiStr) {
   const preferiti = new Set(Array.isArray(CONFIG.giorniSedute) ? CONFIG.giorniSedute : []);
   const descPerData = new Map(); // descrittore di ogni seduta (per alleggerire quella di oggi)
   let prec = { dure: new Set(), corsa: new Set(), dow: new Set() };
+  const nonPossoInfo = []; // giorni "non posso" e dove e' finita la sessione
+  let ctxNp = null;
   const fissiSet = fissi ? new Set(fissi) : null;
   const settimanaCal = (w, stepIdx, n, intensita, proiezione, turno = 0) => {
     const da = addDays(inizio, w * 7);
     let descs = pianoAttivo()[stepIdx].sedute.map((d) => conIntensita(d, intensita));
     for (let k = descs.length; k < n; k++) descs.push(descExtra(stepIdx, intensita));
     // meno giorni che sedute: si tengono le piu' importanti (gli indici restano quelli del piano)
-    const tenute = sceltaSedute(descs, n, turno);
+    let tenute = sceltaSedute(descs, n, turno);
     const ctxG = {
       da, oggi: oggiStr, preferiti, fissi: fissiSet, giorniCorsa: dati.giorniCorsa, maxFila2: faseDi(stepIdx + 1).id <= 2,
-      precDure: prec.dure, precCorsa: prec.corsa, precDow: prec.dow,
+      precDure: prec.dure, precCorsa: prec.corsa, precDow: prec.dow, nonPosso: dati.nonPosso,
     };
+    // "non posso": dove sarebbero andate le sessioni senza quei giorni, per spiegare cosa si e' spostato.
+    // Se i giorni rimasti non bastano, si tengono le sessioni piu' importanti.
+    const npSett = [0, 1, 2, 3, 4, 5, 6].map((o) => addDays(da, o)).filter((d) => dati.nonPosso.has(d) && !(d <= oggiStr && dati.giorniCorsa.has(d)));
+    const orig = new Map();
+    let tolteNp = [];
+    if (npSett.length) {
+      const g0 = scegliGiorni(tenute.map((i) => descs[i]), { ...ctxG, nonPosso: null });
+      if (g0) g0.forEach((x) => orig.set(tenute[x.i], x.off));
+      const liberi = [0, 1, 2, 3, 4, 5, 6].filter((o) => giornoAmmesso(ctxG, o)).length;
+      if (liberi < tenute.length) {
+        const prima = tenute;
+        tenute = sceltaSedute(descs, liberi, turno).filter((i) => prima.includes(i));
+        tolteNp = prima.filter((i) => !tenute.includes(i));
+      }
+    }
     const prova = (ds) => { const g = scegliGiorni(tenute.map((i) => ds[i]), ctxG); return g && g.map((x) => ({ off: x.off, i: tenute[x.i] })); };
     let giorni = prova(descs), facilitata = false;
     if (!giorni) {
@@ -2787,6 +2828,18 @@ function costruisciProgramma(oggiStr) {
       if (giorni) { descs = ds2; facilitata = true; } else { ctxG.rilassa = true; giorni = prova(descs) || tenute.map((i, k) => ({ off: [0, 2, 4, 6, 1][k] ?? k, i })); }
     }
     giorni.sort((x, y) => x.off - y.off);
+    if (npSett.length) {
+      // per ogni giorno tolto: quale sessione c'era e dove e' finita (null = salta questa settimana)
+      const gm = (d) => `${giornoSettimana(d)} ${Number(d.slice(8))}/${Number(d.slice(5, 7))}`;
+      for (const d of npSett) {
+        const off = diffDays(d, da);
+        const i = [...orig].find(([, o]) => o === off)?.[0];
+        const nuovo = i == null ? null : giorni.find((x) => x.i === i);
+        const titolo = i == null ? null : sedutaDa(stepIdx, Math.min(i, 2), d, descs[i], null).titolo.replace(/^(Sett\.|Wk) \d+ · /, '');
+        nonPossoInfo.push({ data: d, titolo, spostata_a: nuovo ? addDays(da, nuovo.off) : null });
+      }
+      ctxNp = { orig, tolte: tolteNp.length, gm, npSett: new Set(npSett) };
+    } else ctxNp = null;
     prec = { dure: new Set(), corsa: new Set(), dow: new Set() };
     const dataGara = (giorni.find(({ i }) => descs[i][0] === 'gara') || {}).off;
     giorni.forEach(({ off, i }, pos) => {
@@ -2804,6 +2857,20 @@ function costruisciProgramma(oggiStr) {
       if (n < pianoAttivo()[stepIdx].sedute.length && pos === 0 && !perche) perche = n === 1
         ? L('Con un giorno a settimana fai una sessione per volta: questa settimana del piano dura 2 settimane.', 'With one day a week you do one session at a time: this plan week lasts 2 weeks.')
         : L(`Con ${n} giorni a settimana il coach tiene le sessioni più importanti e salta una corsa facile.`, `With ${n} days a week the coach keeps the key sessions and skips an easy run.`);
+      if (ctxNp) {
+        const o = ctxNp.orig.get(i);
+        const dOrig = o == null ? null : addDays(da, o);
+        if (dOrig && dOrig !== data) {
+          const msg = ctxNp.npSett.has(dOrig)
+            ? L(`Spostata da ${ctxNp.gm(dOrig)}: avevi detto che quel giorno non potevi.`, `Moved from ${ctxNp.gm(dOrig)}: you said you couldn’t make it that day.`)
+            : L(`Spostata da ${ctxNp.gm(dOrig)} per fare posto alla sessione del giorno in cui non potevi.`, `Moved from ${ctxNp.gm(dOrig)} to make room for the session on the day you couldn’t make.`);
+          perche = perche ? `${msg} ${perche}` : msg;
+        }
+        if (pos === 0 && ctxNp.tolte) {
+          const msg = L('Senza il giorno che hai tolto non c’è posto per tutte: il coach tiene le sessioni più importanti e salta una corsa facile.', 'Without the day you removed there is no room for all of them: the coach keeps the key sessions and skips an easy run.');
+          perche = perche ? `${perche} ${msg}` : msg;
+        }
+      }
       if (desc[0] === 'gara') perche = L('Data indicativa: le gare si corrono quasi sempre nel weekend.', 'Indicative date: races are almost always at the weekend.');
       else if (!fissi && preferiti.size && !preferiti.has(dow) && !(data <= oggiStr && dati.giorniCorsa.has(data)))
         perche = (perche ? perche + ' ' : '') + L('Fuori dai tuoi giorni preferiti: lì non c’era posto senza due sessioni impegnative di fila o senza recuperare quella saltata.', 'Outside your preferred days: there was no room there without two hard sessions back to back or without making up a missed one.');
@@ -2999,6 +3066,8 @@ function costruisciProgramma(oggiStr) {
     storia: storia.slice().reverse(),
     consigli,
     calendario,
+    // giorni "non posso" (dal piu' recente) e dove e' finita la sessione
+    non_posso: nonPossoInfo.sort((a, b) => a.data.localeCompare(b.data)),
     // corse fatte in giorni senza seduta: compaiono nel calendario con il loro segno
     corse_fuori_piano: (() => {
       const giorniPiano = new Set(calendario.map((c) => c.data));
@@ -4639,6 +4708,18 @@ function creaApp() {
     if (esiste) db.prepare('DELETE FROM sedute_manuali WHERE data = ?').run(data);
     else db.prepare('INSERT INTO sedute_manuali (data, creato) VALUES (?, ?)').run(data, new Date().toISOString());
     res.json({ ok: true, data, fatta: !esiste });
+  });
+
+  // "Non posso" quel giorno (oggi o nei prossimi 13): il coach rifà la settimana senza. Un secondo tocco annulla.
+  app.post('/api/seduta/:data/non-posso', soloCoach, (req, res) => {
+    const data = req.params.data, oggiStr = oggi();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || data < oggiStr || data > addDays(oggiStr, 13)) return res.status(400).json({ errore: L('Data non valida', 'Invalid date') });
+    const esiste = db.prepare('SELECT 1 FROM giorni_non_posso WHERE data = ?').get(data);
+    if (esiste) db.prepare('DELETE FROM giorni_non_posso WHERE data = ?').run(data);
+    else db.prepare('INSERT INTO giorni_non_posso (data, creato) VALUES (?, ?)').run(data, new Date().toISOString());
+    // il calendario di Intervals (e l'orologio) segue subito, se l'utente l'ha acceso
+    aggiornaSeduteIntervals(false).catch((e) => console.warn(`[intervals:sedute] ${e.message}`));
+    res.json({ ok: true, data, non_posso: !esiste });
   });
 
   app.get('/api/programma.ics', (req, res) => {

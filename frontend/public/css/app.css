@@ -193,6 +193,16 @@ button.cd:active { transform: scale(0.94); }
 .cd.futura .m { color: var(--accent-2); }
 .cd.fatta { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .cd.saltata { border-style: dashed; border-color: var(--muted); color: var(--muted); }
+/* "Non posso": giorno tolto dall'utente, con una piccola × */
+.cd.nonposso { border-style: dashed; border-color: var(--line-strong); color: var(--muted); }
+.cd.nonposso .np-x, .np-leg { font-size: .7rem; font-weight: 800; line-height: 1; color: var(--muted); font-style: normal; }
+.legend-inline .np-leg { background: none; display: inline-grid; place-items: center; outline: 1.5px dashed var(--line-strong); }
+.np-testo { margin: 10px 0 0; font-size: .9rem; line-height: 1.45; color: var(--text-2); }
+.np-nota { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; margin-bottom: 14px; padding: 10px 13px; border-radius: 14px; background: var(--surface-2); border: 1px solid var(--line); }
+.np-nota p { margin: 0; flex: 1 1 220px; font-size: .86rem; line-height: 1.45; color: var(--text-2); }
+.np-nota .link-btn { padding: 2px 0; font-weight: 600; }
+.hero-np { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; color: var(--text-2); font-weight: 600; }
+.hero-np svg { width: 17px; height: 17px; }
 .cd.sel { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--accent-2); }
 .cal-det { margin-top: 16px; padding: 16px; border-radius: 18px; background: var(--surface-2); border: 1px solid var(--line); scroll-margin-top: 150px; animation: comparsa .25s ease; }
 @keyframes comparsa { from { opacity: 0; transform: translateY(6px); } }

@@ -137,6 +137,7 @@
     o2: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5s-6 6.6-6 11.1a6 6 0 0 0 12 0C18 9.1 12 2.5 12 2.5z"/></svg>',
     info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M12 11v6"/><circle cx="12" cy="7.6" r="0.6" fill="currentColor"/></svg>',
     dati: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 20v-7M12 20V5M19 20v-10"/></svg>',
+    nonposso: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4M9.5 13l5 5M14.5 13l-5 5"/></svg>',
     spunta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
     share: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M7 8l5-5 5 5"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>',
     indietro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>',
@@ -195,8 +196,9 @@
     const p = d.programma;
     const perData = new Map(p.calendario.map((x) => [x.data, x]));
     const fuoriPiano = new Set((p.corse_fuori_piano || []).map((c) => c.data)); // corse in giorni senza seduta
+    const npMap = new Map((p.non_posso || []).map((n) => [n.data, n])); // giorni in cui hai detto "non posso"
     if (!meseCal) meseCal = (d.oggi < p.inizio ? p.inizio : d.oggi).slice(0, 7);
-    if (!giornoSel || !perData.has(giornoSel)) giornoSel = (p.prossime[0] || p.calendario[0]).data;
+    if (!giornoSel || !(perData.has(giornoSel) || npMap.has(giornoSel))) giornoSel = (p.prossime[0] || p.calendario[0]).data;
 
     const [y, m] = meseCal.split('-').map(Number);
     const primo = new Date(Date.UTC(y, m - 1, 1));
@@ -222,11 +224,21 @@
             '<span class="g">' + g + '</span><span class="m"><i>' + siglaTipo(x.tipo) + '</i>' + (x.tipo === 'gara' ? '' : x.durata_min + '′') + '</span></button>'
         : fuoriPiano.has(iso)
           ? '<button type="button" class="' + cls.concat('fuori').join(' ') + '" data-apri-corsa="' + iso + '" aria-label="' + esc(fmtDataLunga(iso)) + T(': corsa fuori piano', ': unscheduled run') + '"><span class="g">' + g + '</span><span class="fp-dot" aria-hidden="true"></span></button>'
-          : '<div class="' + cls.join(' ') + '"><span class="g">' + g + '</span></div>';
+          : npMap.has(iso)
+            ? '<button type="button" class="' + cls.concat('nonposso', iso === giornoSel ? 'sel' : '').join(' ').trim() + '" data-giorno="' + iso + '" aria-label="' + esc(fmtDataLunga(iso)) + T(': non puoi', ': not available') + '"><span class="g">' + g + '</span><span class="np-x" aria-hidden="true">×</span></button>'
+            : '<div class="' + cls.join(' ') + '"><span class="g">' + g + '</span></div>';
     }
 
     const x = perData.get(giornoSel);
     let det = '<div class="empty">' + T('Tocca un giorno colorato per vedere la sessione.', 'Tap a coloured day to see the session.') + '</div>';
+    const np = !x && npMap.get(giornoSel);
+    if (np) {
+      det = '<div class="cal-det" id="cal-det">' +
+        '<div class="cal-det-head"><div><b>' + esc(fmtDataLunga(np.data)) + '</b></div><span class="stato saltata">' + T('Non puoi', 'Not available') + '</span></div>' +
+        '<p class="np-testo">' + esc(testoNonPosso(np)) + '</p>' +
+        (np.data >= d.oggi ? '<div class="az-row"><button type="button" class="az" data-nonposso="' + np.data + '">' + ICO.spunta + '<span>' + T('Annulla: posso', 'Undo: I can make it') + '</span></button></div>' : '') +
+      '</div>';
+    }
     if (x) {
       const stato = x.fatta ? ['fatta', x.manuale ? T('✓ Fatta (a mano)', '✓ Done (manual)') : T('✓ Fatta', '✓ Done')] : x.passata ? ['saltata', T('Saltata', 'Missed')] : x.data === d.oggi ? ['oggi', T('Oggi', 'Today')] : ['futura', quando(d.oggi, x.data)];
       const tipo = tipiSeduta().find((t) => t.tipo === x.tipo);
@@ -239,6 +251,7 @@
       if (x.data <= d.oggi && (!x.fatta || x.manuale)) {
         azioni += az('data-segna', ICO.spunta, x.manuale ? T('Annulla “fatta”', 'Undo “done”') : T('Segna come fatta', 'Mark as done'));
       }
+      if (puoiNonPosso(x, d.oggi)) azioni += az('data-nonposso', ICO.nonposso, T('Non posso', 'Can’t make it'));
       det = '<div class="cal-det" id="cal-det">' +
         '<div class="cal-det-head"><div><b>' + esc(fmtDataLunga(x.data)) + ' · ' + esc(p.ora) + '</b>' +
         '<span>' + esc(x.fase) + T(' · sett. ' + x.settimana, ' · wk ' + x.settimana) + (x.scarico ? T(' · scarico', ' · recovery week') : '') + '</span></div>' +
@@ -265,7 +278,8 @@
           '<span><i style="background:color-mix(in srgb, var(--accent-2) 22%, transparent);outline:1.5px solid var(--accent-2)"></i>' + T('In programma', 'Planned') + '</span>' +
           '<span><i style="outline:1.5px dashed var(--muted)"></i>' + T('Saltata', 'Missed') + '</span>' +
           '<span><i style="outline:1.5px solid var(--warn)"></i>' + T('Adattata ai tuoi dati', 'Adapted to your data') + '</span>' +
-          '<span><i class="fp-leg"></i>' + T('Corsa fuori piano', 'Unscheduled run') + '</span></div>' +
+          '<span><i class="fp-leg"></i>' + T('Corsa fuori piano', 'Unscheduled run') + '</span>' +
+          (npMap.size ? '<span><i class="np-leg">×</i>' + T('Non puoi', 'Not available') + '</span>' : '') + '</div>' +
       '</div><div class="cal-right">' + det + '</div></div>' +
     '</section>';
   }
@@ -288,6 +302,29 @@
     } catch (e) { toast(e.message, 'err'); }
   }
 
+  // "Non posso": oggi o nei prossimi 13 giorni, non per la gara e non per una sessione gia' fatta
+  function puoiNonPosso(x, oggi) {
+    if (!x || x.fatta || x.tipo === 'gara' || x.data < oggi) return false;
+    return (Date.parse(x.data) - Date.parse(oggi)) / 864e5 <= 13;
+  }
+  function testoNonPosso(np) {
+    if (!np.titolo) return T('Quel giorno non c’era nessuna sessione da spostare.', 'There was no session to move that day.');
+    return np.spostata_a
+      ? T('La sessione di questo giorno (' + np.titolo + ') passa a ' + fmtDataLunga(np.spostata_a) + '. Il coach ha rifatto la settimana con le regole di sempre.', 'This day’s session (' + np.titolo + ') moves to ' + fmtDataLunga(np.spostata_a) + '. The coach rebuilt the week with the usual rules.')
+      : T('La settimana non ha altri giorni liberi: ' + np.titolo + ' salta e il coach tiene le sessioni più importanti.', 'The week has no other free day: ' + np.titolo + ' is skipped and the coach keeps the key sessions.');
+  }
+  async function nonPosso(data) {
+    try {
+      const res = await fetch(conLang('/api/seduta/' + data + '/non-posso'), { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'coach' } });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.errore || T('Operazione non riuscita', 'Operation failed'));
+      giornoSel = data;
+      await caricaDati(true);
+      const np = out.non_posso && ultimiDati && ultimiDati.programma && (ultimiDati.programma.non_posso || []).find((n) => n.data === data);
+      toast(np ? testoNonPosso(np) : T('Fatto: la sessione torna al suo giorno', 'Done: the session goes back to its day'), 'ok');
+    } catch (e) { toast(e.message, 'err'); }
+  }
+
   async function segnaFatta(data) {
     try {
       const res = await fetch(conLang('/api/seduta/' + data + '/fatta'), { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'coach' } });
@@ -303,6 +340,8 @@
     if (copia) { copiaPerAI(copia.dataset.copia, copia); return; }
     const segna = e.target.closest('[data-segna]');
     if (segna) { segnaFatta(segna.dataset.segna); return; }
+    const np = e.target.closest('[data-nonposso]');
+    if (np) { nonPosso(np.dataset.nonposso); return; }
     const apri = e.target.closest('[data-apri-corsa]');
     if (apri) { apriCorsaDelGiorno(apri.dataset.apriCorsa); return; }
     const sw = e.target.closest('[data-cg]');
@@ -533,6 +572,7 @@
         '<li>' + T('I giorni li sceglie il coach: mai due sessioni impegnative (lungo, ritmo, gara) in giorni di fila, il lungo di preferenza nel weekend, i tuoi giorni preferiti (Piano → Rivedi il piano con il coach) quando possibile. Se corri in un altro giorno la sessione va lì; se ne salti una, passa ai giorni che restano della settimana.', 'The coach picks the days: never two hard sessions (long, pace, race) on consecutive days, the long run preferably at the weekend, your preferred days (Plan → Review the plan with the coach) whenever possible. If you run on another day the session moves there; if you miss one, it moves to the remaining days of the week.') + '</li>' +
         '<li>' + T('Giorni <b>obbligatori</b> (Piano → Rivedi il piano con il coach): il coach usa solo quelli, una sessione per giorno. Con 2 giorni tiene le sessioni più importanti (lungo e qualità) e salta una corsa facile; se sono attaccati, il secondo è sempre facile. Con 1 giorno fai una sessione per volta e ogni settimana del piano dura 2 settimane: l’obiettivo slitta, e la data stimata lo mostra.', '<b>Fixed</b> days (Plan → Review the plan with the coach): the coach only uses those, one session per day. With 2 days it keeps the key sessions (long run and quality) and skips an easy run; if they are back to back, the second is always easy. With 1 day you do one session at a time and each plan week lasts 2 weeks: your goal moves later, and the estimated date shows it.') + '</li>' +
         '<li>' + T('Per avanzare contano le corse fatte nella settimana, in qualunque giorno.', 'To move forward, the runs done during the week count, on any day.') + '</li>' +
+        '<li>' + T('<b>Non puoi un giorno?</b> Tocca “Non posso” sulla sessione (oggi o nei prossimi 13 giorni): il coach rifà la settimana senza quel giorno, con le stesse regole, e ti dice dove è finita. Se i giorni rimasti non bastano tiene le sessioni più importanti. Se poi corri lo stesso, conta la corsa.', '<b>Can’t make a day?</b> Tap “Can’t make it” on the session (today or in the next 13 days): the coach rebuilds the week without that day, with the same rules, and tells you where it went. If the remaining days are not enough it keeps the key sessions. If you run anyway, the run counts.') + '</li>' +
       '</ul>' +
       '<p class="in-p">' + T('Fonti: progressione di frequenza dei piani di Daniels, Pfitzinger e Higdon; carico acuto/cronico (Gabbett, 2016); distribuzione 80/20 (Seiler).', 'Sources: frequency progression from the Daniels, Pfitzinger and Higdon plans; acute/chronic load (Gabbett, 2016); 80/20 distribution (Seiler).') + '</p>';
 
@@ -792,10 +832,19 @@
     const p = d.programma;
     if (!p || !p.attivo || !p.prossime.length) return '';
     const s = p.prossime[0];
-    return '<section class="hero">' +
+    // oggi "non posso": dove e' finita la sessione, con un tocco per annullare
+    const npOggi = (p.non_posso || []).find((n) => n.data === d.oggi);
+    const nota = npOggi
+      ? '<div class="np-nota"><p>' + '<b>' + T('Oggi non puoi.', 'You can’t make it today.') + '</b> ' + esc(testoNonPosso(npOggi)) + '</p>' +
+        '<button type="button" class="link-btn" data-nonposso="' + d.oggi + '">' + T('Annulla: posso', 'Undo: I can make it') + '</button></div>'
+      : '';
+    const salta = s.data === d.oggi && puoiNonPosso(s, d.oggi)
+      ? '<button type="button" class="link-btn hero-np" data-nonposso="' + s.data + '">' + ICO.nonposso + T('Oggi non posso', 'I can’t make it today') + '</button>'
+      : '';
+    return '<section class="hero">' + nota +
       '<div class="eyebrow">' + esc(quando(d.oggi, s.data)).replace(/^./, (c) => c.toUpperCase()) + ' · ' + esc(p.ora) + '<span class="fase-tag">' + esc(s.fase) + '</span></div>' +
       '<h2>' + esc(s.titolo) + '</h2>' +
-      bannerAdattata(s) + corpoSeduta(s, true) +
+      bannerAdattata(s) + corpoSeduta(s, true) + salta +
     '</section>';
   }
 
