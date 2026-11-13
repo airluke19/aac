@@ -2867,7 +2867,7 @@ function costruisciProgramma(oggiStr) {
           perche = perche ? `${msg} ${perche}` : msg;
         }
         if (pos === 0 && ctxNp.tolte) {
-          const msg = L('Senza il giorno che hai tolto non c’è posto per tutte: il coach tiene le sessioni più importanti e salta una corsa facile.', 'Without the day you removed there is no room for all of them: the coach keeps the key sessions and skips an easy run.');
+          const msg = L('Senza il giorno che hai tolto non c’è posto per tutte: il coach tiene le sessioni più importanti.', 'Without the day you removed there is no room for all of them: the coach keeps the key sessions.');
           perche = perche ? `${perche} ${msg}` : msg;
         }
       }
@@ -4715,7 +4715,11 @@ function creaApp() {
     const data = req.params.data, oggiStr = oggi();
     if (!/^\d{4}-\d{2}-\d{2}$/.test(data) || data < oggiStr || data > addDays(oggiStr, 13)) return res.status(400).json({ errore: L('Data non valida', 'Invalid date') });
     const esiste = db.prepare('SELECT 1 FROM giorni_non_posso WHERE data = ?').get(data);
-    if (esiste) db.prepare('DELETE FROM giorni_non_posso WHERE data = ?').run(data);
+    // annullato: via anche la voce del diario, la sessione torna dov'era
+    if (esiste) db.transaction(() => {
+      db.prepare('DELETE FROM giorni_non_posso WHERE data = ?').run(data);
+      db.prepare("DELETE FROM diario WHERE tipo = 'spostata' AND chiave LIKE ?").run(`spostata:${data}:%`);
+    })();
     else db.prepare('INSERT INTO giorni_non_posso (data, creato) VALUES (?, ?)').run(data, new Date().toISOString());
     // il calendario di Intervals (e l'orologio) segue subito, se l'utente l'ha acceso
     aggiornaSeduteIntervals(false).catch((e) => console.warn(`[intervals:sedute] ${e.message}`));
