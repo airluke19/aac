@@ -1004,7 +1004,8 @@ async function aggiornaSeduteIntervals(forza) {
   try { stato = JSON.parse(getMeta('intervals_sedute') || '{}') || {}; } catch (_) { stato = {}; }
   const inviate = Array.isArray(stato.date) ? stato.date.filter((d) => /^\d{4}-\d{2}-\d{2}$/.test(d)) : [];
   if (!lingua) return null;
-  const modo = stato.modo === 'pct' ? 'pct' : 'bpm';
+  // % della FC max: Intervals non legge la FC in bpm (provato il 13 nov 2026). 'bpm' resta per un eventuale ritorno.
+  const modo = stato.modo === 'bpm' ? 'bpm' : 'pct';
 
   // i testi nella lingua scelta quando l'utente ha acceso l'interruttore (il cron gira senza richiesta)
   const prima = LINGUA;

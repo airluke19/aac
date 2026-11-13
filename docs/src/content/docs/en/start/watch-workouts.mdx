@@ -1,0 +1,53 @@
+---
+title: Sessions on your watch
+description: Your AAC plan in your Intervals.icu calendar and from there on your watch, always up to date.
+sidebar:
+  order: 3
+---
+import { Steps, Tabs, TabItem } from '@astrojs/starlight/components';
+
+AAC can write your plan sessions to your **Intervals.icu** calendar. From there they reach your watch as structured workouts: start, and your watch guides you through warm-up, repeats and recoveries with your heart-rate limits. If the coach changes a session, it changes there too.
+
+## How to turn it on
+
+<Steps>
+1. Connect your watch to Intervals.icu and Intervals.icu to AAC: [here's how](/en/start/connect-watch/).
+2. In AAC open your **profile** and, in the **Intervals.icu** card, turn on **Plan sessions on Intervals**.
+3. A message tells you how many sessions were sent. You'll find them in your Intervals calendar, with names ending in **“· AAC”**.
+</Steps>
+
+It stays off until you turn it on: AAC writes to your calendar only with your permission.
+
+## What you get
+
+- **The next 7 days** of your plan. Every day the window moves forward, so the next session shows up as soon as it enters the week.
+- **A structured session**: warm-up walk, running or repeated blocks (for example `6x` 1′ lively + 2′ easy), cool-down. The description also has the session text and the coach's tips.
+- **Your heart-rate limits**, as a percentage of max HR. Intervals turns them into beats using the max HR in your Intervals profile: for the numbers on your watch to match AAC, in **intervals.icu → Settings**, in your running settings, set **Max HR** to the same max HR AAC shows in the Info tab.
+
+## On your watch
+
+<Tabs syncKey="orologio">
+  <TabItem label="Garmin">
+    In Intervals.icu's Garmin connection turn on uploading **planned workouts**. Sessions reach your Garmin Connect calendar and then your watch at every sync.
+  </TabItem>
+  <TabItem label="Apple Watch">
+    Intervals.icu doesn't talk to the Apple Watch directly: you need an iPhone app that reads your Intervals calendar and sends sessions to the **Workout** app, for example **Intervals.icu Companion**. Sometimes you need to open it for the updated session to arrive.
+  </TabItem>
+  <TabItem label="Others">
+    It depends on what Intervals.icu syncs with your watch's app: check in **intervals.icu → Settings** whether the connection can upload planned workouts.
+  </TabItem>
+</Tabs>
+
+## Always up to date
+
+- AAC checks your data **every 15 minutes**, even with the app closed. If a session in the next 7 days changed, it rewrites it on Intervals; if nothing changed, it leaves everything alone.
+- **Lightened session**: the day before or that morning the coach looks at sleep, HRV, resting HR and load. If you haven't recovered, the session gets lighter and Intervals shows the new version, with the reason in the description.
+- **Session moved or removed** from the plan: it disappears from Intervals too.
+- **Timing**: sleep data first has to travel from your watch to Intervals (with some watches a few hours after you wake up), then to AAC, then the updated session goes back to Intervals and your watch. Before you head out, check the session in AAC or the morning notification: they're always the right version.
+
+## Good to know
+
+- **AAC only touches its own sessions.** The ones you add in Intervals stay as they are.
+- **Past and completed sessions stay** in the calendar, next to the run.
+- **Turning it off** removes AAC's sessions from today onwards from Intervals.
+- **One AAC per Intervals account**: if you connect the same Intervals account to two AAC installs (for example your own and aac.run), turn the switch on in only one, or they'll overwrite each other.
