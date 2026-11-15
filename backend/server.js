@@ -414,7 +414,8 @@ function leggiAlleggerite() {
   const out = {};
   for (const r of db.prepare("SELECT chiave, testo, testo_en FROM diario WHERE tipo = 'alleggerita' AND chiave LIKE 'alleggerita:%'").all()) {
     const data = r.chiave.slice(12);
-    const it = /Perché: (.+?)\. Prevista:/.exec(r.testo || ''), en = /Why: (.+?)\. Planned:/.exec(r.testo_en || '');
+    // "sabato 14/11. Perché: … . Prevista:" oppure, nelle voci piu' vecchie, "sabato 14/11: … . Prevista:"
+    const it = /(?:Perché: |^[^:.]+: )(.+?)\. Prevista:/.exec(r.testo || ''), en = /(?:Why: |^[^:.]+: )(.+?)\. Planned:/.exec(r.testo_en || '');
     if (/^\d{4}-\d{2}-\d{2}$/.test(data) && data < oggi() && it) out[data] = { it: [it[1]], en: [en ? en[1] : it[1]] };
   }
   return out;
