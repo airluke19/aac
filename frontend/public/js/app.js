@@ -151,6 +151,7 @@
     heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1 1.1L12 21l7.8-7.5 1-1.1a5.5 5.5 0 0 0 0-7.8z"/></svg>',
     wave: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg>',
     moon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
+    posate: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 3v18"/><path d="M4 3v5a3 3 0 0 0 6 0V3"/><path d="M17 21V3c-2 1.2-3.2 4.5-3.2 8.5H17"/></svg>',
     steps: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 16v-2.4C4 11.5 3 10.5 3 8c0-2.7 1.5-6 4.5-6C9.4 2 10 3.8 10 5.5c0 3.1-2 5.7-2 8.7V16a2 2 0 1 1-4 0z"/><path d="M20 20v-2.4c0-2.1 1-3.1 1-5.6 0-2.7-1.5-6-4.5-6C14.6 6 14 7.8 14 9.5c0 3.1 2 5.7 2 8.7V20a2 2 0 1 0 4 0z"/></svg>'
   };
 
@@ -463,7 +464,7 @@
       (a.meteo.percepita != null && a.meteo.percepita !== a.meteo.temp ? T(' (percepiti ', ' (feels like ') + esc(String(a.meteo.percepita)) + '°)' : '') +
       T(' alle ', ' at ') + esc(a.ora) + '</p>' : '';
     const peso = a.peso_kg ? '' : '<p class="al-meta">' + T('Dosi calcolate per 70 kg: aggiungi il peso in Salute per averle su misura.', 'Amounts based on 70 kg: add your weight in Health to get them tailored.') + '</p>';
-    return '<details class="adapt-x alim"><summary><span class="al-ic" aria-hidden="true">' + ICO.o2 + '</span><b>' + T('Prima di correre', 'Before you run') + '</b><span class="ax-breve">' + T('cosa mangiare e bere', 'what to eat and drink') + '</span></summary>' +
+    return '<details class="adapt-x alim"><summary><span class="al-ic" aria-hidden="true">' + ICO.posate + '</span><b>' + T('Prima di correre', 'Before you run') + '</b></summary>' +
       '<div class="ax-body">' + meteo + righe + peso +
         '<p class="al-nota">' + esc(a.nota) + '</p>' +
         '<button type="button" class="link-btn ax-info" data-vai-info="alimentazione">' + T('Da dove vengono questi consigli ›', 'Where this advice comes from ›') + '</button>' +
@@ -495,7 +496,7 @@
       grid: svg('<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),
       shield: svg('<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'),
       star: svg('<path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/>'),
-      drop: svg('<path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/>')
+      posate: svg('<path d="M7 3v18"/><path d="M4 3v5a3 3 0 0 0 6 0V3"/><path d="M17 21V3c-2 1.2-3.2 4.5-3.2 8.5H17"/>')
     };
 
     // ---- il ciclo in 4 passi ----
@@ -668,7 +669,7 @@
       voce('sedute', G.list, '#007aff', T('Le sessioni', 'Sessions'), T('Cosa significano le sigle', 'What the codes mean'), '<div class="in-tipi">' + tipiSeduta().map((t) => '<div class="in-tipo"><span class="sig">' + esc(t.sigla) + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('') + '</div>') +
       voce('zone', G.heart, '#ff3b30', T('Zone e passo', 'Zones and pace'), T('Dalla tua FC a riposo e massima', 'From your resting and max HR'), zone) +
       voce('bmi', G.heart, '#ff2d55', 'BMI', T('Peso e altezza, in Salute', 'Weight and height, in Health'), bmi) +
-      voce('alimentazione', G.drop, 'var(--accent)', T('Prima di correre', 'Before you run'), T('Cosa mangiare e bere, con le fonti', 'What to eat and drink, with sources'), alimentazione) +
+      voce('alimentazione', G.posate, 'var(--accent)', T('Prima di correre', 'Before you run'), T('Cosa mangiare e bere, con le fonti', 'What to eat and drink, with sources'), alimentazione) +
       voce('carico', G.shield, '#ff9500', T('Carico e infortuni', 'Load and injuries'), T('Crescere senza farsi male', 'Build up without getting hurt'), carico) +
       voce('previsioni', G.trend, '#30b0c7', T('Previsioni', 'Forecasts'), T('Data, tempo e forma per la gara', 'Race date, time and form'), previsioni) +
       voce('dati', G.sync, '#8e8e93', T('I tuoi dati', 'Your data'), T('Orologio, Intervals.icu, AAC', 'Watch, Intervals.icu, AAC'), dati) +
