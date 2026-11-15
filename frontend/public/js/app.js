@@ -447,7 +447,7 @@
       '<div class="ax-body">' +
         '<div class="ax-r"><span>' + T('Perché', 'Why') + '</span><p>' + esc(a.motivi.join(' · ')) + '</p></div>' +
         '<div class="ax-r"><span>' + T('Prevista', 'Planned') + '</span><p>' + esc((a.originale_titolo ? a.originale_titolo + ': ' : '') + a.originale) + '</p></div>' +
-        '<div class="ax-r"><span>' + T('Oggi', 'Today') + '</span><p>' + cosa + '</p></div>' +
+        '<div class="ax-r"><span>' + (s.fatta || s.passata ? T('Quel giorno', 'That day') : T('Oggi', 'Today')) + '</span><p>' + cosa + '</p></div>' +
         '<button type="button" class="link-btn ax-info" data-vai-info>' + T('Come ragiona il coach ›', 'How the coach thinks ›') + '</button>' +
       '</div></details>';
   }
@@ -1689,7 +1689,7 @@
         (g.length ? '<div class="dd-list">' + primi.map(riga).join('') + '</div>' +
             (altri.length ? '<details class="more"><summary>' + T('Altri ' + altri.length + ' giorni', altri.length + ' more days') + '</summary><div class="dd-list">' + altri.map(riga).join('') + '</div></details>' : '')
           : '<p class="dd-p">' + (rc.base_pronta ? T('Nessuno: il recupero è sempre stato nella norma. 💪', 'None: recovery has always been normal. 💪') : T('Il coach confronta ogni giorno con la tua media delle 4 settimane precedenti: servono almeno 5 giorni di dati per iniziare.', 'The coach compares each day with your average of the previous 4 weeks: at least 5 days of data are needed to start.')) + '</p>') +
-        '<details class="more"><summary>' + T('Quando il recupero è incompleto', 'When recovery is incomplete') + '</summary><p class="dd-p">' + T('Basta un segnale rispetto alla tua media dei 28 giorni prima: FC a riposo ≥ +5 bpm, HRV ≤ −15%, sonno sotto 5h30′.', 'One signal against your average of the previous 28 days is enough: resting HR ≥ +5 bpm, HRV ≤ −15%, sleep under 5h30′.') + '</p></details>' +
+        '<details class="more"><summary>' + T('Quando il recupero è incompleto', 'When recovery is incomplete') + '</summary><p class="dd-p">' + T('Basta un segnale rispetto alla tua media dei 28 giorni prima: FC a riposo ≥ +5 bpm, HRV ≤ −15%, sonno sotto 5h30′ e ≤ −15%. Le notti sotto 3h non contano: registrazione incompleta.', 'One signal against your average of the previous 28 days is enough: resting HR ≥ +5 bpm, HRV ≤ −15%, sleep under 5h30′ and ≤ −15%. Nights under 3h don’t count: incomplete recording.') + '</p></details>' +
       '</section>';
     })();
 
@@ -3991,7 +3991,7 @@
       coach: () => T('Se oggi è <b>almeno il 15% sotto</b> la tua media delle 4 settimane precedenti, il coach riduce la sessione del giorno. 3 o più giorni così in una settimana → la settimana si ripete.', 'If today it is <b>at least 15% below</b> your average of the previous 4 weeks, the coach lightens the day’s session. 3 or more such days in a week → the week is repeated.') },
     sonno_sec: { cat: 'sonno', nome: () => T('Sonno', 'Sleep'), u: '', tipo: 'bar', fmt: (v) => fmtOre(v), meglio: 'alto', conv: (v) => v / 3600, tick: (v) => v + 'h',
       cosa: () => T('Le ore dormite registrate dall’orologio (serve indossarlo di notte con il monitoraggio del sonno attivo).', 'Hours slept as recorded by your watch (wear it at night with sleep tracking on).'),
-      coach: () => T('Se dormi <b>meno di 5h30</b>, la sessione del giorno viene alleggerita.', 'If you sleep <b>less than 5h30</b>, the day’s session is lightened.') },
+      coach: () => T('Se dormi <b>meno di 5h30</b> e almeno il 15% meno della tua media delle 4 settimane precedenti, la sessione del giorno viene alleggerita. Le notti sotto 3h non contano: di solito l’orologio non era al polso tutta la notte.', 'If you sleep <b>less than 5h30</b> and at least 15% below your average of the previous 4 weeks, the day’s session is lightened. Nights under 3h don’t count: usually the watch wasn’t on your wrist all night.') },
     passi: { cat: 'attivita', nome: () => T('Passi', 'Steps'), u: '', tipo: 'bar', fmt: (v) => fmt0(v), meglio: 'alto',
       cosa: () => T('I passi della giornata. Utile per capire quanto ti muovi al di fuori degli allenamenti.', 'Daily steps. Useful to see how much you move outside workouts.'),
       coach: () => T('Solo informativo: il coach non lo usa per adattare il piano.', 'Informational only: the coach does not use it to adapt the plan.') },
@@ -4185,7 +4185,7 @@
     const segn = giorni.map((d) => { const g = perData.get(d); return !!(g && g.segnali && g.segnali.length); });
     const datasets = [];
     if (M.tipo === 'bar') {
-      datasets.push({ type: 'bar', data: y, backgroundColor: y.map((v) => (key === 'sonno_sec' && v != null && v < 5.5 ? warn : accent)), borderRadius: 4, borderSkipped: false, maxBarThickness: 18 });
+      datasets.push({ type: 'bar', data: y, backgroundColor: y.map((v, i) => (key !== 'sonno_sec' || v == null ? accent : v < 3 ? alpha(muted, 0.6) : v < 5.5 && segn[i] ? warn : accent)), borderRadius: 4, borderSkipped: false, maxBarThickness: 18 });
     } else {
       datasets.push({ type: 'line', data: y, borderColor: accent, backgroundColor: accent, borderWidth: 2, tension: 0.15, spanGaps: true,
         pointRadius: giorni.length > 90 ? 0 : y.map((v, i) => (v == null ? 0 : segn[i] ? 4.5 : 3)), pointBackgroundColor: y.map((_, i) => (segn[i] ? warn : accent)), pointBorderColor: cssVar('--surface'), pointBorderWidth: 1.5, pointHoverRadius: 5 });

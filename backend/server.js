@@ -406,7 +406,38 @@ function vociDiario(cd) {
   }
   return voci;
 }
+// Sedute alleggerite che ti sono state mostrate: { 'AAAA-MM-GG': { it: [motivi], en: [motivi] } } in meta.
+// La prima volta si ricostruiscono dalle voci "Sessione alleggerita" del diario.
+function leggiAlleggerite() {
+  const v = getMeta('alleggerite');
+  if (v) { try { return JSON.parse(v) || {}; } catch (_) { return {}; } }
+  const out = {};
+  for (const r of db.prepare("SELECT chiave, testo, testo_en FROM diario WHERE tipo = 'alleggerita' AND chiave LIKE 'alleggerita:%'").all()) {
+    const data = r.chiave.slice(12);
+    const it = /Perché: (.+?)\. Prevista:/.exec(r.testo || ''), en = /Why: (.+?)\. Planned:/.exec(r.testo_en || '');
+    if (/^\d{4}-\d{2}-\d{2}$/.test(data) && data < oggi() && it) out[data] = { it: [it[1]], en: [en ? en[1] : it[1]] };
+  }
+  return out;
+}
+// La seduta di oggi, finche' non e' fatta: si ricorda se e' alleggerita (o non lo e' piu'). Dopo la corsa resta com'era.
+function ricordaAlleggerita(cd) {
+  const p = cd.programma;
+  const s0 = p && p.prossime && p.prossime[0];
+  const nuova = !getMeta('alleggerite');
+  const m = leggiAlleggerite();
+  let cambiata = nuova;
+  if (s0 && s0.data === cd.oggi && !s0.fatta) {
+    const prima = JSON.stringify(m[s0.data] || null);
+    if (s0.adattata) m[s0.data] = { it: s0.adattata.motivi_it, en: s0.adattata.motivi_en };
+    else delete m[s0.data];
+    if (JSON.stringify(m[s0.data] || null) !== prima) cambiata = true;
+  }
+  if (!cambiata) return;
+  for (const d of Object.keys(m)) if (d < addDays(cd.oggi, -400)) delete m[d];
+  setMeta('alleggerite', JSON.stringify(m));
+}
 function registraDiario(cd) {
+  try { ricordaAlleggerita(cd); } catch (e) { console.warn('[alleggerite]', e.message); }
   const voci = vociDiario(cd);
   const esiste = db.prepare('SELECT 1 FROM diario WHERE chiave = ?');
   const nuove = voci.filter((v) => !esiste.get(v.chiave));
@@ -491,7 +522,7 @@ function parereCorsa(id, oggiStr = oggi(), gia = null) {
   const consigli = []; // in ordine di priorita': il primo diventa "Il consiglio del coach"
   const minuti = (sec) => Math.round(sec / 60);
   const num = (x, d = 1) => String(round(x, d)).replace('.', LINGUA === 'en' ? '.' : ',');
-  const nomeS = (t) => t.replace(/^(Sett\.|Wk) \d+ · /, '');
+  const nomeS = (t) => t.replace(/^(Sett\.|Wk) \d+ · /, '') + (pr && pr.adattata ? L(' alleggerita', ' (lightened)') : '');
   const tipo = pr ? pr.tipo : null;
   // la giornata conta una volta: piu' corse nello stesso giorno si sommano
   const delGiorno = db.prepare("SELECT tempo FROM attivita WHERE origine = 'intervals' AND data = ?").all(c.data);
@@ -2522,11 +2553,16 @@ function valutaCarico(oggiStr, acwrMappa) {
   };
 }
 
+// Sonno: sotto 3 ore la registrazione e' quasi sempre incompleta (orologio tolto o indossato solo per un pezzo
+// di notte): non conta ne' come segnale ne' nella media. Sotto 5h30' e almeno il 15% sotto la tua media e' un segnale.
+const SONNO = { minimoValido: 3 * 3600, corto: 5.5 * 3600, menoPct: 15 };
+const sonnoValido = (sec) => sec != null && sec >= SONNO.minimoValido;
+
 function mediaBase(benessere, campo, data) {
   const vals = [];
   for (let d = addDays(data, -28); d < data; d = addDays(d, 1)) {
     const r = benessere.get(d);
-    if (r && r[campo] != null) vals.push(r[campo]);
+    if (r && r[campo] != null && (campo !== 'sonno_sec' || sonnoValido(r[campo]))) vals.push(r[campo]);
   }
   return vals.length >= 5 ? vals.reduce((s, x) => s + x, 0) / vals.length : null;
 }
@@ -2541,7 +2577,8 @@ function segnaliRecupero(benessere, data) {
     out.push(L(`FC a riposo ${Math.round(r.fc_riposo)} bpm (+${Math.round(r.fc_riposo - fcB)} sulla tua media)`, `resting HR ${Math.round(r.fc_riposo)} bpm (+${Math.round(r.fc_riposo - fcB)} vs your average)`));
   if (r.hrv != null && hrvB != null && r.hrv <= hrvB * 0.85)
     out.push(L(`HRV ${Math.round(r.hrv)} ms (−${Math.round((1 - r.hrv / hrvB) * 100)}% sulla tua media)`, `HRV ${Math.round(r.hrv)} ms (−${Math.round((1 - r.hrv / hrvB) * 100)}% vs your average)`));
-  if (r.sonno_sec != null && r.sonno_sec < 5.5 * 3600)
+  const sonnoB = mediaBase(benessere, 'sonno_sec', data);
+  if (sonnoValido(r.sonno_sec) && r.sonno_sec < SONNO.corto && (sonnoB == null || r.sonno_sec <= sonnoB * (1 - SONNO.menoPct / 100)))
     out.push(L(`solo ${Math.floor(r.sonno_sec / 3600)}h ${String(Math.round((r.sonno_sec % 3600) / 60)).padStart(2, '0')}′ di sonno`, `only ${Math.floor(r.sonno_sec / 3600)}h ${String(Math.round((r.sonno_sec % 3600) / 60)).padStart(2, '0')}′ of sleep`));
   return out;
 }
@@ -2917,32 +2954,52 @@ function costruisciProgramma(oggiStr) {
   // ---- Adattamento giornaliero della prossima seduta ----
   const prossime = calendario.filter((s) => s.data > oggiStr || (s.data === oggiStr && !s.fatta)).slice(0, 3);
   let prontezza = { valutata: false, motivi: [] };
+  // versione ridotta di una seduta del calendario, con i motivi in entrambe le lingue (servono per ricordarla)
+  const alleggerisci = (s, motivi, lingue) => {
+    const ridotta = sedutaDa(s.settimana - 1, Math.min(2, s.seduta - 1), s.data, riduci(descPerData.get(s.data)));
+    delete ridotta.seduta;
+    return { ...s, ...ridotta, adattata: { motivi, motivi_it: lingue.it, motivi_en: lingue.en, originale: `${s.blocchi} (${s.durata_min}′)`, originale_min: s.durata_min, originale_titolo: s.titolo.replace(/^(Sett\.|Wk) \d+ · /, ''), originale_tipo: s.tipo } };
+  };
+  const alleggeribile = (s) => s.tipo !== 'gara' && s.tipo !== 'recupero' && descPerData.has(s.data);
   if (prossime.length && diffDays(prossime[0].data, oggiStr) <= 1) {
-    const motivi = [];
-    // dati di salute piu' recenti (oggi o ieri)
-    for (const d of [oggiStr, addDays(oggiStr, -1)]) {
-      const r = dati.benessere.get(d);
-      const m = segnaliRecupero(dati.benessere, d);
-      if (r && (r.fc_riposo != null || r.hrv != null || r.sonno_sec != null)) {
-        motivi.push(...m);
-        prontezza.valutata = true;
-        break;
+    const valuta = () => {
+      const motivi = [];
+      let valutata = false;
+      // dati di salute piu' recenti (oggi o ieri)
+      for (const d of [oggiStr, addDays(oggiStr, -1)]) {
+        const r = dati.benessere.get(d);
+        if (r && (r.fc_riposo != null || r.hrv != null || r.sonno_sec != null)) {
+          motivi.push(...segnaliRecupero(dati.benessere, d));
+          valutata = true;
+          break;
+        }
       }
-    }
-    const tsbOggi = dati.tsb.get(oggiStr);
-    if (tsbOggi != null && tsbOggi < SOGLIE.rossaMax) motivi.push(L(`TSB a ${it1(tsbOggi)}`, `TSB at ${round(tsbOggi, 1)}`));
-    if (carico.acwr != null && carico.acwr > CARICO.acwrAlto) motivi.push(L(`carico salito troppo in fretta (${it1(carico.acwr)} volte quello abituale)`, `load rose too fast (${round(carico.acwr, 1)}× your usual)`));
-    prontezza.motivi = motivi;
+      const tsbOggi = dati.tsb.get(oggiStr);
+      if (tsbOggi != null && tsbOggi < SOGLIE.rossaMax) motivi.push(L(`TSB a ${it1(tsbOggi)}`, `TSB at ${round(tsbOggi, 1)}`));
+      if (carico.acwr != null && carico.acwr > CARICO.acwrAlto) motivi.push(L(`carico salito troppo in fretta (${it1(carico.acwr)} volte quello abituale)`, `load rose too fast (${round(carico.acwr, 1)}× your usual)`));
+      return { motivi, valutata };
+    };
+    const { motivi, valutata } = valuta();
+    prontezza = { valutata, motivi };
     const p0 = prossime[0];
-    if (motivi.length && p0.tipo !== 'gara' && p0.tipo !== 'recupero') {
-      const desc = descPerData.get(p0.data);
-      const ridotta = sedutaDa(p0.settimana - 1, Math.min(2, p0.seduta - 1), p0.data, riduci(desc));
-      delete ridotta.seduta;
-      prossime[0] = { ...p0, ...ridotta, adattata: { motivi, originale: `${p0.blocchi} (${p0.durata_min}′)`, originale_min: p0.durata_min, originale_titolo: p0.titolo.replace(/^(Sett\.|Wk) \d+ · /, ''), originale_tipo: p0.tipo } };
+    if (motivi.length && alleggeribile(p0)) {
+      const altra = LINGUA === 'en' ? 'it' : 'en', qui = LINGUA;
+      let motiviAltra = motivi;
+      LINGUA = altra;
+      try { motiviAltra = valuta().motivi; } finally { LINGUA = qui; }
+      prossime[0] = alleggerisci(p0, motivi, { [qui]: motivi, [altra]: motiviAltra });
       const idx = calendario.findIndex((s) => s.data === p0.data);
       if (idx >= 0) calendario[idx] = { ...calendario[idx], ...prossime[0] };
     }
   }
+  // sedute gia' fatte (o passate) che il coach aveva alleggerito: restano alleggerite, cosi' il parere
+  // le confronta con quello che ti era stato chiesto davvero
+  const giaAlleggerite = leggiAlleggerite();
+  calendario.forEach((s, i) => {
+    const m = giaAlleggerite[s.data];
+    if (!m || s.adattata || !(s.fatta || s.data < oggiStr) || !alleggeribile(s)) return;
+    calendario[i] = alleggerisci(s, m[LINGUA] || m.it || [], m);
+  });
 
   // ---- Settimana in corso: quante sedute contano per la decisione di fine settimana ----
   const settDa = addDays(inizio, settCorrente * 7);
@@ -3484,7 +3541,7 @@ function costruisciAttivita(id, oggiStr) {
   const prog = costruisciProgramma(oggiStr);
   if (prog) {
     const s = prog.calendario.find((x) => x.data === c.data);
-    if (s) prevista = { titolo: s.titolo, tipo: s.tipo, durata_min: s.durata_min, corsa_min: s.corsa_min, fc_target: s.fc_target, blocchi: s.blocchi, fase: s.fase, segmenti: s.segmenti };
+    if (s) prevista = { titolo: s.titolo, tipo: s.tipo, durata_min: s.durata_min, corsa_min: s.corsa_min, fc_target: s.fc_target, blocchi: s.blocchi, fase: s.fase, segmenti: s.segmenti, adattata: s.adattata || null };
   }
   // confronto con le 5 corse precedenti
   const prec = st.corse.filter((x) => x.data < c.data || (x.data === c.data && String(x.id) < String(c.id))).slice(0, 5);
@@ -3522,7 +3579,7 @@ function costruisciStoriaSalute(oggiStr) {
       o.segnali = segnaliRecupero(mappa, r.data);
       return o;
     });
-  return { oggi: oggiStr, giorni, soglie: { fc_riposo_piu: 5, hrv_meno_pct: 15, sonno_min_sec: 5.5 * 3600, giorni_base: 28, valori_minimi: 5 } };
+  return { oggi: oggiStr, giorni, soglie: { fc_riposo_piu: 5, hrv_meno_pct: 15, sonno_min_sec: SONNO.corto, sonno_meno_pct: SONNO.menoPct, sonno_valido_sec: SONNO.minimoValido, giorni_base: 28, valori_minimi: 5 } };
 }
 
 function costruisciStorico(oggiStr) {

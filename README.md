@@ -47,7 +47,7 @@ AAC repeats a simple loop: **Assess → Train → Listen → Adapt**.
 
 - resting HR at least 5 bpm higher than usual,
 - HRV at least 15% lower than usual,
-- or less than 5h30′ of sleep,
+- or less than 5h30′ of sleep and at least 15% below your average (nights under 3h are treated as incomplete recordings and ignored),
 
 then today's session is cut to about 60%, and a hard session becomes 25 easy minutes. You always see which signal triggered it.
 
