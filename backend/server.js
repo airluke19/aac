@@ -511,6 +511,95 @@ function spiegaAlleggerita(s) {
 }
 
 // ---------------------------------------------------------------------------
+// Cosa mangiare e bere prima della sessione. Regole fisse dalle linee guida, mai testo generato:
+// - ACSM/AND/DC 2016 (Thomas, Erdman, Burke, Med Sci Sports Exerc 48:543): 1–4 g/kg di carboidrati 1–4 h prima
+//   (circa 1 g/kg per ogni ora di anticipo), pasto povero di grassi, fibre e proteine; 30–60 g/h oltre 1 h di sforzo;
+//   sotto i 60′ a intensita' moderata non servono strategie particolari.
+// - ACSM 2007 (Sawka et al., Med Sci Sports Exerc 39:377): 5–7 mL/kg almeno 4 h prima; se l'urina e' scura o
+//   scarsa altri 3–5 mL/kg circa 2 h prima; sodio (cibo salato o bevanda) aiuta a trattenere i liquidi; non bere oltre la sete.
+// - ISSN 2021 (Guest et al., J Int Soc Sports Nutr 18:1): caffeina 3–6 mg/kg ~60′ prima, efficace gia' da 2 mg/kg.
+// Gli integratori si consigliano solo quando servono davvero: caffeina (facoltativa) per qualita' e gara,
+// carboidrati da portare e sodio con il caldo per le uscite lunghe. Nessun altro.
+// ---------------------------------------------------------------------------
+const ALIMENTAZIONE = { breveMin: 60, lungaMin: 90, portareMin: 75, caldoC: 24, oraMattina: 9, oraCaffeina: 16 };
+function alimentazionePrima(s, oggiStr) {
+  if (!s || !s.durata_min) return null;
+  const A = ALIMENTAZIONE;
+  const peso = corpoEBmi(oggiStr).peso_kg || null;
+  const kg = peso || 70; // senza peso: dosi per 70 kg, con l'invito a inserirlo
+  const arr = (x, passo) => Math.round(x / passo) * passo;
+  const g = (a, b) => (b == null ? `${arr(a * kg, 5)} g` : `${arr(a * kg, 5)}–${arr(b * kg, 5)} g`);
+  const ml = (a, b) => `${arr(a * kg, 50)}–${arr(b * kg, 50)} mL`;
+  const ora = CONFIG.programmaOra || '06:30';
+  const h = Number(ora.slice(0, 2));
+  const mattina = h < A.oraMattina;
+  const durata = s.durata_min;
+  const cammino = s.corsa_min === 0;
+  const intensa = s.tipo === 'qualita' || s.tipo === 'gara';
+  const livello = cammino ? 'breve' : s.tipo === 'gara' || durata > A.lungaMin ? 'lunga' : intensa || durata >= A.breveMin ? 'media' : 'breve';
+  const meteo = meteoSeduta(s.data);
+  const tCaldo = meteo ? Math.max(meteo.temp ?? -99, meteo.percepita ?? -99) : null;
+  const caldo = tCaldo != null && tCaldo >= A.caldoC;
+  const punti = [];
+
+  // 1. cibo
+  let cibo;
+  if (livello === 'breve') {
+    cibo = mattina
+      ? L('Non serve niente di speciale: per una sessione breve e tranquilla puoi uscire anche a digiuno, se ti trovi bene. Se hai fame, qualcosa di piccolo e facile 30–60′ prima: una banana o una fetta di pane con miele.',
+        'Nothing special needed: for a short, easy session you can go out without eating, if that works for you. If you’re hungry, something small and simple 30–60′ before: a banana or a slice of bread with honey.')
+      : L('Non serve niente di speciale: basta il pasto normale, finito 2–3 ore prima. Se è passato di più e hai fame, uno spuntino piccolo 30–60′ prima (una banana, qualche cracker).',
+        'Nothing special needed: your normal meal, finished 2–3 hours before, is enough. If it’s been longer and you’re hungry, a small snack 30–60′ before (a banana, a few crackers).');
+  } else if (livello === 'media') {
+    cibo = mattina
+      ? L(`Carboidrati facili circa 1 ora prima: circa 1 g per kg, cioè ${g(1)}. Per esempio una banana (circa 25 g) e una fetta di pane con un cucchiaio di miele (circa 30 g).`,
+        `Easy carbs about 1 hour before: about 1 g per kg, i.e. ${g(1)}. For example a banana (about 25 g) and a slice of bread with a spoonful of honey (about 30 g).`)
+      : L(`Un pasto ricco di carboidrati 3–4 ore prima (pasta, riso, pane, patate), oppure, se il pasto è lontano, uno spuntino di circa 1 g per kg (${g(1)}) un’ora prima.`,
+        `A carb-rich meal 3–4 hours before (pasta, rice, bread, potatoes) or, if your meal is far off, a snack of about 1 g per kg (${g(1)}) an hour before.`);
+  } else {
+    cibo = mattina
+      ? L(`Colazione 2–3 ore prima con 2–3 g di carboidrati per kg (${g(2, 3)}): pane o fette biscottate con miele o marmellata, una banana, un succo. Se non hai tempo, almeno 1 g per kg (${g(1)}) un’ora prima.`,
+        `Breakfast 2–3 hours before with 2–3 g of carbs per kg (${g(2, 3)}): bread or rusks with honey or jam, a banana, a juice. If there’s no time, at least 1 g per kg (${g(1)}) an hour before.`)
+      : L(`Un pasto 3–4 ore prima con 3–4 g di carboidrati per kg (${g(3, 4)}): pasta, riso, pane, patate. Se il pasto è più lontano, aggiungi 1 g per kg (${g(1)}) un’ora prima.`,
+        `A meal 3–4 hours before with 3–4 g of carbs per kg (${g(3, 4)}): pasta, rice, bread, potatoes. If your meal is further off, add 1 g per kg (${g(1)}) an hour before.`);
+  }
+  if (livello !== 'breve') cibo += ' ' + L('Pochi grassi, fibre e proteine nelle ore prima: si digeriscono lentamente e possono dare fastidio allo stomaco.', 'Little fat, fibre and protein in the hours before: they digest slowly and can upset your stomach.');
+  if (intensa) cibo += ' ' + L('Niente cibi nuovi: usa quello che hai già provato in allenamento.', 'Nothing new: stick to what you’ve already tried in training.');
+  punti.push({ id: 'cibo', titolo: L('Cosa mangiare', 'What to eat'), testo: cibo, fonte: 'ACSM 2016' });
+
+  // 2. liquidi
+  let bere = mattina
+    ? L(`Appena sveglio bevi con calma ${ml(5, 7)} d’acqua (5–7 mL per kg).`, `As soon as you wake up, slowly drink ${ml(5, 7)} of water (5–7 mL per kg).`)
+    : L(`Nelle 4 ore prima bevi con calma ${ml(5, 7)} d’acqua (5–7 mL per kg).`, `Over the 4 hours before, slowly drink ${ml(5, 7)} of water (5–7 mL per kg).`);
+  bere += ' ' + L(`Se l’urina è scura o scarsa, altri ${ml(3, 5)} fino a 2 ore prima; se è chiara sei a posto.`, `If your urine is dark or scant, another ${ml(3, 5)} up to 2 hours before; if it’s pale you’re fine.`);
+  if (caldo) bere += ' ' + L(`Sono previsti circa ${tCaldo}°: aggiungi un po’ di sale (cibo salato o una bevanda con sali), aiuta a trattenere i liquidi.`, `About ${tCaldo}° expected: add some salt (salty food or a drink with electrolytes), it helps you hold on to fluids.`);
+  bere += ' ' + L('Non forzarti oltre la sete: troppa acqua non migliora la prestazione.', 'Don’t force it beyond thirst: extra water doesn’t improve performance.');
+  punti.push({ id: 'bere', titolo: L('Quanto bere', 'How much to drink'), testo: bere, fonte: 'ACSM 2007' });
+
+  // 3. integratori: solo se servono
+  const extra = [];
+  if (intensa) {
+    extra.push(h < A.oraCaffeina
+      ? L(`Facoltativo, solo se già bevi caffè e lo tolleri: caffeina 2–3 mg per kg (${arr(2 * kg, 10)}–${arr(3 * kg, 10)} mg, un espresso ne ha 60–100) circa 60′ prima aiuta negli sforzi intensi. Se non la usi, non serve iniziare ora.`,
+        `Optional, only if you already drink coffee and tolerate it: 2–3 mg of caffeine per kg (${arr(2 * kg, 10)}–${arr(3 * kg, 10)} mg, an espresso has 60–100) about 60′ before helps with hard efforts. If you don’t use it, no need to start now.`)
+      : L('Caffeina: meglio di no, a quest’ora disturba il sonno, che conta di più.', 'Caffeine: better not, at this hour it disrupts your sleep, which matters more.'));
+  }
+  if (!cammino && durata > A.portareMin) {
+    extra.push(L(`Da portare: oltre i ${A.portareMin}′ servono 30–60 g di carboidrati all’ora (un gel o una banana ogni 30–45′ circa) e acqua${caldo ? ' con sali minerali' : ''}.`,
+      `To bring: beyond ${A.portareMin}′ you need 30–60 g of carbs per hour (a gel or a banana every 30–45′ or so) and water${caldo ? ' with electrolytes' : ''}.`));
+  }
+  punti.push({ id: 'integratori', titolo: L('Integratori', 'Supplements'),
+    testo: extra.length ? extra.join(' ') : L('Non servono: per questa sessione bastano cibo normale e acqua.', 'Not needed: normal food and water are enough for this session.'),
+    fonte: extra.length ? (intensa ? 'ISSN 2021 · ACSM 2016' : 'ACSM 2016') : null });
+
+  return {
+    data: s.data, ora, livello, peso_kg: peso, meteo: meteo ? { ...meteo, caldo } : null, punti,
+    nota: L('Indicazioni generali per adulti sani. Con diabete, disturbi alimentari, gravidanza o altre condizioni di salute chiedi al medico o a un nutrizionista.',
+      'General guidance for healthy adults. With diabetes, eating disorders, pregnancy or other health conditions, ask your doctor or a dietitian.'),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Il parere del coach su una corsa: regole dichiarate sui tuoi dati (nessun servizio esterno, nessuna AI).
 // Seduta prevista vs fatta, FC rispetto al limite della seduta, efficienza rispetto alle ultime corse,
 // record, deriva cardiaca e prossima seduta. Usato nel dettaglio della corsa e nella notifica dopo il sync.
@@ -1315,6 +1404,44 @@ async function aggiornaMeteo(limite = 25) {
   return fatti;
 }
 
+// Previsione all'ora delle sessioni di oggi e domani (per i consigli su cosa bere prima), dal punto di partenza
+// dell'ultima corsa con GPS. Si aggiorna al massimo ogni 3 ore; in meta.meteo_seduta = { aggiornato, ora, giorni: { data: {...} } }.
+async function aggiornaMeteoSeduta() {
+  const ora = CONFIG.programmaOra || '06:30', oggiStr = oggi();
+  let prima = null;
+  try { prima = JSON.parse(getMeta('meteo_seduta') || 'null'); } catch (_) { prima = null; }
+  if (prima && prima.ora === ora && prima.giorni && prima.giorni[oggiStr] && Date.now() - Date.parse(prima.aggiornato) < 3 * 3600e3) return false;
+  let lat = null, lng = null;
+  for (const r of db.prepare("SELECT serie FROM attivita WHERE origine = 'intervals' AND serie IS NOT NULL ORDER BY data DESC LIMIT 5").all()) {
+    try {
+      const sr = JSON.parse(r.serie);
+      const i = sr && sr.lat ? sr.lat.findIndex((x) => x != null) : -1;
+      if (i >= 0) { lat = sr.lat[i]; lng = sr.lng[i]; break; }
+    } catch (_) { /* serie non leggibile */ }
+  }
+  if (lat == null) return false; // senza GPS niente previsione: i consigli restano quelli standard
+  const domani = addDays(oggiStr, 1);
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(2)}&longitude=${lng.toFixed(2)}&start_date=${oggiStr}&end_date=${domani}` +
+    '&hourly=temperature_2m,apparent_temperature,relative_humidity_2m&timezone=auto';
+  const res = await fetch(url, { signal: AbortSignal.timeout(15000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const h = (await res.json()).hourly;
+  if (!h || !Array.isArray(h.time)) return false;
+  const giorni = {};
+  for (const d of [oggiStr, domani]) {
+    const k = h.time.indexOf(`${d}T${ora.slice(0, 2)}:00`);
+    if (k >= 0) giorni[d] = { temp: round(h.temperature_2m[k], 0), percepita: round(h.apparent_temperature[k], 0), umidita: round(h.relative_humidity_2m[k], 0) };
+  }
+  setMeta('meteo_seduta', JSON.stringify({ aggiornato: new Date().toISOString(), ora, giorni }));
+  return true;
+}
+function meteoSeduta(data) {
+  try {
+    const m = JSON.parse(getMeta('meteo_seduta') || 'null');
+    return m && m.ora === (CONFIG.programmaOra || '06:30') && m.giorni ? m.giorni[data] || null : null;
+  } catch (_) { return null; }
+}
+
 // ---------------------------------------------------------------------------
 // Scarpe
 // ---------------------------------------------------------------------------
@@ -1781,6 +1908,7 @@ async function eseguiSync(origine) {
     } catch (e) {
       console.warn(`[meteo] ${e.message}`);
     }
+    try { await aggiornaMeteoSeduta(); } catch (e) { console.warn(`[meteo:seduta] ${e.message}`); }
     // il parere del coach sulle corse appena arrivate (notifica + diario), dopo analisi e meteo
     try {
       const st = contesto.getStore();
@@ -3121,6 +3249,7 @@ function costruisciProgramma(oggiStr) {
     prontezza,
     settimana,
     prossime,
+    alimentazione: prossime[0] && diffDays(prossime[0].data, oggiStr) <= 1 ? alimentazionePrima(prossime[0], oggiStr) : null,
     storia: storia.slice().reverse(),
     consigli,
     calendario,

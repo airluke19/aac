@@ -87,7 +87,7 @@ Goal, intensity and days are set with a **step-by-step guide that opens inside t
 
 ### What you see in the app
 
-- **Today:** next session, how you are today, last run, this week
+- **Today:** next session, how you are today, last run, this week; **Before you run** opens rule-based advice on what to eat, how much to drink and supplements only when needed (ACSM 2016, ACSM 2007, ISSN 2021), scaled to session length and type, time of day, weight and the Open-Meteo forecast at session time
 - **Health:** resting HR, HRV, sleep, steps, BMI and more, plus the days with incomplete recovery in the last 30 days; each metric has a detail page with collapsible deep dives
 - **Load and injuries:** three declared signals (recent vs usual load ACWR, weekly km jump, single-run jump over the month's longest); a warning on Today, a section in Progress, the next session lightened when ACWR goes above 1.5 and a cap for the next long run (+10%)
 - **Data sources:** the profile shows where your data comes from — **Intervals.icu** (runs plus resting HR, HRV and sleep) and, when the instance has Strava keys, **Strava** (one tap, runs only) — with status, sync now and a step-by-step guide for each. Runs arriving from both, or uploaded twice to Intervals by two apps (e.g. Companion and Health Sync), are kept once (the one with more data), and activities deleted on Intervals disappear from AAC at the next sync; for Strava-only users AAC estimates load from heart rate so form and injury checks keep working. If runs reach Intervals only through Strava, the app warns you and offers both fixes

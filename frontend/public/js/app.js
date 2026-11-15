@@ -453,6 +453,23 @@
   }
 
 
+  // Prima di correre: cosa mangiare e bere (regole del server dalle linee guida, si apre con un tocco)
+  function bannerAlimentazione(a, s) {
+    if (!a || a.data !== s.data || !a.punti || !a.punti.length) return '';
+    const etichetta = { cibo: T('Mangiare', 'Eat'), bere: T('Bere', 'Drink'), integratori: T('Integratori', 'Supplements') };
+    const righe = a.punti.map((x) => '<div class="ax-r"><span>' + esc(etichetta[x.id] || x.titolo) + '</span><p>' + esc(x.testo) +
+      (x.fonte ? ' <small class="al-fonte">' + esc(x.fonte) + '</small>' : '') + '</p></div>').join('');
+    const meteo = a.meteo ? '<p class="al-meta">' + T('Previsti ', 'Forecast ') + esc(String(a.meteo.temp)) + '°' +
+      (a.meteo.percepita != null && a.meteo.percepita !== a.meteo.temp ? T(' (percepiti ', ' (feels like ') + esc(String(a.meteo.percepita)) + '°)' : '') +
+      T(' alle ', ' at ') + esc(a.ora) + '</p>' : '';
+    const peso = a.peso_kg ? '' : '<p class="al-meta">' + T('Dosi calcolate per 70 kg: aggiungi il peso in Salute per averle su misura.', 'Amounts based on 70 kg: add your weight in Health to get them tailored.') + '</p>';
+    return '<details class="adapt-x alim"><summary><span class="al-ic" aria-hidden="true">' + ICO.o2 + '</span><b>' + T('Prima di correre', 'Before you run') + '</b><span class="ax-breve">' + T('cosa mangiare e bere', 'what to eat and drink') + '</span></summary>' +
+      '<div class="ax-body">' + meteo + righe + peso +
+        '<p class="al-nota">' + esc(a.nota) + '</p>' +
+        '<button type="button" class="link-btn ax-info" data-vai-info="alimentazione">' + T('Da dove vengono questi consigli ›', 'Where this advice comes from ›') + '</button>' +
+      '</div></details>';
+  }
+
   /* ---- Info: come funziona AAC (regole reali del motore) ---- */
   function renderInfo(d) {
     const fcMax = d.atleta ? d.atleta.fc_max_stimata : 185;
@@ -477,7 +494,8 @@
       sync: svg('<path d="M4 12a8 8 0 0 1 14-5.3L20 9M20 4v5h-5"/><path d="M20 12a8 8 0 0 1-14 5.3L4 15M4 20v-5h5"/>'),
       grid: svg('<rect x="4" y="4" width="7" height="7" rx="1.5"/><rect x="13" y="4" width="7" height="7" rx="1.5"/><rect x="4" y="13" width="7" height="7" rx="1.5"/><rect x="13" y="13" width="7" height="7" rx="1.5"/>'),
       shield: svg('<path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/>'),
-      star: svg('<path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/>')
+      star: svg('<path d="M12 3l2.4 6.6L21 12l-6.6 2.4L12 21l-2.4-6.6L3 12l6.6-2.4z"/>'),
+      drop: svg('<path d="M12 3s-6 6.5-6 11a6 6 0 0 0 12 0c0-4.5-6-11-6-11z"/>')
     };
 
     // ---- il ciclo in 4 passi ----
@@ -620,6 +638,13 @@
       kv(T('Condividi', 'Share'), T('immagine di una sessione fatta, per post o storie', 'image of a completed session, for posts or stories')) +
       kv(T('Copia per AI', 'Copy for AI'), T('i dati di una sessione fatta, con età, altezza, peso e BMI se presenti', 'data of a completed session, with age, height, weight and BMI when available'));
 
+    const alimentazione = '<p>' + T('Prima di ogni sessione, in Oggi, trovi cosa mangiare e quanto bere. Sono regole fisse prese dalle linee guida scientifiche, adattate a durata e tipo della sessione, orario, peso e temperatura prevista:', 'Before each session, in Today, you find what to eat and how much to drink. They are fixed rules from scientific guidelines, adapted to the session’s length and type, time of day, weight and forecast temperature:') + '</p>' +
+      kv(T('Sessione breve e facile', 'Short, easy session'), T('sotto i 60′ non serve niente di speciale: pasto normale o, al mattino, anche a digiuno se ti trovi bene', 'under 60′ nothing special is needed: a normal meal or, in the morning, even fasted if it suits you')) +
+      kv(T('Qualità o 60–90′', 'Quality or 60–90′'), T('carboidrati facili circa 1 g per kg un’ora prima, o un pasto 3–4 ore prima', 'easy carbs about 1 g per kg an hour before, or a meal 3–4 hours before')) +
+      kv(T('Lungo oltre 90′ e gara', 'Long run over 90′ and race'), T('2–4 g di carboidrati per kg 2–4 ore prima; oltre 75′ porta 30–60 g di carboidrati all’ora', '2–4 g of carbs per kg 2–4 hours before; beyond 75′ bring 30–60 g of carbs per hour')) +
+      kv(T('Liquidi', 'Fluids'), T('5–7 mL per kg nelle 4 ore prima, altri 3–5 mL per kg se l’urina è scura; con 24° o più anche un po’ di sale', '5–7 mL per kg in the 4 hours before, another 3–5 mL per kg if urine is dark; at 24° or more also some salt')) +
+      kv(T('Integratori', 'Supplements'), T('solo se servono: caffeina facoltativa (2–3 mg per kg, mai dopo le 16) per qualità e gara; nient’altro', 'only when needed: optional caffeine (2–3 mg per kg, never after 4 pm) for quality and races; nothing else')) +
+      '<p class="nf-foot">' + T('Fonti: ACSM, Academy of Nutrition and Dietetics e Dietitians of Canada, “Nutrition and Athletic Performance” (2016); ACSM, “Exercise and Fluid Replacement” (2007); ISSN, “Caffeine and exercise performance” (2021). Indicazioni generali per adulti sani: con diabete, disturbi alimentari, gravidanza o altre condizioni chiedi al medico.', 'Sources: ACSM, Academy of Nutrition and Dietetics and Dietitians of Canada, “Nutrition and Athletic Performance” (2016); ACSM, “Exercise and Fluid Replacement” (2007); ISSN, “Caffeine and exercise performance” (2021). General guidance for healthy adults: with diabetes, eating disorders, pregnancy or other conditions, ask your doctor.') + '</p>';
     const limiti = li(T([
       '<b>Piano su misura</b>: si adatta ai tuoi dati e ogni cambiamento ha un motivo scritto.',
       'Senza la tua FC massima usa la stima dall’età.',
@@ -643,6 +668,7 @@
       voce('sedute', G.list, '#007aff', T('Le sessioni', 'Sessions'), T('Cosa significano le sigle', 'What the codes mean'), '<div class="in-tipi">' + tipiSeduta().map((t) => '<div class="in-tipo"><span class="sig">' + esc(t.sigla) + '</span><div><b>' + esc(t.nome) + '</b><p>' + esc(t.testo) + '</p></div></div>').join('') + '</div>') +
       voce('zone', G.heart, '#ff3b30', T('Zone e passo', 'Zones and pace'), T('Dalla tua FC a riposo e massima', 'From your resting and max HR'), zone) +
       voce('bmi', G.heart, '#ff2d55', 'BMI', T('Peso e altezza, in Salute', 'Weight and height, in Health'), bmi) +
+      voce('alimentazione', G.drop, 'var(--accent)', T('Prima di correre', 'Before you run'), T('Cosa mangiare e bere, con le fonti', 'What to eat and drink, with sources'), alimentazione) +
       voce('carico', G.shield, '#ff9500', T('Carico e infortuni', 'Load and injuries'), T('Crescere senza farsi male', 'Build up without getting hurt'), carico) +
       voce('previsioni', G.trend, '#30b0c7', T('Previsioni', 'Forecasts'), T('Data, tempo e forma per la gara', 'Race date, time and form'), previsioni) +
       voce('dati', G.sync, '#8e8e93', T('I tuoi dati', 'Your data'), T('Orologio, Intervals.icu, AAC', 'Watch, Intervals.icu, AAC'), dati) +
@@ -844,7 +870,7 @@
     return '<section class="hero">' + nota +
       '<div class="eyebrow">' + esc(quando(d.oggi, s.data)).replace(/^./, (c) => c.toUpperCase()) + ' · ' + esc(p.ora) + '<span class="fase-tag">' + esc(s.fase) + '</span></div>' +
       '<h2>' + esc(s.titolo) + '</h2>' +
-      bannerAdattata(s) + corpoSeduta(s, true) + salta +
+      bannerAdattata(s) + bannerAlimentazione(p.alimentazione, s) + corpoSeduta(s, true) + salta +
     '</section>';
   }
 
@@ -2654,8 +2680,10 @@
   document.addEventListener('click', async (e) => {
     if (e.target.closest('[data-vai-piano]')) { vaiTab('piano'); return; }
     if (e.target.closest('[data-vai-info]')) {
+      const dove = e.target.closest('[data-vai-info]').dataset.vaiInfo;
+      const idInfo = /^[a-z]+$/.test(dove || '') ? 'info-' + dove : 'info-come';
       vaiTab('info');
-      requestAnimationFrame(() => { const x = document.getElementById('info-come'); if (x) x.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); });
+      requestAnimationFrame(() => { const x = document.getElementById(idInfo) || document.getElementById('info-come'); if (x && x.tagName === 'DETAILS') x.open = true; if (x) x.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); });
       return;
     }
     if (e.target.closest('[data-guida-apri]')) { apriGuida(); return; }
