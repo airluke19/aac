@@ -2696,6 +2696,15 @@ function mediaBase(benessere, campo, data) {
   return vals.length >= 5 ? vals.reduce((s, x) => s + x, 0) / vals.length : null;
 }
 
+// Ultimo giorno (negli ultimi 60) con FC a riposo, HRV o sonno: serve a dire "i dati non arrivano da N giorni"
+function ultimoRecupero(benessere, oggiStr) {
+  for (let d = oggiStr, i = 0; i <= 60; i++, d = addDays(d, -1)) {
+    const r = benessere.get(d);
+    if (r && (r.fc_riposo != null || r.hrv != null || r.sonno_sec != null)) return { data: d, giorni: diffDays(oggiStr, d) };
+  }
+  return null;
+}
+
 function segnaliRecupero(benessere, data) {
   const r = benessere.get(data);
   if (!r) return [];
@@ -3184,6 +3193,10 @@ function costruisciProgramma(oggiStr) {
     consigli.push(L(`Prossima sessione alleggerita: ${prossime[0].adattata.motivi.join(', ')}.`, `Next session lightened: ${prossime[0].adattata.motivi.join(', ')}.`));
   } else if (prontezza.valutata) {
     consigli.push(L('FC a riposo, HRV e sonno nella norma: via libera alla sessione prevista.', 'Resting HR, HRV and sleep look normal: go ahead with the planned session.'));
+  } else if ((prontezza.ultimo = ultimoRecupero(dati.benessere, oggiStr))) {
+    const u = prontezza.ultimo;
+    consigli.push(L(`FC a riposo, HRV e sonno non arrivano da ${u.giorni} giorni (ultimo dato ${Number(u.data.slice(8))}/${Number(u.data.slice(5, 7))}): presumo che tu stia bene e confermo la sessione prevista. Se l’orologio non si sincronizza con Intervals.icu, controlla il collegamento.`,
+      `Resting HR, HRV and sleep haven’t arrived for ${u.giorni} days (last data ${u.data.slice(5, 7)}/${u.data.slice(8)}): I assume you’re fine and keep the planned session. If your watch isn’t syncing with Intervals.icu, check the connection.`));
   } else {
     consigli.push(L('Senza dati di FC a riposo, HRV e sonno adatto il piano solo in base alle sessioni fatte: fai arrivare questi dati su Intervals.icu (Apple Watch: app Companion; Garmin e altri: wellness nel collegamento).', 'Without resting HR, HRV and sleep data I can only adapt the plan to the sessions you complete: get this data onto Intervals.icu (Apple Watch: Companion app; Garmin and others: wellness in the connection).'));
   }
@@ -3923,7 +3936,7 @@ function costruisciSalute(oggiStr) {
   }
   const recupero_30g = { giorni: nonRecuperati.reverse(), base_pronta: basePronta };
 
-  return { disponibile, metriche, serie_30g: serie, recupero, recupero_30g, corpo: corpoEBmi(oggiStr) };
+  return { disponibile, metriche, serie_30g: serie, recupero, ultimo_recupero: recupero ? null : ultimoRecupero(perGiorno, oggiStr), recupero_30g, corpo: corpoEBmi(oggiStr) };
 }
 
 // BMI = peso (kg) / altezza (m)². Peso: sempre il dato piu' recente tra bilancia/Intervals e profilo

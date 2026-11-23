@@ -1027,7 +1027,12 @@
     const m = s.metriche, r = s.recupero;
     const segnali = r ? r.segnali : [];
     let cls, titolo, testo;
-    if (!r) { cls = ''; titolo = T('Dati di recupero in arrivo', 'Recovery data on its way'); testo = T('Per ora il piano segue le sessioni fatte.', 'For now the plan follows completed sessions.'); }
+    const u = s.ultimo_recupero;
+    if (!r && u) {
+      // dati fermi da qualche giorno: solo informativo, la sessione resta quella prevista
+      cls = ''; titolo = T('Nessun dato da ' + u.giorni + ' giorni', 'No data for ' + u.giorni + ' days');
+      testo = T('Ultimo il ' + fmtData(u.data) + ': presumo che tu stia bene, sessione piena. Controlla che l’orologio si sincronizzi con Intervals.icu.', 'Last on ' + fmtData(u.data) + ': I assume you’re fine, full session. Check that your watch syncs with Intervals.icu.');
+    } else if (!r) { cls = ''; titolo = T('Dati di recupero in arrivo', 'Recovery data on its way'); testo = T('Per ora il piano segue le sessioni fatte.', 'For now the plan follows completed sessions.'); }
     else if (segnali.length) { cls = 'warn'; titolo = T('Sessione alleggerita', 'Session eased'); testo = esc(segnali.join(' · ')); }
     else if (r.base_fc_riposo == null && r.base_hrv == null) { cls = ''; titolo = T('Sto imparando i tuoi valori', 'Learning your baseline'); testo = T('Servono 5 giorni di dati.', '5 days of data needed.'); }
     else {
